@@ -39,7 +39,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, fireEvent, within } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import MemberSelectModal, {

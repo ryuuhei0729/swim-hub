@@ -107,6 +107,8 @@ vi.mock("@/lib/revenucat", () => ({
 // QueryProvider モック
 vi.mock("@/providers/QueryProvider", () => ({
   getQueryClient: mocks.getQueryClient,
+  clearQueryCache: () => mocks.getQueryClient().clear(),
+  bindQueryCacheOwner: vi.fn(),
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";

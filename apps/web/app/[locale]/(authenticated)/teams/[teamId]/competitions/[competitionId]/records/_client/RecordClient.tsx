@@ -20,6 +20,12 @@ import { Competition, Style } from "@apps/shared/types";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { FREE_PLAN_LIMITS } from "@apps/shared/constants/premium";
 import { useInvalidateTeamRankings } from "@apps/shared/hooks/queries/useInvalidateTeamRankings";
+import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
+import {
+  resetTeamQueriesAfterExternalSave,
+  teamDetailKeys,
+  teamMemberBestTimesKeys,
+} from "@/hooks/queries/teamDetailKeys";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
@@ -190,6 +196,9 @@ export default function RecordClient({
   const locale = useLocale();
   const { supabase, subscription } = useAuth();
   const invalidateRankings = useInvalidateTeamRankings();
+  // チーム画面のキャッシュ (大会一覧・記録一覧モーダル・ベストタイム表) を落とすため。
+  // Provider が無い環境 (既存テスト) では null
+  const queryClient = useOptionalQueryClient();
 
   /**
    * リレーのチーム記録の書き込み API。差し替えの手順は shared 側が持つ
@@ -1784,6 +1793,16 @@ export default function RecordClient({
       // hasError の早期 return より前に置く: 一部の行だけ書き込めた場合もキャッシュは古い。
       // (Provider が無い環境では no-op。理由は useInvalidateTeamRankings の docstring)
       invalidateRankings();
+      // 保存後はチーム画面の大会タブへ戻る。キャッシュに残る保存前の内容
+      // (カードの記録件数・記録一覧モーダル・メンバータブのベストタイム表) が
+      // 戻った直後に一瞬表示されないよう、該当キャッシュを捨てる (一部だけ書き込めた場合も古い)
+      if (queryClient) {
+        void resetTeamQueriesAfterExternalSave(queryClient, [
+          teamDetailKeys.competitionPages(teamId),
+          teamDetailKeys.competitionRecords(competitionId),
+          teamMemberBestTimesKeys.team(teamId),
+        ]);
+      }
 
       // エラーが発生した場合はリダイレクトしない
       if (hasError) {

@@ -31,7 +31,8 @@
  *   維持」) から導出したものであり、RecordDetail.tsx の実装を読んでコピーしたものではない。
  */
 
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/contexts/AuthProvider");

@@ -21,7 +21,8 @@
 //   ここで保証するのは DOM 上の所属コンテナと前後関係、および開くモーダルの中身のみ。
 // =============================================================================
 
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, it, expect } from "vitest";
 import jaMessages from "@apps/shared/messages/ja.json";
 import { buildMember, mockEmptyRecordsQuery } from "./teamMemberListHarness";

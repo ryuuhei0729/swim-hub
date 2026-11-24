@@ -11,6 +11,12 @@ import {
   focusManager,
   onlineManager,
 } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import {
+  QUERY_CACHE_MAX_AGE,
+  queryCacheBuster,
+  queryPersistence,
+} from "@/lib/queryPersistence";
 import { isNetworkError } from "@apps/shared/utils/networkError";
 import { isNetInfoOnline } from "@/hooks/useNetworkStatus";
 
@@ -71,7 +77,9 @@ function createMobileQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60 * 10, // 10分
-        gcTime: 1000 * 60 * 60 * 24 * 7, // 7日間（メモリ上のみ。アプリ再起動で消える）
+        // 7日間。端末にも保存し、次回起動時に復元する (lib/queryPersistence.ts)。
+        // 復元できる最長期間 (QUERY_CACHE_MAX_AGE) より短くしないこと
+        gcTime: QUERY_CACHE_MAX_AGE,
         refetchOnWindowFocus: refetchOnlyWhenOnline, // AppState連動でバックグラウンド復帰時に再取得
         refetchOnMount: refetchOnlyWhenOnline,
         refetchOnReconnect: true, // オンライン復帰時に自動再取得 (onlineManager 連動)
@@ -102,16 +110,54 @@ export function getQueryClient() {
   return queryClient;
 }
 
+/**
+ * ログアウト時に、メモリ上と端末に保存したキャッシュの両方を消す
+ * (次にログインする別のユーザーへ前のユーザーのデータを見せないため)
+ */
+export function clearQueryCache(): void {
+  getQueryClient().clear();
+  queryPersistence.clearPersisted();
+}
+
+/**
+ * ログインしたユーザーが、保存済みキャッシュの持ち主と違えばキャッシュを捨てる
+ * (セッション切れなど、ログアウト処理を通らずにユーザーが替わった場合の備え)
+ */
+export function bindQueryCacheOwner(userId: string): void {
+  void queryPersistence.bindToUser(userId, () => getQueryClient().clear());
+}
+
 interface QueryProviderProps {
   children: React.ReactNode;
 }
 
 /**
  * React Queryのプロバイダーコンポーネント
- * AuthProviderの内側に配置して、認証済みユーザーのみReact Queryを使用可能にする
+ *
+ * 保存先 (暗号化 MMKV) が使える端末では、キャッシュを端末に保存して次回起動時に復元する。
+ * 復元が終わるまでクエリは走らないので、復元したデータがあればそれを先に表示し、
+ * 古ければ (staleTime 超過) その後に裏で取り直す。
  */
 export default function QueryProvider({ children }: QueryProviderProps) {
   const queryClient = getQueryClient();
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  const { persister } = queryPersistence;
+  if (!persister) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  }
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: QUERY_CACHE_MAX_AGE,
+        buster: queryCacheBuster,
+      }}
+      onSuccess={queryPersistence.markRestored}
+      onError={queryPersistence.markRestored}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
 }

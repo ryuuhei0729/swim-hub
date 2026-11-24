@@ -23,6 +23,8 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createTestQueryClient } from "@/__tests__/helpers/teamQueryTestUtils";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import jaMessages from "@apps/shared/messages/ja.json";
@@ -42,16 +44,22 @@ vi.mock("@apps/shared/api/teams/groups", () => ({
   }),
 }));
 
+// 取得は React Query 経由になったため、テストごとに新しい QueryClient で包む
+// (テスト間でキャッシュが漏れると「フェッチされない」ことの検証が意味を失う)
+let queryClient = createTestQueryClient();
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <NextIntlClientProvider locale="ja" messages={jaMessages as unknown as AbstractIntlMessages}>
-    {children}
-  </NextIntlClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <NextIntlClientProvider locale="ja" messages={jaMessages as unknown as AbstractIntlMessages}>
+      {children}
+    </NextIntlClientProvider>
+  </QueryClientProvider>
 );
 
 const dummySupabase = {} as unknown as SupabaseClient;
 
 describe("useMemberGroupSort — enabled 引数 [WV-22, WV-23, 修正H]", () => {
   beforeEach(() => {
+    queryClient = createTestQueryClient();
     mocks.list.mockReset().mockResolvedValue([]);
     mocks.listAllMemberships.mockReset().mockResolvedValue([]);
   });

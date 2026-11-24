@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTableDispatchSupabase } from "./utils/tableSupabaseMock";
@@ -228,12 +228,16 @@ describe("DashboardScreen — 月の切り替え時の読み込み表示", () =>
     expect(screen.queryByTestId("calendar")).toBeNull();
   });
 
+  // 表示中の月が取得できると前後の月も先読みする (useCalendarQuery)。
+  // 以下の2件は「先読みがまだ終わっていない月へ切り替えた」状況を作るため、
+  // 表示中の月だけすぐ返し、先読みの分は返さない/失敗させる。
   it("次月へ切り替えて読み込み中の間、ホームはそのままでカレンダーだけが読み込み中になる", async () => {
+    let resolveNext: (v: unknown[]) => void = () => {};
+    const pendingNext = new Promise((r) => { resolveNext = r; });
+    apiMocks.getCalendarEntries.mockResolvedValueOnce([]).mockReturnValue(pendingNext);
     await mountDashboard();
     expect(screen.getByTestId("calendar").getAttribute("data-loading")).toBe("false");
 
-    let resolveNext: (v: unknown[]) => void = () => {};
-    apiMocks.getCalendarEntries.mockReturnValue(new Promise((r) => { resolveNext = r; }));
     await act(async () => { fireEvent.click(screen.getByText("next-month")); });
 
     expect(screen.queryByTestId("calendar-skeleton")).toBeNull();
@@ -243,9 +247,19 @@ describe("DashboardScreen — 月の切り替え時の読み込み表示", () =>
     expect(screen.getByTestId("calendar").getAttribute("data-loading")).toBe("false");
   });
 
-  it("次月の取得に失敗しても全画面エラーにせず、ホームとカレンダーを出したままにする", async () => {
+  it("先読みが済んでいる次月へ切り替えると、読み込み中を挟まずに表示する", async () => {
     await mountDashboard();
-    apiMocks.getCalendarEntries.mockRejectedValue(new Error("network"));
+    await waitFor(() => expect(apiMocks.getCalendarEntries).toHaveBeenCalledTimes(3));
+    await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
+
+    await act(async () => { fireEvent.click(screen.getByText("next-month")); });
+
+    expect(screen.getByTestId("calendar").getAttribute("data-loading")).toBe("false");
+  });
+
+  it("次月の取得に失敗しても全画面エラーにせず、ホームとカレンダーを出したままにする", async () => {
+    apiMocks.getCalendarEntries.mockResolvedValueOnce([]).mockRejectedValue(new Error("network"));
+    await mountDashboard();
     await act(async () => {
       fireEvent.click(screen.getByText("next-month"));
       await new Promise((r) => setTimeout(r, 50));

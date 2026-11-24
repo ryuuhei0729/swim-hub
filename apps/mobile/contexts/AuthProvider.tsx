@@ -11,7 +11,7 @@ import {
 import type { Database } from "@swim-hub/shared/types";
 import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/shared/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getQueryClient } from "@/providers/QueryProvider";
+import { bindQueryCacheOwner, clearQueryCache } from "@/providers/QueryProvider";
 import { onlineManager } from "@tanstack/react-query";
 import { isNetworkError } from "@apps/shared/utils/networkError";
 import {
@@ -362,8 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthState((prev) => ({ ...prev, subscription: null }));
       clearMmkvCaches();
 
-      const queryClient = getQueryClient();
-      queryClient.clear();
+      clearQueryCache();
 
       try {
         const [
@@ -615,6 +614,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted && !initialSessionReceived) {
           initialSessionReceived = true;
           clearTimeout(hardTimeoutId);
+          if (session?.user) bindQueryCacheOwner(session.user.id);
           setAuthState((prev) => ({
             ...prev,
             user: session?.user ?? null,
@@ -638,6 +638,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId);
       clearTimeout(hardTimeoutId);
 
+      // 保存済みキャッシュが別のユーザーのものなら、画面に出す前に捨てる
+      if (session?.user) bindQueryCacheOwner(session.user.id);
+
       setAuthState((prev) => ({
         ...prev,
         user: session?.user ?? null,
@@ -652,8 +655,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn("RevenueCat ログアウト失敗:", err);
         });
 
-        const queryClient = getQueryClient();
-        queryClient.clear();
+        clearQueryCache();
 
         Promise.all([
           import("@/stores/practiceFormStore"),

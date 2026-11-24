@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { useAuth } from "@/contexts";
 import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 import { useSearchParams } from "next/navigation";
@@ -58,7 +59,8 @@ export const EmailSignInForm: React.FC = () => {
   const tAuth = useTranslations("auth");
 
   const { signIn } = useAuth();
-  const router = useRouter();
+  // ログイン後はページを読み直す (前のユーザーの画面のキャッシュを使い回さない)
+  const router = useFullPageRouter();
   const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {

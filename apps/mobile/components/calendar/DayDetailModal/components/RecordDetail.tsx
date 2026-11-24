@@ -1,18 +1,24 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import {
+  useInvalidateWhenChanged,
+  useIsAwaitingFreshData,
+} from "@/hooks/cachedQuery";
+import { DAY_DETAIL_QUERY_OPTIONS, dayDetailKeys } from "@/hooks/dayDetailQueries";
+import { useGalleryImages } from "@/hooks/useGalleryImages";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
 import { ShareCardModal } from "@/components/share";
 import type { CompetitionShareData } from "@/components/share";
-import { resolveGalleryImages } from "@/utils/imageUpload";
 import { RecordAPI } from "@apps/shared/api/records";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -23,6 +29,28 @@ import { AttendanceGroupModal } from "@/components/teams/AttendanceGroupModal";
 import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
+
+/** records テーブルから取得した行 (キャッシュにはこの形のまま持つ) */
+interface RecordFromDB {
+  id: string;
+  time: number;
+  reaction_time: number | null;
+  is_relaying: boolean;
+  note: string | null;
+  style_id: number;
+  video_path: string | null;
+  video_thumbnail_path: string | null;
+  style:
+    | { id: number; name_jp: string; distance: number; style: string }
+    | { id: number; name_jp: string; distance: number; style: string }[]
+    | null;
+  split_times?: Array<{ distance: number; split_time: number }> | null;
+}
+
+interface CompetitionRecordsData {
+  imagePaths: string[];
+  records: RecordFromDB[];
+}
 
 // DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色 (旧デフォルト青)。
 // この値と一致する場合は旧来のカード外枠色(#EFF6FF / #DBEAFE)をそのまま使い、
@@ -510,22 +538,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BADGE_BACKGROUND);
   const badgeTextColor = isDefaultAccent ? "#FFFFFF" : darkenHex(color, 0.65);
   const { t } = useTranslation();
-  const { supabase, user, getAccessToken } = useAuth();
+  const { supabase, user } = useAuth();
   const locale = useDateLocale();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
-  const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
-  const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
-    [],
-  );
-  const [loading, setLoading] = useState(true);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const [splitTimesMap, setSplitTimesMap] = useState<
-    Map<string, Array<{ distance: number; split_time: number }>>
-  >(new Map());
-  const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set());
-  const loadingSplitsRef = useRef<Set<string>>(new Set());
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
@@ -535,14 +553,21 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   };
 
   // 記録データを取得
-  useEffect(() => {
-    const loadRecords = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
+  // 同じ日を開き直したときは前回の内容をすぐ表示し、裏で取り直す。
+  // スプリットタイムは記録と同じ問い合わせに含める (以前は記録1件ごとに別の問い合わせを
+  // 順番に投げていた)。キャッシュには DB の行をそのまま持たせ、表示言語で変わる種目名や
+  // 失効する画像URLは描画時に組み立てる。
+  const userId = user?.id;
+  const queryClient = useQueryClient();
+  const recordsKey = dayDetailKeys.records(_competitionId, {
+    userId: userId ?? "",
+    ownOnly: !!isTeamCompetition,
+    recordId: targetRecordId ?? null,
+  });
+  const recordsQuery = useQuery({
+    queryKey: recordsKey,
+    queryFn: async (): Promise<CompetitionRecordsData> => {
       try {
-        setLoading(true);
         let query = supabase
           .from("records")
           .select(
@@ -555,14 +580,15 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             style_id,
             video_path,
             video_thumbnail_path,
-            style:styles(id, name_jp, distance, style)
+            style:styles(id, name_jp, distance, style),
+            split_times(distance, split_time)
           `,
           )
           .eq("competition_id", _competitionId);
 
         // チーム大会の場合は自分の記録だけを表示
-        if (isTeamCompetition && user?.id) {
-          query = query.eq("user_id", user.id);
+        if (isTeamCompetition && userId) {
+          query = query.eq("user_id", userId);
         }
 
         // 大会タブでタップした記録1件のみに絞る(同じ大会の他種目記録は出さない)
@@ -570,149 +596,80 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           query = query.eq("id", targetRecordId);
         }
 
-        const [{ data: competitionData }, { data, error }] = await Promise.all([
-          supabase
-            .from("competitions")
-            .select("image_paths")
-            .eq("id", _competitionId)
-            .single(),
-          query,
-        ]);
-
-        const imagePaths =
-          (competitionData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-        // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
-        const accessToken = await getAccessToken();
-        if (accessToken) {
-          const images = await resolveGalleryImages("competition-images", imagePaths, accessToken);
-          setCompetitionImages(images);
-        } else {
-          // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
-          setCompetitionImages([]);
-        }
+        const [{ data: competitionData, error: competitionError }, { data, error }] =
+          await Promise.all([
+            supabase.from("competitions").select("image_paths").eq("id", _competitionId).single(),
+            query,
+          ]);
 
         if (error) throw error;
 
-        type RecordFromDB = {
-          id: string;
-          time: number;
-          reaction_time: number | null;
-          is_relaying: boolean;
-          note: string | null;
-          style_id: number;
-          video_path: string | null;
-          video_thumbnail_path: string | null;
-          style:
-            | {
-                id: number;
-                name_jp: string;
-                distance: number;
-                style: string;
-              }
-            | {
-                id: number;
-                name_jp: string;
-                distance: number;
-                style: string;
-              }[]
-            | null;
-        };
-        const recordsData = (data || []) as unknown as RecordFromDB[];
-        const formattedRecords = recordsData.map((record) => {
-          const style = Array.isArray(record.style) ? record.style[0] : record.style;
-          return {
-            id: record.id,
-            styleName: localizedStyleName(style, t),
-            time: record.time || 0,
-            reactionTime: record.reaction_time ?? null,
-            isRelaying: record.is_relaying || false,
-            note: record.note,
-            styleId: record.style_id,
-            styleDistance: style?.distance || 0,
-            videoPath: record.video_path ?? null,
-            videoThumbnailPath: record.video_thumbnail_path ?? null,
-          };
-        });
+        // 画像パスだけ取得に失敗した場合は、記録は表示しつつ前回の画像パスを保つ
+        // (「画像なし」をキャッシュに上書きすると、次に成功するまで画像が消えたままになる)
+        const imagePaths = competitionError
+          ? (queryClient.getQueryData<CompetitionRecordsData>(recordsKey)?.imagePaths ?? [])
+          : ((competitionData as { image_paths?: string[] | null } | null)?.image_paths ?? []);
 
-        setActualRecords(formattedRecords);
+        return {
+          imagePaths,
+          records: (data || []) as unknown as RecordFromDB[],
+        };
       } catch (err) {
         console.error("記録の取得エラー:", err);
-        setActualRecords([]);
-        setCompetitionImages([]);
-      } finally {
-        setLoading(false);
+        throw err;
       }
-    };
+    },
+    enabled: !!userId,
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  // カレンダー側の記録が差し替わったら (追加・編集・削除のあと) 取り直す。
+  // records は呼び出し側でメモ化されている前提 (非安定な配列参照を渡すと毎レンダーで
+  // 再フェッチが多発するので注意)。
+  useInvalidateWhenChanged(records, recordsKey);
+  const awaitingFresh = useIsAwaitingFreshData(recordsKey, recordsQuery.isFetching);
 
-    loadRecords();
-    // records は呼び出し側でメモ化されている前提の依存配列（Supabase への2往復を含むこの
-    // effect が依存する）。非安定な配列参照を渡すと毎レンダーで再フェッチが多発するので注意。
-  }, [_competitionId, supabase, user?.id, isTeamCompetition, targetRecordId, getAccessToken, t, records]);
+  const recordsData = recordsQuery.data;
+  // 取得できるまでは読み込み中。取得に失敗した場合は0件として扱う
+  const loading =
+    !!userId && ((recordsData === undefined && !recordsQuery.isError) || awaitingFresh);
 
-  // スプリットタイムを取得
-  useEffect(() => {
-    let cancelled = false;
+  const actualRecords = useMemo<RecordData[]>(
+    () =>
+      (recordsData?.records ?? []).map((record) => {
+        const style = Array.isArray(record.style) ? record.style[0] : record.style;
+        return {
+          id: record.id,
+          styleName: localizedStyleName(style, t),
+          time: record.time || 0,
+          reactionTime: record.reaction_time ?? null,
+          isRelaying: record.is_relaying || false,
+          note: record.note,
+          styleId: record.style_id,
+          styleDistance: style?.distance || 0,
+          videoPath: record.video_path ?? null,
+          videoThumbnailPath: record.video_thumbnail_path ?? null,
+        };
+      }),
+    [recordsData, t],
+  );
 
-    const loadSplitTimes = async () => {
-      const recordIds = actualRecords.map((r) => r.id);
-      const recordsToLoad = recordIds.filter((id) => !loadingSplitsRef.current.has(id));
+  const splitTimesMap = useMemo(() => {
+    const map = new Map<string, Array<{ distance: number; split_time: number }>>();
+    for (const record of recordsData?.records ?? []) {
+      const splits = record.split_times ?? [];
+      if (splits.length === 0) continue;
+      map.set(
+        record.id,
+        splits
+          .map((st) => ({ distance: st.distance, split_time: st.split_time }))
+          .sort((a, b) => a.distance - b.distance),
+      );
+    }
+    return map;
+  }, [recordsData]);
 
-      if (recordsToLoad.length === 0) return;
-
-      for (const recordId of recordsToLoad) {
-        if (cancelled) return;
-
-        try {
-          if (cancelled) return;
-          loadingSplitsRef.current.add(recordId);
-          setLoadingSplits((prev) => new Set(prev).add(recordId));
-
-          const { data, error } = await supabase
-            .from("split_times")
-            .select("distance, split_time")
-            .eq("record_id", recordId)
-            .order("distance", { ascending: true });
-
-          if (error) throw error;
-
-          if (cancelled) return;
-
-          if (data && data.length > 0) {
-            setSplitTimesMap((prev) => {
-              if (cancelled) return prev;
-              const newMap = new Map(prev);
-              newMap.set(
-                recordId,
-                data.map((st) => ({
-                  distance: st.distance,
-                  split_time: st.split_time,
-                })),
-              );
-              return newMap;
-            });
-          }
-        } catch (error) {
-          if (cancelled) return;
-          console.error("スプリットタイム取得エラー:", error);
-        } finally {
-          if (!cancelled) {
-            loadingSplitsRef.current.delete(recordId);
-            setLoadingSplits((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(recordId);
-              return newSet;
-            });
-          }
-        }
-      }
-    };
-
-    loadSplitTimes();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [actualRecords, supabase]);
+  // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+  const competitionImages = useGalleryImages("competition-images", recordsData?.imagePaths);
 
   return (
     <View

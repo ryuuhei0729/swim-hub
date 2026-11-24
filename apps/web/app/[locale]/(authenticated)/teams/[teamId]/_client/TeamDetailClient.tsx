@@ -45,6 +45,7 @@ import { isTeamTabType } from "@/components/team/TeamTabs";
 import { TeamMembership, TeamWithMembers } from "@apps/shared/types";
 import type { LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
 import { useTeamDetailStore } from "@/stores/form/teamDetailStore";
+import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
 
 interface TeamDetailClientProps {
   teamId: string;
@@ -89,6 +90,10 @@ export default function TeamDetailClient({
     setAppliedTabParam,
     reset,
   } = useTeamDetailStore();
+
+  // 開いているタブの読み込みが終わったら、既定タブと隣のタブのデータを先読みする
+  // (所属していないチームでは取得できないので先読みしない)
+  useTeamTabPrefetch(teamId, activeTab, "member", initialMembership !== null);
 
   // サーバー側から取得したデータをストアに設定
   useEffect(() => {

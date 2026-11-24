@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useQuery } from "@tanstack/react-query";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { useAttendanceGrouping } from "@apps/shared/hooks/useAttendanceGrouping";
 import { fetchTeamMembers, type TeamMember } from "@apps/shared/utils/team";
@@ -16,6 +19,9 @@ import {
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
+
+const NO_TEAM_MEMBERS: TeamMember[] = [];
+const NO_ATTENDANCE: TeamAttendanceWithDetails[] = [];
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
 const NOOP_BACKDROP_PRESS = () => {};
@@ -61,65 +67,54 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
   const insets = useSafeInsets();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
-  const [attendanceData, setAttendanceData] = useState<
-    TeamAttendanceWithDetails[]
-  >([]);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceError, setAttendanceError] = useState(false);
-
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [teamMembersLoading, setTeamMembersLoading] = useState(true);
-  const [teamMembersError, setTeamMembersError] = useState(false);
-
   // チーム名簿は visible になった時にだけ取得する。AdminMonthlyAttendance は画面レベルで
   // 1つのインスタンスが N 個の EventCard に名簿を配るため mount 時の1回取得で済むが、
   // この AttendanceGroupModal は DayDetailModal 内でカレンダーアイテムの数だけ
   // インスタンス化される（=N 個のモーダルが同時に存在しうる）。mount 時に無条件取得すると
   // ユーザーがボタンを一度も押していなくても teamId 分の fetchTeamMembers が並走してしまうため、
-  // loadAttendance と同じく visible をガードにして、実際にシートが開かれるまで取得しない。
-  const loadTeamMembers = useCallback(async () => {
-    try {
-      setTeamMembersLoading(true);
-      setTeamMembersError(false);
-      const members = await fetchTeamMembers(supabase, teamId);
-      setTeamMembers(members);
-    } catch (err) {
-      console.error("AttendanceGroupModal: failed to fetch team members", err);
-      setTeamMembersError(true);
-    } finally {
-      setTeamMembersLoading(false);
-    }
-  }, [teamId, supabase]);
+  // 出欠と同じく visible をガードにして、実際にシートが開かれるまで取得しない。
+  // 名簿は出欠管理画面 (useTeamAttendanceMembers) と同じキャッシュを共有する。
+  const teamMembersQuery = useQuery({
+    queryKey: teamDetailKeys.roster(teamId),
+    queryFn: async () => {
+      try {
+        return await fetchTeamMembers(supabase, teamId);
+      } catch (err) {
+        console.error("AttendanceGroupModal: failed to fetch team members", err);
+        throw err;
+      }
+    },
+    enabled: visible,
+    // キャッシュは共有するが、このモーダルでは従来どおり開くたびに取り直す
+    // (メンバーの増減をすぐ反映する。取り直している間は前回の名簿を見せる)
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const teamMembers = teamMembersQuery.data ?? NO_TEAM_MEMBERS;
+  // 手元に名簿が無いときだけ読み込み中・エラーにする (取り直し中は前回の名簿を見せる)
+  const { isLoading: teamMembersLoading, isFailed: teamMembersError } =
+    getCachedQueryStatus(teamMembersQuery);
+  const loadTeamMembers = () => void teamMembersQuery.refetch();
 
-  useEffect(() => {
-    if (visible) {
-      loadTeamMembers();
-    }
-  }, [visible, loadTeamMembers]);
-
-  const loadAttendance = useCallback(async () => {
-    if (!eventId || !eventType) return;
-    try {
-      setAttendanceLoading(true);
-      setAttendanceError(false);
-      const data =
-        eventType === "practice"
-          ? await attendanceAPI.getAttendanceByPractice(eventId)
-          : await attendanceAPI.getAttendanceByCompetition(eventId);
-      setAttendanceData(data);
-    } catch (err) {
-      console.error("AttendanceGroupModal: failed to fetch attendance", err);
-      setAttendanceError(true);
-    } finally {
-      setAttendanceLoading(false);
-    }
-  }, [eventId, eventType, attendanceAPI]);
-
-  useEffect(() => {
-    if (visible && eventId && eventType) {
-      loadAttendance();
-    }
-  }, [visible, eventId, eventType, loadAttendance]);
+  // 出欠は開くたびに取り直すが、同じイベントを開き直したときは前回の内容をすぐ表示する
+  const attendanceQuery = useQuery({
+    queryKey: teamDetailKeys.eventAttendance(eventType ?? "practice", eventId ?? ""),
+    queryFn: async (): Promise<TeamAttendanceWithDetails[]> => {
+      try {
+        return eventType === "practice"
+          ? await attendanceAPI.getAttendanceByPractice(eventId!)
+          : await attendanceAPI.getAttendanceByCompetition(eventId!);
+      } catch (err) {
+        console.error("AttendanceGroupModal: failed to fetch attendance", err);
+        throw err;
+      }
+    },
+    enabled: visible && !!eventId && !!eventType,
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const attendanceData = attendanceQuery.data ?? NO_ATTENDANCE;
+  const { isLoading: attendanceLoading, isFailed: attendanceError } =
+    getCachedQueryStatus(attendanceQuery);
+  const loadAttendance = () => void attendanceQuery.refetch();
 
   const grouping = useAttendanceGrouping(attendanceData, teamMembers);
 

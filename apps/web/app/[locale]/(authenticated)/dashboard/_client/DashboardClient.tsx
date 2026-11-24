@@ -34,7 +34,6 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { EntryAPI } from "@apps/shared/api";
 import type { TeamMembership, Team, Style, PracticeTag } from "@apps/shared/types";
-import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
 import { dashboardKeys, notificationKeys } from "@apps/shared/hooks/queries/keys";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
@@ -45,9 +44,14 @@ import { useCalendarHandlers } from "../_hooks/useCalendarHandlers";
 import { useDashboardRefreshOnSave } from "../_hooks/useDashboardRefreshOnSave";
 
 interface DashboardClientProps {
+  /**
+   * カレンダーの最初の表示月 ("yyyy-MM")。この月のカレンダーデータはサーバーが
+   * React Query のキャッシュに prefetch し、HydrationBoundary で渡している
+   */
+  initialCalendarMonth?: string;
+  /** サーバーの描画ごとの ID (カレンダーの取り直し判定に使う。CalendarProvider を参照) */
+  serverRenderId?: string;
   // サーバー側で取得したデータ
-  initialCalendarItems: CalendarItem[];
-  initialMonthlySummary: MonthlySummary;
   teams: Array<TeamMembership & { team?: Team }>;
   styles: Style[];
   tags: PracticeTag[];
@@ -57,8 +61,8 @@ interface DashboardClientProps {
  * ダッシュボードのインタラクティブ部分を担当するClient Component
  */
 export default function DashboardClient({
-  initialCalendarItems,
-  initialMonthlySummary,
+  initialCalendarMonth,
+  serverRenderId,
   teams,
   styles,
   tags,
@@ -405,8 +409,8 @@ export default function DashboardClient({
         {/* カレンダー (チームのお知らせは上の「お知らせ」にまとめたので全幅) */}
         <CalendarContainer
           refreshKey={calendarRefreshKey}
-          initialCalendarItems={initialCalendarItems}
-          initialMonthlySummary={initialMonthlySummary}
+          initialMonth={initialCalendarMonth}
+          serverRenderId={serverRenderId}
           onDateClick={onDateClick}
           onAddItem={onAddItem}
           onEditItem={onEditItem}

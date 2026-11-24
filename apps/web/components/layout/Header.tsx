@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useUserQuery } from "@apps/shared/hooks";
@@ -24,6 +25,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { user, supabase, signOut } = useAuth();
   const { profile } = useUserQuery(supabase, { userId: user?.id });
   const router = useRouter();
+  // ログアウト後はページを読み直す (このユーザーの画面のキャッシュを残さない)
+  const fullPageRouter = useFullPageRouter();
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const tAuth = useTranslations("auth");
@@ -38,7 +41,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       console.error("ログアウトエラー:", error);
       return;
     }
-    router.replace("/login");
+    fullPageRouter.replace("/login");
   };
 
   const displayName = profile?.name || user?.email?.split("@")[0] || tCommon("user");

@@ -12,7 +12,8 @@
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import jaMessages from "@apps/shared/messages/ja.json";
 import enMessages from "@apps/shared/messages/en.json";
 import deMessages from "@apps/shared/messages/de.json";

@@ -8,6 +8,13 @@
   // Worker スクリプトを minify してバンドルサイズを削減
   "minify": true,
 
+  // Smart Placement: Worker を「利用者の近く」ではなく「通信先 (Supabase) の近く」で動かす。
+  // 1回の表示で Supabase へ何度も問い合わせるため、利用者との往復1回より
+  // Supabase との往復の回数分の方が効く。Cloudflare が実測で配置を判断し、
+  // 効果が無いと判断すれば従来どおり利用者の近くで動く。
+  // https://developers.cloudflare.com/workers/configuration/smart-placement/
+  "placement": { "mode": "smart" },
+
   // OpenNext がビルド時に生成するファイル（変更不要）
   "main": ".open-next/worker.js",
   "assets": {

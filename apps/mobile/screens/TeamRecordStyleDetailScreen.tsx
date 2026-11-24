@@ -25,6 +25,7 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -1224,7 +1225,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
       // 動画アップロードの両方を内部で完結させてから返る。段階を分けて2回
       // invalidate していた旧実装と異なり、ここは戻り値を受け取った後に
       // 1回だけ呼べば両方の書き込みを反映できる。
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient, { competitionId });
       queryClient.invalidateQueries({
         queryKey: teamKeys.competitions(teamId),
       });

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
-import type { Goal, Style, GoalWithMilestones, Competition } from "@apps/shared/types";
+import type { Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { useGoalsQuery, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { selectUpcomingGoals } from "@apps/shared/utils/upcomingGoals";
@@ -15,8 +15,8 @@ import GoalEditModal from "../_components/GoalEditModal";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
 interface GoalsClientProps {
-  initialGoals: Goal[];
-  initialCompetitions: Competition[];
+  // 目標一覧はサーバーが React Query のキャッシュ (goalKeys.list()) に prefetch し、
+  // HydrationBoundary で渡している (props では受け取らない)
   styles: Style[];
   /** 最初に選んでおく目標。一覧に無ければ (大会終了・削除済み) 一覧の先頭を選ぶ */
   initialGoalId?: string;
@@ -26,8 +26,6 @@ interface GoalsClientProps {
  * 目標管理ページのインタラクティブ部分を担当するClient Component
  */
 export default function GoalsClient({
-  initialGoals,
-  initialCompetitions,
   styles,
   initialGoalId,
 }: GoalsClientProps) {
@@ -48,13 +46,7 @@ export default function GoalsClient({
     data: goals = [],
     error: goalsError,
     invalidate: invalidateGoals,
-  } = useGoalsQuery(supabase, {
-    styles,
-    initialData:
-      initialGoals.length > 0 || initialCompetitions.length > 0
-        ? { goals: initialGoals, competitions: initialCompetitions }
-        : undefined,
-  });
+  } = useGoalsQuery(supabase, { styles });
 
   // 大会が終わった目標は出さない (大会情報なしの目標は削除できるよう残す)。
   // 複数日開催は終了日で判定する。今日が決まるまで (サーバー描画中) は null

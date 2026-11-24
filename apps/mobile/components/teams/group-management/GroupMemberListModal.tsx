@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useQuery } from "@tanstack/react-query";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import { CenterModal } from "@/components/ui/CenterModal";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
@@ -89,6 +92,8 @@ const GroupMemberRow: React.FC<GroupMemberRowProps> = ({
   );
 };
 
+const NO_MEMBERS: MemberInfo[] = [];
+
 interface GroupMemberListModalProps {
   visible: boolean;
   onClose: () => void;
@@ -108,63 +113,6 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   onMemberClick,
 }) => {
   const { t } = useTranslation();
-  const [members, setMembers] = useState<MemberInfo[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const loadMembers = useCallback(async () => {
-    if (!group) return;
-    setLoading(true);
-    try {
-      const { data: groupMemberships, error: gmError } = await supabase
-        .from("team_group_memberships")
-        .select("user_id")
-        .eq("team_group_id", group.id);
-      if (gmError) throw gmError;
-
-      const userIds = (groupMemberships ?? []).map(
-        (m: { user_id: string }) => m.user_id,
-      );
-      if (userIds.length === 0) {
-        setMembers([]);
-        return;
-      }
-
-      const { data, error: tmError } = await supabase
-        .from("team_memberships")
-        .select(
-          `
-          id,
-          user_id,
-          role,
-          users!team_memberships_user_id_fkey (
-            id,
-            name,
-            profile_image_path,
-            birthday
-          )
-        `,
-        )
-        .eq("team_id", teamId)
-        .eq("status", "approved")
-        .eq("is_active", true)
-        .in("user_id", userIds);
-
-      if (tmError) throw tmError;
-      // メンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
-      setMembers(((data ?? []) as unknown as MemberInfo[]).sort(compareMembersByBirthday));
-    } catch (err) {
-      console.error("グループメンバー取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [group, teamId, supabase]);
-
-  useEffect(() => {
-    if (visible && group) {
-      loadMembers();
-    }
-  }, [visible, group, loadMembers]);
-
   // 呼び出し元 (TeamGroupManagement.tsx) は group と visible を同一 state で同時に
   // null/false にするため、生の group だけで中身を判定すると CenterModal の閉じ
   // アニメーション(160msのフェード+スケールアウト)より先に中身が消えてしまう
@@ -184,6 +132,59 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
       setDisplayGroup(group);
     }
   }, [group]);
+
+  // 開くたびに取り直すが、同じグループを開き直したときは前回の一覧をすぐ表示する。
+  // 閉じるとき group は null になるが、キーまで変えると閉じアニメーション中に一覧が
+  // 空になってしまうため、直近のグループ (displayGroup) のキーを使い続ける。
+  // 取得自体は生の group があるとき (= 開いているとき) だけ行う。
+  const groupId = group?.id ?? displayGroup?.id;
+  const membersQuery = useQuery({
+    queryKey: teamDetailKeys.groupMembers(teamId, groupId ?? ""),
+    queryFn: async (): Promise<MemberInfo[]> => {
+      try {
+        const { data: groupMemberships, error: gmError } = await supabase
+          .from("team_group_memberships")
+          .select("user_id")
+          .eq("team_group_id", groupId!);
+        if (gmError) throw gmError;
+
+        const userIds = (groupMemberships ?? []).map((m: { user_id: string }) => m.user_id);
+        if (userIds.length === 0) return [];
+
+        const { data, error: tmError } = await supabase
+          .from("team_memberships")
+          .select(
+            `
+          id,
+          user_id,
+          role,
+          users!team_memberships_user_id_fkey (
+            id,
+            name,
+            profile_image_path,
+            birthday
+          )
+        `,
+          )
+          .eq("team_id", teamId)
+          .eq("status", "approved")
+          .eq("is_active", true)
+          .in("user_id", userIds);
+
+        if (tmError) throw tmError;
+        // メンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
+        return ((data ?? []) as unknown as MemberInfo[]).sort(compareMembersByBirthday);
+      } catch (err) {
+        console.error("グループメンバー取得エラー:", err);
+        throw err;
+      }
+    },
+    enabled: visible && !!group,
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const members = membersQuery.data ?? NO_MEMBERS;
+  // 手元に一覧が無い間だけ読み込み中にする (取り直し中は前回の一覧を見せる)
+  const loading = getCachedQueryStatus(membersQuery).isLoading;
 
   if (!displayGroup) return null;
 

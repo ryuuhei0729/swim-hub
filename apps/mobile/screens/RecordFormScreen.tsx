@@ -16,6 +16,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -673,7 +674,7 @@ export const RecordFormScreen: React.FC = () => {
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient);
 
       // 成功: 前の画面に戻る
       reset();

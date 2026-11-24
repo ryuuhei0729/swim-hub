@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -12,7 +12,8 @@ export default function AccountDeleteSettings() {
   const t = useTranslations("settings.accountDelete");
   const tErrors = useTranslations("settings.accountDelete.errors");
   const { session, signOut } = useAuth();
-  const router = useRouter();
+  // 退会後はページを読み直す (このユーザーの画面のキャッシュを残さない)
+  const router = useFullPageRouter();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

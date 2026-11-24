@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+"use client";
+
+import { useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
+import { teamGroupSortDataQueryOptions } from "@/hooks/queries/teamMemberQueries";
 import type { TeamMember } from "./useMembers";
 
 export interface MemberGroup<T = TeamMember> {
@@ -20,6 +23,10 @@ interface GroupSortableMember {
 
 const GENDER_CATEGORY = "__gender__";
 
+// 取得前に毎回新しい配列を作って useMemo を無駄に再計算しないための空配列
+const EMPTY_GROUPS: TeamGroup[] = [];
+const EMPTY_MEMBERSHIPS: TeamGroupMembership[] = [];
+
 /**
  * メンバー一覧のグループ別表示機能
  *
@@ -30,8 +37,14 @@ const GENDER_CATEGORY = "__gender__";
  *   既定は true なので、引数を渡さない既存呼び出し元 (TeamMemberManagement 等) は
  *   従来どおりマウント時に即フェッチする。MemberSelectModal は isOpen を渡し、
  *   モーダルを一度も開かなければリクエストが発生しないようにする。
- *   一度フェッチに成功した teamId/supabase の組については、enabled が
+ *   一度フェッチに成功した teamId の組については、enabled が
  *   false→true と再度切り替わっても再フェッチしない (取得済みデータを保持する)
+ *
+ * 取得は React Query (`teamDetailKeys.groupSortData`)。
+ *   - refetchOnMount: "always" … 以前と同じく、マウント (タブを開く) のたびに再取得する。
+ *     再取得中は前回のグループ情報でグループ別表示を続ける。
+ *   - staleTime: Infinity … マウント中に enabled を再トグルしただけでは再取得しない (修正H)。
+ *     グループの変更は invalidateTeamGroupQueries で stale にするので、その後は再取得される。
  */
 export const useMemberGroupSort = (
   teamId: string,
@@ -39,45 +52,21 @@ export const useMemberGroupSort = (
   enabled: boolean = true,
 ) => {
   const t = useTranslations("teams.memberGroupSort");
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const [memberships, setMemberships] = useState<TeamGroupMembership[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(
     GENDER_CATEGORY,
   );
 
-  // フェッチ済みの teamId/supabase の組。enabled の再トグルだけでは変わらないため、
-  // モーダルを閉じて再度開いても再フェッチしない (修正H)
-  const loadedKeyRef = useRef<{
-    teamId: string;
-    supabase: SupabaseClient;
-  } | null>(null);
-
   // グループとメンバーシップを取得
-  useEffect(() => {
-    if (!enabled) return;
-    if (
-      loadedKeyRef.current?.teamId === teamId &&
-      loadedKeyRef.current?.supabase === supabase
-    ) {
-      return;
-    }
-    loadedKeyRef.current = { teamId, supabase };
-
-    const load = async () => {
-      try {
-        const api = new TeamGroupsAPI(supabase);
-        const [groupsData, membershipsData] = await Promise.all([
-          api.list(teamId),
-          api.listAllMemberships(teamId),
-        ]);
-        setGroups(groupsData);
-        setMemberships(membershipsData);
-      } catch (err) {
-        console.error("グループ情報の取得に失敗:", err);
-      }
-    };
-    load();
-  }, [teamId, supabase, enabled]);
+  const groupSortQuery = useQuery({
+    ...teamGroupSortDataQueryOptions(supabase, teamId),
+    enabled,
+    staleTime: Infinity,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+  });
+  const groups: TeamGroup[] = groupSortQuery.data?.groups ?? EMPTY_GROUPS;
+  const memberships: TeamGroupMembership[] =
+    groupSortQuery.data?.memberships ?? EMPTY_MEMBERSHIPS;
 
   // カテゴリ一覧（性別は常に先頭に表示）
   const categories = useMemo(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -27,15 +27,10 @@ import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_PRACTICE_COLOR } from "@apps/shared/utils/calendarColorResolver";
-import type {
-  Practice,
-  PracticeLogWithTimes,
-  PracticeTime,
-  PracticeTag,
-  TimeEntry,
-} from "@apps/shared/types";
+import type { PracticeLogWithTimes, PracticeTag, TimeEntry } from "@apps/shared/types";
+import { usePracticeDetailQuery } from "@/hooks/queries/dayDetailQueries";
 import { AttendanceButton } from "../AttendanceSection";
-import type { PracticeDetailsProps, FormattedPracticeLog } from "../../types";
+import type { PracticeDetailsProps } from "../../types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 // 色の明度に基づいてテキスト色を決定する関数
@@ -46,10 +41,6 @@ const getTextColor = (backgroundColor: string) => {
   const b = parseInt(hex.substr(4, 2), 16);
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
   return brightness > 128 ? "#000000" : "#FFFFFF";
-};
-
-type PracticeWithFormattedLogs = Omit<Practice, "practiceLogs" | "practice_logs"> & {
-  practiceLogs: FormattedPracticeLog[];
 };
 
 export function PracticeDetails({
@@ -87,142 +78,52 @@ export function PracticeDetails({
     // DB の name_jp 値（ベストタイム由来）がそのまま来た場合はそのまま返す
     return styleValue;
   };
-  const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null);
   const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
+  // 練習詳細 (開くたびに取り直す。同じ練習を開き直したときは前回の内容を先に表示する)
+  const {
+    data: practiceDetail,
+    error,
+    refetch,
+  } = usePracticeDetailQuery(supabase, {
+    practiceId,
+    isTeamPractice,
+    userId: userId ?? null,
+  });
+  const practice = practiceDetail?.practice ?? null;
+
+  // 練習ログの更新 (カレンダーの再取得で updateKey が変わる) に追随して取り直す
+  const lastUpdateKeyRef = useRef(practiceLogUpdateKey);
   useEffect(() => {
+    if (lastUpdateKeyRef.current === practiceLogUpdateKey) return;
+    lastUpdateKeyRef.current = practiceLogUpdateKey;
+    void refetch();
+  }, [practiceLogUpdateKey, refetch]);
+
+  // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）。
+  // 署名付きURLは期限があるのでクエリデータには入れず、表示のたびに解決する
+  const imagePathsKey = practiceDetail ? JSON.stringify(practiceDetail.imagePaths) : null;
+  useEffect(() => {
+    if (imagePathsKey === null) return;
     let cancelled = false;
-    const timeoutId = setTimeout(() => {
+    const imagePaths = JSON.parse(imagePathsKey) as string[];
+    resolveGalleryImages("practice-images", imagePaths).then((images: GalleryImage[]) => {
       if (cancelled) return;
-      setLoading(false);
-      setError(new Error(tDash("practice.loadTimeout")));
-    }, 15000);
-
-    const loadPractice = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("practices")
-          .select(
-            `
-            *,
-            practice_logs (
-              *,
-              practice_times (*),
-              practice_log_tags (
-                practice_tag:practice_tags (*)
-              )
-            )
-          `,
-          )
-          .eq("id", practiceId)
-          .single();
-
-        if (error) throw error;
-        if (!data) throw new Error("Practice data not found");
-
-        // データ整形
-        type PracticeLogFromDB = {
-          id: string;
-          user_id: string;
-          practice_id: string;
-          style: string;
-          swim_category?: "Swim" | "Pull" | "Kick";
-          rep_count: number;
-          set_count: number;
-          distance: number;
-          circle: number | null;
-          note: string | null;
-          video_path?: string | null;
-          video_thumbnail_path?: string | null;
-          practice_log_tags?: Array<{ practice_tag: PracticeTag }>;
-          practice_times?: PracticeTime[];
-          created_at?: string;
-          updated_at?: string;
-        };
-        type PracticeFromDB = Practice & {
-          practice_logs?: PracticeLogFromDB[];
-          image_paths?: string[];
-        };
-        const practiceData = data as PracticeFromDB;
-        // チーム練習の場合、ダッシュボードでは自分のログのみ表示
-        const filteredLogs =
-          isTeamPractice && userId
-            ? (practiceData.practice_logs || []).filter(
-                (log: PracticeLogFromDB) => log.user_id === userId,
-              )
-            : practiceData.practice_logs || [];
-        const formattedPractice: PracticeWithFormattedLogs = {
-          ...practiceData,
-          practiceLogs: filteredLogs.map(
-            (log: PracticeLogFromDB): FormattedPracticeLog => ({
-              id: log.id,
-              practiceId: log.practice_id,
-              style: log.style,
-              swim_category: log.swim_category,
-              repCount: log.rep_count,
-              setCount: log.set_count,
-              distance: log.distance,
-              circle: log.circle,
-              note: log.note,
-              video_path: log.video_path,
-              video_thumbnail_path: log.video_thumbnail_path,
-              tags:
-                log.practice_log_tags
-                  ?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag)
-                  .filter((tag): tag is PracticeTag => tag != null) || [],
-              times:
-                log.practice_times?.map((time: PracticeTime) => ({
-                  id: time.id,
-                  time: time.time,
-                  repNumber: time.rep_number,
-                  setNumber: time.set_number,
-                })) || [],
-              created_at: log.created_at,
-              updated_at: log.updated_at,
-            }),
-          ),
-        };
-
-        if (cancelled) return;
-        // 本文を先に表示し、画像の署名URL解決はブロックしない（fire-and-forget）
-        setPractice(formattedPractice);
-        clearTimeout(timeoutId);
-
-        const imagePaths = practiceData.image_paths || [];
-        resolveGalleryImages("practice-images", imagePaths).then((images: GalleryImage[]) => {
-          if (cancelled) return;
-          setPracticeImages(images);
-        });
-      } catch (err) {
-        clearTimeout(timeoutId);
-        console.error("練習詳細の取得エラー:", err);
-        if (!cancelled) setError(err as Error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    loadPractice();
-
+      setPracticeImages(images);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
     };
-  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, userId, tDash]);
+  }, [imagePathsKey]);
 
-  if (loading) {
-    return <div className="mt-3 text-sm text-gray-500">{t("details.loading")}</div>;
-  }
-  if (error) {
-    return <div className="mt-3 text-sm text-red-600">{t("details.error")}</div>;
-  }
+  // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)
   if (!practice) {
-    return null;
+    if (error) {
+      return <div className="mt-3 text-sm text-red-600">{t("details.error")}</div>;
+    }
+    return <div className="mt-3 text-sm text-gray-500">{t("details.loading")}</div>;
   }
 
   const practiceLogs = practice.practiceLogs || [];

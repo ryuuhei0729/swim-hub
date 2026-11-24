@@ -6,11 +6,13 @@ import { useTranslations } from "next-intl";
 import { AuthForm } from "@/components/auth";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/contexts";
-import { useRouter, Link } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 
 export default function SignupEmailPage() {
   const { user, session, loading } = useAuth();
-  const router = useRouter();
+  // ログイン後はページを読み直す (前のユーザーの画面のキャッシュを使い回さない)
+  const router = useFullPageRouter();
   const tSignin = useTranslations("auth.signin");
   const tSignup = useTranslations("auth.signup");
   const hasRedirectedRef = useRef(false);

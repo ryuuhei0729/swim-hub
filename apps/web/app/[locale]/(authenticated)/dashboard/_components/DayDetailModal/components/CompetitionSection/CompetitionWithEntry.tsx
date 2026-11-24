@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   PencilIcon,
@@ -10,7 +10,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
-import { EntryAPI } from "@swim-hub/shared/api/entries";
+import {
+  DayDetailAuthRequiredError,
+  useCompetitionEntryQuery,
+} from "@/hooks/queries/dayDetailQueries";
 import { useRouter } from "@/i18n/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
@@ -54,9 +57,43 @@ export function CompetitionWithEntry({
   // 未カスタマイズ(デフォルト色のまま)なら旧 Tailwind クラスをそのまま使い、
   // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
   const isDefaultColor = wrapperColor === DEFAULT_COMPETITION_COLOR;
-  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([]);
-  const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
+  // エントリー状況を「編集」押下時に取り直したときの値 (クエリで取れなかったときの補完)
+  const [fetchedEntryStatus, setFetchedEntryStatus] = useState<
+    "before" | "open" | "closed" | null
+  >(null);
+
+  // 大会のエントリー状況・画像・自分のエントリー (開くたびに取り直す。同じ大会を
+  // 開き直したときは前回の内容を先に表示する)
+  const {
+    data: entryData,
+    error: entryError,
+    refetch,
+  } = useCompetitionEntryQuery(supabase, competitionId);
+
+  // エントリーの削除 (deletedEntryIds の件数が変わる) に追随して取り直す
+  const deletedCount = deletedEntryIds?.length;
+  const lastDeletedCountRef = useRef(deletedCount);
+  useEffect(() => {
+    if (lastDeletedCountRef.current === deletedCount) return;
+    lastDeletedCountRef.current = deletedCount;
+    void refetch();
+  }, [deletedCount, refetch]);
+
+  // 未ログイン (セッション切れ) ならログイン画面へ
+  const authRequired = entryError instanceof DayDetailAuthRequiredError;
+  useEffect(() => {
+    if (authRequired) router.replace("/login");
+  }, [authRequired, router]);
+  const authError = authRequired ? t("entry.authRequired") : null;
+
+  // データが無いときだけ読み込み中にする (裏での取り直し中は表示中の内容を隠さない)
+  const loading = !entryData && !entryError;
+  const entryStatus = entryData?.entryStatus ?? fetchedEntryStatus;
+
+  // 取得したエントリーが無いときは、カレンダーのアイテムが持っているエントリー情報を表示する
+  const entries = useMemo<CompetitionEntryDisplay[]>(() => {
+    if (entryData && entryData.entries.length > 0) return entryData.entries;
     if (styleId && styleName) {
       return [
         {
@@ -69,91 +106,23 @@ export function CompetitionWithEntry({
       ];
     }
     return [];
-  });
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [entryStatus, setEntryStatus] = useState<"before" | "open" | "closed" | null>(null);
+  }, [entryData, styleId, styleName, _entryId, entryTime, note]);
 
+  // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）。
+  // 署名付きURLは期限があるのでクエリデータには入れず、表示のたびに解決する
+  const imagePathsKey = entryData ? JSON.stringify(entryData.imagePaths) : null;
   useEffect(() => {
+    if (imagePathsKey === null) return;
     let cancelled = false;
-    const fetchEntryData = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (!user) {
-          setLoading(false);
-          setAuthError(t("entry.authRequired"));
-          router.replace("/login");
-          return;
-        }
-
-        // competitionのentry_statusとimage_pathsを取得
-        const { data: competitionData, error: competitionError } = await supabase
-          .from("competitions")
-          .select("entry_status, image_paths")
-          .eq("id", competitionId)
-          .single();
-
-        if (cancelled) return;
-        if (!competitionError && competitionData) {
-          setEntryStatus(competitionData.entry_status || "before");
-
-          // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
-          const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || [];
-          resolveGalleryImages("competition-images", imagePaths).then(
-            (images: GalleryImage[]) => {
-              if (cancelled) return;
-              setCompetitionImages(images);
-            },
-          );
-        }
-
-        // EntryAPIを使用してエントリーを取得
-        const allEntries = await entryApi.getEntriesByCompetition(competitionId);
-
-        // 現在のユーザーのエントリーのみをフィルタリング
-        const userEntries = allEntries.filter((entry) => entry.user_id === user.id);
-
-        if (cancelled) return;
-        if (userEntries && userEntries.length > 0) {
-          const mapped = userEntries.map((entry) => {
-            const style = entry.style;
-            return {
-              id: entry.id,
-              styleId: entry.style_id,
-              styleName: style?.name_jp || "",
-              entryTime: entry.entry_time,
-              note: entry.note,
-            } as CompetitionEntryDisplay;
-          });
-          setEntries(mapped);
-        } else if (entries.length === 0 && styleId && styleName) {
-          setEntries([
-            {
-              id: _entryId,
-              styleId,
-              styleName,
-              entryTime,
-              note,
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error("エントリーデータの取得エラー:", err);
-        if (!cancelled) setCompetitionImages([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    fetchEntryData();
+    const imagePaths = JSON.parse(imagePathsKey) as string[];
+    resolveGalleryImages("competition-images", imagePaths).then((images: GalleryImage[]) => {
+      if (cancelled) return;
+      setCompetitionImages(images);
+    });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId, entryApi, deletedEntryIds?.length]);
+  }, [imagePathsKey]);
 
   const entryInfoList = entries.map((entry) => ({
     styleId: entry.styleId,
@@ -191,7 +160,7 @@ export function CompetitionWithEntry({
 
           if (!competitionError && competitionData) {
             const status = competitionData.entry_status || "before";
-            setEntryStatus(status);
+            setFetchedEntryStatus(status);
 
             // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
             if (status !== "open") {

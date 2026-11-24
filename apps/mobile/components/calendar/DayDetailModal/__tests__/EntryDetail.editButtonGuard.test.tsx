@@ -15,7 +15,8 @@
  * 編集ボタン (見出し行) のみのため、getAllByTestId で件数を比較して切り分ける。
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
@@ -51,7 +52,7 @@ function renderEntryDetail(
         Promise.resolve({ data: [], error: null }).then(resolve),
     })),
   };
-  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase }));
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "user-1" }, supabase }));
 
   return render(
     <EntryDetail

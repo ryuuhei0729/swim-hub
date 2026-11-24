@@ -28,7 +28,7 @@
 
 import React from "react";
 import { act } from "@testing-library/react";
-import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
+import { renderWithI18n as render, screen, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { usePracticeStore } from "@/stores/practice/practiceStore";

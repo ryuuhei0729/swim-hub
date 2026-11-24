@@ -8,7 +8,8 @@ import { OAuthButtons } from "@/components/auth";
 import { LastUsedBadge } from "@/components/auth/LastUsedBadge";
 import { getLastLoginMethod, type LoginMethod } from "@/lib/lastLoginMethod";
 import { useAuth } from "@/contexts";
-import { useRouter, Link } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
 import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 
@@ -77,7 +78,8 @@ export default function LoginPage() {
 function LoginPageContent() {
   const { user, session, loading, signInWithOAuth } = useAuth();
   const isAuthenticated = !!user && !!session;
-  const router = useRouter();
+  // ログイン後はページを読み直す (前のユーザーの画面のキャッシュを使い回さない)
+  const router = useFullPageRouter();
   const searchParams = useSearchParams();
   const hasRedirectedRef = useRef(false);
   const rawError = searchParams.get("error");

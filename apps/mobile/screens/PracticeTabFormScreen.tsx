@@ -16,6 +16,7 @@ import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidin
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -1093,7 +1094,7 @@ export const PracticeTabFormScreen: React.FC = () => {
       }
 
       // クエリ無効化
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient, { practiceId: savedPracticeId });
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });

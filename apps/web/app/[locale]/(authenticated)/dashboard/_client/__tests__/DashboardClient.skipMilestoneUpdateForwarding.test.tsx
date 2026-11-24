@@ -155,8 +155,7 @@ describe("DashboardClient — createPracticeLog/updatePracticeLog ラッパー�
     render(
       <QueryClientProvider client={queryClient}>
         <DashboardClient
-          initialCalendarItems={[]}
-          initialMonthlySummary={{} as never}
+          initialCalendarMonth="2026-01"
           teams={[]}
           styles={[]}
           tags={[]}

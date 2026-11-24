@@ -3,52 +3,41 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
-import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { TeamEvent } from "@swim-hub/shared/types";
-import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
-import { fetchTeamMembers, TeamMember } from "@swim-hub/shared/utils/team";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
+import { useEventAttendanceQuery } from "@/hooks/queries/teamAttendanceQueries";
 
+/**
+ * 出欠状況モーダル (1 イベントの全員の回答) のデータ。
+ *
+ * 取得は React Query (`teamKeys.attendanceByPractice/Competition` + 名簿)。
+ * 開くたびに再取得するが、同じイベントを前回開いたときの内容があれば先に表示する。
+ */
 export const useAttendanceStatus = (
   teamId: string,
   supabase: SupabaseClient,
-  attendancesAPI: TeamAttendancesAPI,
+  isOpen: boolean,
 ) => {
   const t = useTranslations("teams");
-  const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [event, setEvent] = useState<TeamEvent | null>(null);
 
-  const loadAttendanceData = useCallback(
-    async (event: TeamEvent) => {
-      try {
-        setError(null);
-        setLoading(true);
-
-        const attendances =
-          event.type === "practice"
-            ? await attendancesAPI.listByPractice(event.id)
-            : await attendancesAPI.listByCompetition(event.id);
-        setAttendanceData(attendances);
-
-        const members = await fetchTeamMembers(supabase, teamId);
-        setTeamMembers(members);
-      } catch (err) {
-        console.error("出欠情報の取得に失敗:", err);
-        setError(toUserFacingMessage(err, t("attendanceStatusHook.loadError")));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [teamId, supabase, attendancesAPI, t],
+  const { attendanceData, teamMembers, loading, error } = useEventAttendanceQuery(
+    supabase,
+    teamId,
+    event,
+    isOpen,
   );
+
+  // 表示するイベントを切り替える (取得は useEventAttendanceQuery がキーの変化で行う)
+  const loadAttendanceData = useCallback(async (nextEvent: TeamEvent) => {
+    setEvent(nextEvent);
+  }, []);
 
   return {
     attendanceData,
     teamMembers,
     loading,
-    error,
+    error: error ? toUserFacingMessage(error, t("attendanceStatusHook.loadError")) : null,
     loadAttendanceData,
   };
 };

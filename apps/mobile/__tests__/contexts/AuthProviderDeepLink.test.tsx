@@ -185,6 +185,8 @@ vi.mock("@/lib/revenucat", () => ({
 
 vi.mock("@/providers/QueryProvider", () => ({
   getQueryClient: mocks.getQueryClient,
+  clearQueryCache: () => mocks.getQueryClient().clear(),
+  bindQueryCacheOwner: vi.fn(),
 }));
 
 // ---- インポート（モック設定後に行う）------------------------------------------

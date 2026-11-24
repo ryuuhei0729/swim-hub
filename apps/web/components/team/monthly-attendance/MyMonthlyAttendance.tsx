@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts";
 import { useTranslations } from "next-intl";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
-import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { MonthList } from "./components/MonthList";
 import { RecentAttendance } from "./components/RecentAttendance";
@@ -15,16 +15,17 @@ import { useRecentAttendance } from "./hooks/useRecentAttendance";
 import { useMonthDetail } from "./hooks/useMonthDetail";
 import { useAttendanceEdit } from "./hooks/useAttendanceEdit";
 import { useAttendanceStatus } from "./hooks/useAttendanceStatus";
+import { invalidateTeamAttendanceAnswerQueries } from "@/hooks/queries/teamDetailKeys";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
 }
 
 export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
+  const queryClient = useQueryClient();
   const t = useTranslations("teams");
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
-  const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
 
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,7 +41,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     error: monthListError,
     loadMonthList,
     updateMonthStatus,
-  } = useMonthList(teamId, supabase, attendanceAPI);
+  } = useMonthList(teamId, supabase, attendanceAPI, user?.id ?? null);
 
   const {
     events: recentEvents,
@@ -79,11 +80,11 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     teamMembers,
     loading: loadingAttendance,
     loadAttendanceData,
-  } = useAttendanceStatus(teamId, supabase, attendancesAPI);
+  } = useAttendanceStatus(teamId, supabase, isAttendanceModalOpen);
 
+  // 月別サマリは useMonthList (React Query) がマウント時に取得する。
+  // 直近の出欠は回答フォームの初期値になるので、キャッシュせず毎回最新を読み込む
   useEffect(() => {
-    loadMonthList();
-
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -96,7 +97,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     return () => {
       abortController.abort();
     };
-  }, [loadMonthList, loadRecentAttendances]);
+  }, [loadRecentAttendances]);
 
   useEffect(() => {
     if (selectedMonth && isModalOpen) {
@@ -123,6 +124,8 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
   const handleSaveAll = async () => {
     await saveAll(monthEvents, monthAttendances, async () => {
+      // 出欠状況モーダル (全員の回答) のキャッシュに保存前の回答が残らないよう落とす
+      await invalidateTeamAttendanceAnswerQueries(queryClient, monthEvents);
       if (selectedMonth) {
         await loadMonthAttendances(selectedMonth.year, selectedMonth.month);
       }
@@ -141,6 +144,19 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     setIsAttendanceModalOpen(false);
     setSelectedEventForAttendance(null);
   };
+
+  // 直近の出欠を 1 件保存したら、そのイベントの出欠状況モーダルのキャッシュも落とす
+  // (月別サマリは useRecentAttendance が updateMonthStatus で更新する)
+  const handleSaveRecentEventAndInvalidate = useCallback(
+    async (eventId: string) => {
+      await handleSaveRecentEvent(eventId);
+      const event = recentEvents.find((e) => e.id === eventId);
+      if (event) {
+        await invalidateTeamAttendanceAnswerQueries(queryClient, [event]);
+      }
+    },
+    [handleSaveRecentEvent, recentEvents, queryClient],
+  );
 
   const getMonthLabel = (year: number, month: number) => {
     return t("attendance.monthLabel", { year, month });
@@ -180,7 +196,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         loading={loadingRecent}
         onStatusChange={handleRecentStatusChange}
         onNoteChange={handleRecentNoteChange}
-        onSave={handleSaveRecentEvent}
+        onSave={handleSaveRecentEventAndInvalidate}
         attendances={recentAttendances}
       />
 
