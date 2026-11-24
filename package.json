@@ -9,6 +9,8 @@
     "dev:web": "turbo dev --filter=@swim-hub/web",
     "dev:lan": "turbo dev:lan --filter=@swim-hub/web",
     "dev:https": "pnpm --filter @swim-hub/web dev:https",
+    "admin": "pnpm --filter @swim-hub/admin dev",
+    "admin:local": "pnpm --filter @swim-hub/admin dev:local",
     "dev:mobile": "pnpm --filter @swim-hub/mobile start:local",
     "dev:mobile:clear": "pnpm --filter @swim-hub/mobile start:clear",
     "dev:mobile:local": "pnpm --filter @swim-hub/mobile start:local",

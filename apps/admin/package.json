@@ -1,0 +1,38 @@
+{
+  "name": "@swim-hub/admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SwimHub 運営者用コンソール (ローカル専用・読み取り専用。デプロイしない)",
+  "scripts": {
+    "dev": "dotenvx run -f ../web/.env.production -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
+    "dev:local": "dotenvx run -f ../web/.env.local -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
+    "build": "next build",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.1",
+    "@supabase/supabase-js": "^2.97.0",
+    "@swim-hub/shared": "*",
+    "@tailwindcss/postcss": "^4.1.17",
+    "date-fns": "^4.1.0",
+    "next": "16.4.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@types/node": "^25",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.37.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5",
+    "typescript-eslint": "^8.34.0"
+  }
+}
