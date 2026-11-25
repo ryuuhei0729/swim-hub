@@ -60,6 +60,21 @@ AAPT2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/
 PKG=$([ -n "$AAPT2" ] && "$AAPT2" dump packagename app.apk 2>/dev/null | tr -d '\r')
 if [ -n "$PKG" ] && [ "$PKG" != "$APP_ID" ]; then echo "Package read from the APK (differs from app_id)"; APP_ID=$PKG; fi
 export APP_ID
+# Navigation mode (personas.json device.nav), set before the app starts so it gets the right insets.
+# Empty = the system image's default. navigation_mode: 0 = 3-button, 2 = gesture
+case "${NAV:-}" in
+  "") NAV_PKG="" ;;
+  3button) NAV_PKG=com.android.internal.systemui.navbar.threebutton; NAV_MODE=0 ;;
+  gesture) NAV_PKG=com.android.internal.systemui.navbar.gestural; NAV_MODE=2 ;;
+  *) echo "::error::Unknown nav mode: $NAV (3button | gesture)"; exit 1 ;;
+esac
+if [ -n "$NAV_PKG" ]; then
+  adb shell cmd overlay enable-exclusive --category "$NAV_PKG"
+  nav_mode() { adb shell settings get secure navigation_mode | tr -d '\r'; }
+  for i in $(seq 1 10); do [ "$(nav_mode)" = "$NAV_MODE" ] && break; sleep 2; done
+  [ "$(nav_mode)" = "$NAV_MODE" ] || { echo "::error::Navigation mode $NAV not applied (navigation_mode=$(nav_mode))"; exit 1; }
+  echo "Navigation mode: $NAV"
+fi
 adb install -r -g app.apk || adb install -r app.apk
 adb shell settings put system font_scale "${FONT_SCALE:-1.0}"
 [ "${THEME:-light}" = dark ] && adb shell cmd uimode night yes
@@ -88,7 +103,7 @@ if [ "${RECORD_VIDEO:-false}" = true ]; then
 fi
 # 5. The agent: only the listed tools, nothing else
 LOGIN="Log in with the shared test account (never change its e-mail, password or plan, never delete it): e-mail ${TEST_LOGIN_EMAIL:?TEST_LOGIN_EMAIL missing} password ${TEST_LOGIN_PASSWORD:?TEST_LOGIN_PASSWORD missing}."
-claude -p "Read $BRIEF and personas.json, then do the mission until the final report. PERSONA=$PERSONA PLATFORM=android APP_ID=$APP_ID. Device: ${DEVICE}, font scale x${FONT_SCALE:-1.0}, theme ${THEME:-light}, language $LOCALE. Report anything that does not fit this screen (cut text, off-screen buttons, broken layout). $LOGIN" \
+claude -p "Read $BRIEF and personas.json, then do the mission until the final report. PERSONA=$PERSONA PLATFORM=android APP_ID=$APP_ID. Device: ${DEVICE}, font scale x${FONT_SCALE:-1.0}, theme ${THEME:-light}, language $LOCALE, navigation ${NAV:-default}. Report anything that does not fit this screen (cut text, off-screen buttons, broken layout, content under the status bar or the navigation bar). $LOGIN" \
   --model "${MODEL:-sonnet}" --max-turns 400 --output-format json \
   --allowedTools "Bash(adb:*),Bash(python3 scripts/android/screen.py:*),Bash(python3 scripts/android/type.py:*),Bash(sleep:*),Bash(ls:*),Bash(mkdir:*),Read,Edit(./results/**)" \
   --disallowedTools "Read(//proc/**),Read(~/.claude/**),Read(~/.config/**),Read(~/.ssh/**)" \

@@ -248,6 +248,7 @@ jobs:
           PERSONA: ${{ matrix.persona }}
           DEVICE: ${{ matrix.device }}
           FONT_SCALE: ${{ matrix.font_scale }}
+          NAV: ${{ matrix.nav }}
           THEME: ${{ matrix.theme }}
           LOCALE: ${{ matrix.locale }}
           GEO: ${{ matrix.geo }}

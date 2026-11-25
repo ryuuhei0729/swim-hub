@@ -13,7 +13,7 @@ iOS シミュレーターを用意して、Claude Code のエージェントに�
 | ファイル | 内容 |
 |---|---|
 | `.github/workflows/agent-testers.yml` | 手動実行のワークフロー（ビルド → ペルソナごとのジョブ → 暗号化してアップロード） |
-| `personas.json` | ペルソナ 10 人（Android 5 / iOS 5）。端末・OS・文字サイズ・言語・目的 |
+| `personas.json` | ペルソナ 12 人（Android 7 / iOS 5）。端末・OS・文字サイズ・言語・Android のナビゲーションモード (`device.nav`: `3button` / `gesture`、省略で端末イメージの既定)・目的 |
 | `AGENT_BRIEF.md` | エージェントへの指示（ログイン手順、禁止事項、確認項目、レポート形式） |
 | `scripts/build/` | pnpm モノレポ + Expo prebuild でのビルド（swim-hub 用に書き直し） |
 | `scripts/android/`, `scripts/ios/` | 画面を見る・タップする・入力するツールと、エージェントの起動 |
@@ -63,6 +63,8 @@ bash tools/agent-testers/collect.sh <run id>
 | kenta | Nexus 5 / Android 11 | フォント 130%・ダーク | 小さい画面、目標設定 |
 | mei | Pixel Tablet / Android 14 | 標準 | タブレットでのチーム画面 |
 | daniel | Pixel 6 / Android 13 | 英語・115% | 英語の翻訳漏れ |
+| riku | Pixel 7 / Android 15 | 3 ボタンナビゲーション | Edge-to-Edge（バーとの重なり） |
+| aoi | Pixel 7 / Android 15 | ジェスチャーナビゲーション | Edge-to-Edge（バーとの重なり） |
 | yui | iPhone SE (3rd) | 文字 XXXL | 小さい画面 × 大きい文字 |
 | tomoko | iPhone 16 Pro Max | アクセシビリティ最大 | 最大の文字サイズでの崩れ |
 | sato | iPad Air 11" | ダーク | iPad での一括登録 |

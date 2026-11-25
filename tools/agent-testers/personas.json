@@ -45,6 +45,24 @@
     "device": {"name": "Pixel 6, Android 13", "profile": "pixel_6", "android_api": 33, "font_scale": 1.15, "theme": "light"}
   },
   {
+    "id": "riku",
+    "platform": "android",
+    "profile": "高校1年の競泳選手、16歳。親のお下がりの Android を、昔からの 3 ボタンナビゲーション（戻る・ホーム・履歴）のまま使っている。",
+    "goal": "アプリの全タブと、練習記録・大会記録の追加画面（キーボードを出した状態も）、ボトムシートやモーダルを開き、画面の上端と下端の要素がステータスバーや Android のナビゲーションバーに隠れていないか確かめる。",
+    "locale": "ja-JP",
+    "geo": [35.8617, 139.6455],
+    "device": {"name": "Pixel 7, Android 15, 3-button navigation", "profile": "pixel_7", "android_api": 35, "font_scale": 1.0, "theme": "light", "nav": "3button"}
+  },
+  {
+    "id": "aoi",
+    "platform": "android",
+    "profile": "大学の水泳部員、20歳。Android のジェスチャーナビゲーション（画面下の横線をスワイプ）に慣れていて、戻るのも端からのスワイプで済ませる。",
+    "goal": "アプリの全タブと、練習記録・大会記録の追加画面（キーボードを出した状態も）、ボトムシートやモーダルを開き、画面の上端と下端の要素がステータスバーや Android のナビゲーションバーに隠れていないか確かめる。",
+    "locale": "ja-JP",
+    "geo": [34.3853, 132.4553],
+    "device": {"name": "Pixel 7, Android 15, gesture navigation", "profile": "pixel_7", "android_api": 35, "font_scale": 1.0, "theme": "light", "nav": "gesture"}
+  },
+  {
     "id": "yui",
     "platform": "ios",
     "profile": "中学1年の競泳選手、13歳。親のお下がりの iPhone SE で、文字を大きめにしている。",

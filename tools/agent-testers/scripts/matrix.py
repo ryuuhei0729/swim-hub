@@ -28,6 +28,7 @@ for pid in wanted:
                     "text_size": d.get("text_size", "large")})
     else:
         row.update({"profile": d.get("profile", "pixel_6"), "api": d.get("android_api", 34),
-                    "font_scale": str(d.get("font_scale", 1.0)), "device": d.get("name", "Pixel 6, Android 14")})
+                    "font_scale": str(d.get("font_scale", 1.0)), "device": d.get("name", "Pixel 6, Android 14"),
+                    "nav": d.get("nav", "")})
     rows.append(row)
 print(f"{platform}=" + json.dumps(rows, ensure_ascii=False))
