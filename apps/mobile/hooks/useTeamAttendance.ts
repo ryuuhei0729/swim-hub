@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { addMonths, endOfMonth, format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { useToast } from "@/providers/ToastProvider";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { AttendanceStatus, AttendanceStatusType, TeamEvent } from "@swim-hub/shared/types";
@@ -43,7 +44,7 @@ const EDIT_MARK_REGEX = /\s*\(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}(?:締切後)?編�
 export const teamAttendanceKeys = {
   list: (teamId: string, userId: string | undefined) =>
     ["teamAttendance", "list", teamId, userId ?? ""] as const,
-  members: (teamId: string) => ["teamAttendance", "members", teamId] as const,
+  members: teamDetailKeys.roster,
 };
 
 type ListData = AttendanceListItem[];
@@ -125,6 +126,12 @@ function invalidateAfterAnswer(queryClient: QueryClient, event: TeamEvent) {
       event.type === "practice"
         ? teamKeys.attendanceByPractice(event.id)
         : teamKeys.attendanceByCompetition(event.id),
+  });
+  // 出欠の閲覧モーダル (AttendanceGroupModal) は別のキーで同じイベントの出欠を持っている。
+  // 落としておかないと、回答を変えた直後に開いたとき変更前の回答が一瞬表示される。
+  // (resetQueries: 手元の内容を捨て、表示中なら取り直す)
+  void queryClient.resetQueries({
+    queryKey: teamDetailKeys.eventAttendance(event.type, event.id),
   });
 }
 

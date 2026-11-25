@@ -362,9 +362,10 @@ export default function CalendarView({
           date={selectedDate}
           entries={getDateEntries(selectedDate)}
           onEditItem={onEditItem}
-          onDeleteItem={(itemId, itemType) => {
-            onDeleteItem?.(itemId, itemType);
-            refetch();
+          onDeleteItem={async (itemId, itemType) => {
+            // 削除が終わってから取り直す (削除前の内容を取り直してしまわないように)
+            await onDeleteItem?.(itemId, itemType);
+            await refetch();
           }}
           onAddItem={(date, type) => {
             setShowDayDetail(false);

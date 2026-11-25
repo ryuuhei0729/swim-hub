@@ -12,7 +12,13 @@ import {
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest } from "@/utils/formatters";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntryAPI } from "@apps/shared/api/entries";
+import {
+  TEAM_VIEW_QUERY_OPTIONS,
+  invalidateTeamCompetitionQueries,
+  teamDetailKeys,
+} from "@/hooks/queries/teamDetailKeys";
 import { RecordAPI } from "@apps/shared/api/records";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRouter } from "@/i18n/navigation";
@@ -134,8 +140,9 @@ export default function TeamCompetitionEntryModal({
   const tCommon = useTranslations("common");
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const recordApi = useMemo(() => new RecordAPI(supabase), [supabase]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // ステータス変更・削除の失敗 (以前と同じく一覧の代わりに表示する)
+  const [actionError, setActionError] = useState<string | null>(null);
   type EntryRow = {
     id: string;
     user_id: string;
@@ -165,16 +172,15 @@ export default function TeamCompetitionEntryModal({
     isAdmin: boolean;
     totalEntries: number;
   };
-  const [data, setData] = useState<EntryByStyleData | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [pendingDeleteEntry, setPendingDeleteEntry] = useState<EntryRow | null>(null);
   const [deletingEntry, setDeletingEntry] = useState(false);
 
-  const loadEntries = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
+  // エントリー一覧。開くたびに再取得するが (staleTime 0)、前回開いたときの内容があれば先に表示する。
+  // 閲覧者のロール (isAdmin) を含むので userId もキーに入れる
+  const entriesQuery = useQuery({
+    queryKey: teamDetailKeys.competitionEntries(teamId, competitionId, user?.id ?? null),
+    queryFn: async (): Promise<EntryByStyleData> => {
       // 1) 競技会情報取得（team_id + id で直接絞り込み。個人スコープの getCompetitions() だと
       // 自分以外の管理者が作成したチーム大会を取得できないため使わない）
       const competition = await fetchTeamCompetition(supabase, competitionId, teamId);
@@ -232,10 +238,11 @@ export default function TeamCompetitionEntryModal({
         {} as Record<number, { style: EntryRow["styles"]; entries: EntryRow[] }>,
       );
 
-      setData({
+      return {
         competition: {
           team_id: competition.team_id || "",
-          title: competition.title || competitionTitle,
+          // 表示上のタイトルは props の competitionTitle を使う (キャッシュの中身を props に依存させない)
+          title: competition.title || "",
           date: competition.date,
           place: competition.place,
           entry_status: isValidEntryStatus(competition.entry_status)
@@ -245,20 +252,29 @@ export default function TeamCompetitionEntryModal({
         isAdmin: membership?.role === "admin",
         entriesByStyle,
         totalEntries: entries.length,
-      });
-    } catch (err) {
-      console.error("エントリー情報の取得に失敗:", err);
-      setError(toUserFacingMessage(err, t("competitionEntryModal.fetchFailed")));
-    } finally {
-      setLoading(false);
-    }
-  }, [competitionId, competitionTitle, entryApi, supabase, t, teamId]);
-
+      };
+    },
+    enabled: isOpen,
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  });
+  const data = entriesQuery.data ?? null;
+  // 読み込み表示 / 取得エラーは表示できる内容が無いときだけ出す
+  const loading = !data && entriesQuery.isPending;
+  const fetchError = entriesQuery.error;
+  const error =
+    actionError ??
+    (!data && fetchError
+      ? toUserFacingMessage(fetchError, t("competitionEntryModal.fetchFailed"))
+      : null);
   useEffect(() => {
-    if (isOpen) {
-      loadEntries();
-    }
-  }, [isOpen, competitionId, loadEntries]);
+    if (fetchError) console.error("エントリー情報の取得に失敗:", fetchError);
+  }, [fetchError]);
+
+  // 保存・削除の後に再取得する。カード一覧 (大会タブ) のエントリー数・ステータスも変わるので一緒に落とす
+  const loadEntries = useCallback(async () => {
+    setActionError(null);
+    await invalidateTeamCompetitionQueries(queryClient, teamId, competitionId);
+  }, [queryClient, teamId, competitionId]);
 
   const handleStatusChange = async (newStatus: "before" | "open" | "closed") => {
     // 現在のステータスと同じ場合は何もしない
@@ -292,7 +308,7 @@ export default function TeamCompetitionEntryModal({
       await loadEntries(); // 再読み込み
     } catch (err) {
       console.error("ステータス変更に失敗:", err);
-      setError(toUserFacingMessage(err, t("competitionEntryModal.statusChangeFailed")));
+      setActionError(toUserFacingMessage(err, t("competitionEntryModal.statusChangeFailed")));
     } finally {
       setUpdatingStatus(false);
     }
@@ -319,7 +335,7 @@ export default function TeamCompetitionEntryModal({
       await loadEntries();
     } catch (err) {
       console.error("エントリーの削除に失敗:", err);
-      setError(toUserFacingMessage(err, t("competitionEntryModal.deleteFailed")));
+      setActionError(toUserFacingMessage(err, t("competitionEntryModal.deleteFailed")));
       setPendingDeleteEntry(null);
     } finally {
       setDeletingEntry(false);

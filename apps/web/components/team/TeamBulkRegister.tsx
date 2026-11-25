@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useBulkRegister } from "@/hooks/useBulkRegister";
@@ -9,6 +9,11 @@ import { FileUpload } from "@/components/bulk-register/FileUpload";
 import { DataPreview } from "@/components/bulk-register/DataPreview";
 import ManualEntryForm from "@/components/bulk-register/ManualEntryForm";
 import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
+import {
+  resetTeamQueriesAfterExternalSave,
+  teamDetailKeys,
+} from "@/hooks/queries/teamDetailKeys";
 
 export interface TeamBulkRegisterProps {
   teamId: string;
@@ -33,6 +38,23 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     setLoading,
     setError,
   } = useBulkRegister(supabase, teamId);
+  const queryClient = useOptionalQueryClient();
+
+  // 一括登録 (ファイル取込 / 手動入力) は練習・大会を作成する。手動入力は登録の完了を
+  // この画面に伝えないため、このタブを離れるときに練習・大会一覧と出欠の月別サマリの
+  // キャッシュを捨てる。捨てないと、練習・大会タブへ移った直後に登録前の一覧が一瞬出る
+  // (このタブを開いただけで何も登録しなかった場合も捨てるが、次に開く一覧が
+  // 読み込み表示から始まるだけで鮮度は変わらない)
+  useEffect(() => {
+    return () => {
+      if (!queryClient) return;
+      void resetTeamQueriesAfterExternalSave(queryClient, [
+        teamDetailKeys.practicePages(teamId),
+        teamDetailKeys.competitionPages(teamId),
+        teamDetailKeys.myMonthListAll(teamId),
+      ]);
+    };
+  }, [queryClient, teamId]);
 
   if (!isAdmin) {
     return (

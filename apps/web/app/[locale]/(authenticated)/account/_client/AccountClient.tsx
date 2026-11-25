@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { useAuth } from "@/contexts";
 import { useUserQuery, userKeys } from "@apps/shared/hooks";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
@@ -102,7 +103,8 @@ function useCheckoutSessionVerification(): string | null {
 export default function AccountClient({ initialProfile }: AccountClientProps) {
   const t = useTranslations("account.web");
   const tCommon = useTranslations("common");
-  const router = useRouter();
+  // ログアウト後はページを読み直す (このユーザーの画面のキャッシュを残さない)
+  const fullPageRouter = useFullPageRouter();
   const searchParams = useSearchParams();
   const { user, supabase, subscription, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -213,8 +215,8 @@ export default function AccountClient({ initialProfile }: AccountClientProps) {
       console.error("ログアウトエラー:", error);
       return;
     }
-    router.replace("/login");
-  }, [signOut, router]);
+    fullPageRouter.replace("/login");
+  }, [signOut, fullPageRouter]);
 
   // 「プラン」行の右に出す値
   const planValue = useMemo(() => {

@@ -1,8 +1,11 @@
+"use client";
+
+import { useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts";
 import { DashboardAPI } from "@apps/shared/api/dashboard";
 import type { CalendarItem } from "@apps/shared/types";
-import { endOfMonth, format, startOfMonth } from "date-fns";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { toCalendarMonthKey } from "@/hooks/queries/calendarKeys";
+import { useCalendarMonthQuery } from "@/hooks/queries/calendarQueries";
 
 export interface MonthlySummary {
   practiceCount: number;
@@ -11,103 +14,30 @@ export interface MonthlySummary {
   averageTime?: number;
 }
 
+const EMPTY_CALENDAR_ITEMS: CalendarItem[] = [];
+const DEFAULT_MONTHLY_SUMMARY: MonthlySummary = { practiceCount: 0, recordCount: 0 };
+
+/**
+ * 表示月のカレンダーデータ (エントリー + 月間サマリー) を読む。
+ * 実体は CalendarProvider と同じ月キーの React Query (useCalendarMonthQuery) で、
+ * キャッシュを共有する。データが無いときだけ loading / error にする。
+ */
 export function useCalendarData(displayDate: Date, _userId?: string) {
   const { supabase } = useAuth();
   const api = useMemo(() => new DashboardAPI(supabase), [supabase]);
-  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
-    practiceCount: 0,
-    recordCount: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const query = useCalendarMonthQuery(api, toCalendarMonthKey(displayDate));
+  const { refetch: queryRefetch } = query;
 
-  // 月の開始日と終了日を計算（displayDateを使用）
-  const monthStart = startOfMonth(displayDate);
-  const monthEnd = endOfMonth(displayDate);
-  const startDate = format(monthStart, "yyyy-MM-dd");
-  const endDate = format(monthEnd, "yyyy-MM-dd");
-
-  // データ取得関数（useCallbackでメモ化）
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // カレンダーエントリーと月間サマリーを並行取得
-      // 注意: 認証済みレイアウト内で使用されるため、ユーザー認証チェックは不要
-      const [entries, summary] = await Promise.all([
-        api.getCalendarEntries(startDate, endDate),
-        api.getMonthlySummary(displayDate.getFullYear(), displayDate.getMonth() + 1),
-      ]);
-      setCalendarItems(entries);
-      setMonthlySummary(summary);
-    } catch (err) {
-      console.error("Calendar data fetch error:", err);
-      setError(err as Error);
-      // エラー時も空配列を設定してUIを更新
-      setCalendarItems([]);
-      setMonthlySummary({ practiceCount: 0, recordCount: 0 });
-    } finally {
-      setLoading(false);
-    }
-  }, [startDate, endDate, displayDate, api]);
-
-  // 初回データ取得
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // リアルタイム購読は一時的に無効化（無限ループ回避）
-  // useEffect(() => {
-  //   const supabase = createClient()
-  //
-  //   // 練習記録の変更を購読
-  //   const practicesChannel = supabase
-  //     .channel('dashboard-practices')
-  //     .on(
-  //       'postgres_changes',
-  //       {
-  //         event: '*',
-  //         schema: 'public',
-  //         table: 'practices'
-  //       },
-  //       () => {
-  //         // 変更があったら再取得
-  //         loadData()
-  //       }
-  //     )
-  //     .subscribe()
-
-  //   // 記録の変更を購読
-  //   const recordsChannel = supabase
-  //     .channel('dashboard-records')
-  //     .on(
-  //       'postgres_changes',
-  //       {
-  //         event: '*',
-  //         schema: 'public',
-  //         table: 'records'
-  //       },
-  //       () => {
-  //         // 変更があったら再取得
-  //         loadData()
-  //       }
-  //     )
-  //     .subscribe()
-
-  //   return () => {
-  //     supabase.removeChannel(practicesChannel)
-  //     supabase.removeChannel(recordsChannel)
-  //   }
-  // }, [loadData])
+  const refetch = useCallback(async () => {
+    await queryRefetch();
+  }, [queryRefetch]);
 
   return {
-    calendarItems,
-    monthlySummary,
-    loading,
-    error,
-    refetch: loadData,
+    calendarItems: query.data?.calendarItems ?? EMPTY_CALENDAR_ITEMS,
+    monthlySummary: (query.data?.monthlySummary as MonthlySummary | undefined) ?? DEFAULT_MONTHLY_SUMMARY,
+    loading: !query.data && !query.error,
+    error: !query.data && query.error ? query.error : null,
+    refetch,
   };
 }
 

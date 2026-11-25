@@ -32,7 +32,7 @@
  * (Issue #49 の回帰防止であることに変わりはない)。
  */
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { BestTime, Style } from "@apps/shared/types";
 import EntriesClient, {

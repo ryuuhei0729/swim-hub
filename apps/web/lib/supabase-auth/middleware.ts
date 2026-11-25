@@ -11,6 +11,44 @@ import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@swim-hub/shared/types";
 import { NextResponse, type NextRequest } from "next/server";
 
+/**
+ * ログインしているユーザーのトークンの中身 (claims) を返す。未ログイン・検証失敗なら null。
+ *
+ * getClaims() は認証エラー以外 (通信エラーなど) を例外で投げる。従来の getUser() は
+ * そうした場合も「未ログイン」として扱っていた (ログインへ送る) ので、それに合わせる。
+ */
+async function getAuthenticatedClaims(
+  supabase: ReturnType<typeof createServerClient<Database>>,
+): Promise<{ sub: string } | null> {
+  try {
+    const { data } = await supabase.auth.getClaims();
+    const sub = data?.claims?.sub;
+    return typeof sub === "string" && sub.length > 0 ? { sub } : null;
+  } catch (error) {
+    console.error("[middleware] 認証状態の確認に失敗しました:", error);
+    return null;
+  }
+}
+
+/**
+ * セッションがサーバー側でまだ有効かを Auth サーバーに確かめる (getUser())。
+ * 通信エラーなどで確かめられないときは「有効ではない」として扱う (ダッシュボードへは送らない)。
+ */
+async function isSessionStillValid(
+  supabase: ReturnType<typeof createServerClient<Database>>,
+): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    return !error && !!user;
+  } catch (error) {
+    console.error("[middleware] セッションの確認に失敗しました:", error);
+    return false;
+  }
+}
+
 // 1. クッキー情報からUserデータを取得する
 // 2. 未ログインの場合（Userデータが存在しない場合）
 export async function updateSession(request: NextRequest) {
@@ -101,13 +139,21 @@ export async function updateSession(request: NextRequest) {
       },
     },
   });
-  // ユーザーを取得
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  // 重要: createServerClient と supabase.auth.getUser() の間にロジックを
-  // 書かないでください。単純なミスでも、ユーザーがランダムにログアウトされる
-  // 問題のデバッグが非常に困難になる可能性があります。
+  // ログインしているかを確かめる (期限切れのトークンはここで更新され、Cookie に書き戻される)
+  //
+  // getUser() は毎リクエスト Auth サーバーへ問い合わせるため、全ページの表示に往復が1回乗っていた。
+  // getClaims() はトークンの署名を手元で検証する (公開鍵はプロセス内で10分キャッシュされる)。
+  // ただし Supabase の JWT 署名鍵が共通鍵 (HS256) の間は、内部で getUser() と同じ問い合わせに
+  // なるので速くはならない (遅くもならない)。
+  //
+  // ここでの判定は「ログイン画面へ送るかどうか」だけに使う。アカウント削除・利用停止は
+  // トークンの期限 (最長1時間) まで見逃すが、認証後のページは layout の getServerUser()、
+  // API は lib/api-helpers.ts がそれぞれ getUser() で改めて確かめるので、データは守られる。
+  //
+  // 重要: createServerClient と getClaims() の間にロジックを書かないでください。
+  // 単純なミスでも、ユーザーがランダムにログアウトされる問題のデバッグが
+  // 非常に困難になる可能性があります。
+  const user = await getAuthenticatedClaims(supabase);
 
   // ---------------------------------------------
   // 認証が必要なルート (locale プレフィックスなしで定義)
@@ -199,13 +245,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 認証済みユーザーが認証ページにアクセスした場合
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
-  }
-
-  // 認証済みユーザーがランディングページにアクセスした場合はダッシュボードにリダイレクト
-  if (normalizedPathname === "/" && user) {
+  // 認証済みユーザーが認証ページ・ランディングページにアクセスした場合はダッシュボードへ送る。
+  //
+  // ここだけは getUser() で Auth サーバーに確かめてから送る。getClaims() はトークンの署名だけを
+  // 見るので、別の端末でのログアウト・パスワード変更・アカウント削除で無効になったセッションも
+  // トークンの期限 (最長1時間) までは通してしまう。一方、認証後のページの layout は
+  // getUser() で弾いてログインへ送るので、ここでダッシュボードへ送り返すと
+  // ログイン ⇄ ダッシュボードのリダイレクトが無限に繰り返される。
+  // (ログイン画面などを開くのはまれなので、ここで1回問い合わせても表示速度への影響は小さい)
+  if ((isAuthRoute || normalizedPathname === "/") && user && (await isSessionStillValid(supabase))) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 

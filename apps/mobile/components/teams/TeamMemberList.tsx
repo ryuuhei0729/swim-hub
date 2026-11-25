@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import {
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
@@ -203,16 +206,9 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   );
 
   // ベストタイムデータ
-  const [bestTimesMap, setBestTimesMap] = useState<Map<string, MemberBestTime[]>>(new Map());
-  const [loadingBestTimes, setLoadingBestTimes] = useState(false);
-  const [hasLoadedBestTimes, setHasLoadedBestTimes] = useState(false);
-
   // ベストタイムの取得対象は「メンバーの顔ぶれ」だけで決まる。members 配列そのものを
-  // 依存に置くと、権限変更・泳者区分変更で1行書き換わっただけでもチーム全員分の
-  // records を引き直し、その間テーブルがスピナーに戻る (体感で数秒固まる)。
-  // 顔ぶれを表すキーだけを依存にし、members 自体は ref 経由で最新を読む。
-  const membersRef = useRef(members);
-  membersRef.current = members;
+  // キーに置くと、権限変更・泳者区分変更で1行書き換わっただけでもチーム全員分の
+  // records を引き直してしまう。顔ぶれを表すキーだけをクエリキーにする。
   const memberUserIdsKey = useMemo(
     () =>
       members
@@ -223,115 +219,116 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   );
 
   // メンバーのベストタイムを一括取得
-  const loadBestTimes = useCallback(async () => {
-    const members = membersRef.current;
-    if (members.length === 0) return;
+  // チーム全員分の records を引く重いクエリなので、キャッシュに載せる。メンバータブを
+  // 開き直したときは前回の表をすぐ表示し、裏で取り直す (開くたびにスピナーへ戻さない)。
+  // キャッシュは端末に JSON で保存されるため、データは Map ではなく
+  // 「user_id → ベストタイムの配列」のオブジェクトで持つ。
+  const bestTimesQuery = useQuery({
+    queryKey: teamDetailKeys.memberBestTimes(teamId, memberUserIdsKey),
+    queryFn: async (): Promise<Record<string, MemberBestTime[]>> => {
+      try {
+        const userIds = memberUserIdsKey.split(",");
 
-    setLoadingBestTimes(true);
-    try {
-      const userIds = members.map((m) => m.user_id);
-
-      const { data, error: fetchError } = await supabase
-        .from("records")
-        .select(
-          `
-          user_id,
-          time,
-          created_at,
-          note,
-          pool_type,
-          is_relaying,
-          styles!records_style_id_fkey (
-            name_jp,
-            distance
-          ),
-          competitions!records_competition_id_fkey (
-            id,
-            title,
-            date
+        const { data, error: fetchError } = await supabase
+          .from("records")
+          .select(
+            `
+            user_id,
+            time,
+            created_at,
+            note,
+            pool_type,
+            is_relaying,
+            styles!records_style_id_fkey (
+              name_jp,
+              distance
+            ),
+            competitions!records_competition_id_fkey (
+              id,
+              title,
+              date
+            )
+          `,
           )
-        `,
-        )
-        .in("user_id", userIds)
-        .order("time", { ascending: true });
+          .in("user_id", userIds)
+          .order("time", { ascending: true });
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-      // ユーザーごとに種目×プール種別のベストタイムをまとめる
-      const map = new Map<string, MemberBestTime[]>();
+        // ユーザーごとに種目×プール種別のベストタイムをまとめる
+        const byUser: Record<string, MemberBestTime[]> = {};
+        const seenByUser = new Map<string, Set<string>>();
 
-      if (data) {
-        const grouped = new Map<string, typeof data>();
-        data.forEach((record) => {
-          const list = grouped.get(record.user_id) || [];
-          list.push(record);
-          grouped.set(record.user_id, list);
-        });
+        (data ?? []).forEach(
+          (record: {
+            user_id: string;
+            time: number;
+            created_at: string;
+            note: string | null;
+            pool_type: number;
+            is_relaying: boolean;
+            styles?:
+              | { name_jp: string; distance: number }
+              | null
+              | { name_jp: string; distance: number }[];
+            competitions?:
+              | { id: string; title: string; date: string }
+              | null
+              | { id: string; title: string; date: string }[];
+          }) => {
+            const style = Array.isArray(record.styles) ? record.styles[0] : record.styles;
+            if (!style) return;
+            // time の昇順で届くので、種目×プール種別×引き継ぎの組で最初に来たものがベスト
+            const key = `${style.name_jp}_${record.pool_type}_${record.is_relaying}`;
+            let seen = seenByUser.get(record.user_id);
+            if (!seen) {
+              seen = new Set();
+              seenByUser.set(record.user_id, seen);
+            }
+            if (seen.has(key)) return;
+            seen.add(key);
+            const competition = Array.isArray(record.competitions)
+              ? record.competitions[0]
+              : record.competitions;
+            (byUser[record.user_id] ??= []).push({
+              styleName: style.name_jp,
+              time: record.time,
+              poolType: record.pool_type,
+              isRelaying: record.is_relaying,
+              createdAt: record.created_at,
+              distance: style.distance,
+              note: record.note ?? undefined,
+              competitionTitle: competition?.title ?? undefined,
+              competitionDate: competition?.date ?? undefined,
+            });
+          },
+        );
 
-        grouped.forEach((records, userId) => {
-          const bestTimes: MemberBestTime[] = [];
-          const seen = new Set<string>();
-
-          records.forEach(
-            (record: {
-              user_id: string;
-              time: number;
-              created_at: string;
-              note: string | null;
-              pool_type: number;
-              is_relaying: boolean;
-              styles?:
-                | { name_jp: string; distance: number }
-                | null
-                | { name_jp: string; distance: number }[];
-              competitions?:
-                | { id: string; title: string; date: string }
-                | null
-                | { id: string; title: string; date: string }[];
-            }) => {
-              const style = Array.isArray(record.styles) ? record.styles[0] : record.styles;
-              if (!style) return;
-              const key = `${style.name_jp}_${record.pool_type}_${record.is_relaying}`;
-              if (seen.has(key)) return;
-              seen.add(key);
-              const competition = Array.isArray(record.competitions)
-                ? record.competitions[0]
-                : record.competitions;
-              bestTimes.push({
-                styleName: style.name_jp,
-                time: record.time,
-                poolType: record.pool_type,
-                isRelaying: record.is_relaying,
-                createdAt: record.created_at,
-                distance: style.distance,
-                note: record.note ?? undefined,
-                competitionTitle: competition?.title ?? undefined,
-                competitionDate: competition?.date ?? undefined,
-              });
-            },
-          );
-
-          const membership = members.find((m) => m.user_id === userId);
-          if (membership) {
-            map.set(membership.id, bestTimes);
-          }
-        });
+        return byUser;
+      } catch (err) {
+        console.error("ベストタイム取得エラー:", err);
+        throw err;
       }
+    },
+    enabled: memberUserIdsKey.length > 0,
+    staleTime: ALWAYS_REVALIDATE,
+    // メンバーの増減で顔ぶれが変わっても、取り直すまで前の表を見せておく
+    placeholderData: keepPreviousData,
+  });
+  // 手元に表が無い間だけ読み込み中にする (取り直し中は前回の表を見せる)
+  const loadingBestTimes = getCachedQueryStatus(bestTimesQuery).isLoading;
 
-      setBestTimesMap(map);
-    } catch (err) {
-      console.error("ベストタイム取得エラー:", err);
-    } finally {
-      setLoadingBestTimes(false);
-      setHasLoadedBestTimes(true);
+  // 表は membership.id で引くので、user_id → membership.id に付け替える
+  const bestTimesByUser = bestTimesQuery.data;
+  const bestTimesMap = useMemo(() => {
+    const map = new Map<string, MemberBestTime[]>();
+    if (!bestTimesByUser) return map;
+    for (const member of members) {
+      const bestTimes = bestTimesByUser[member.user_id];
+      if (bestTimes) map.set(member.id, bestTimes);
     }
-  }, [supabase]);
-
-  useEffect(() => {
-    if (memberUserIdsKey.length > 0) {
-      loadBestTimes();
-    }
-  }, [memberUserIdsKey, loadBestTimes]);
+    return map;
+  }, [bestTimesByUser, members]);
 
   // 引き継ぎタイムを含めて表示するか（WEB版 useMemberBestTimes 準拠、初期値false）
   const [includeRelaying, setIncludeRelaying] = useState(false);
@@ -651,7 +648,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       </View>
 
       {/* ベストタイムテーブル */}
-      {loadingBestTimes && !hasLoadedBestTimes ? (
+      {loadingBestTimes ? (
         <View style={styles.tableLoading}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.tableLoadingText}>{t("teams.mobile.bestTimeLoading")}</Text>

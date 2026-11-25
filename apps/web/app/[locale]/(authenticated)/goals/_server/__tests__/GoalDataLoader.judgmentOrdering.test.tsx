@@ -14,8 +14,9 @@
  *    (GoalDataLoader 自体が例外を投げない) ことを assert する
  */
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { renderWithQueryClient } from "@/__tests__/helpers/dashboardQueryTestUtils";
 
 const mocks = vi.hoisted(() => ({
   callOrder: [] as string[],
@@ -60,9 +61,7 @@ vi.mock("@apps/shared/api/goals", () => ({
 
 vi.mock("../../_client/GoalsClient", () => ({
   __esModule: true,
-  default: (props: { initialGoals: unknown[] }) => (
-    <div data-testid="goals-client-stub">{props.initialGoals.length}</div>
-  ),
+  default: () => <div data-testid="goals-client-stub" />,
 }));
 
 import GoalDataLoader from "../GoalDataLoader";
@@ -78,7 +77,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
 
   it("updateAllMilestoneStatuses が getGoals/getSelectableCompetitions/getStyles より先に呼ばれる (呼び出し順)", async () => {
     const element = await GoalDataLoader({});
-    render(element);
+    renderWithQueryClient(element);
 
     await waitFor(() => expect(mocks.getGoals).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mocks.getSelectableCompetitions).toHaveBeenCalledTimes(1));
@@ -119,7 +118,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
 
     resolveJudgment();
     const element = await loaderPromise;
-    render(element);
+    renderWithQueryClient(element);
 
     await waitFor(() => expect(mocks.getGoals).toHaveBeenCalledTimes(1));
     expect(mocks.getSelectableCompetitions).toHaveBeenCalledTimes(1);
@@ -135,7 +134,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
       })(),
     ).resolves.not.toThrow();
 
-    render(element);
+    renderWithQueryClient(element);
 
     await waitFor(() => expect(mocks.getGoals).toHaveBeenCalledTimes(1));
     expect(mocks.getSelectableCompetitions).toHaveBeenCalledTimes(1);

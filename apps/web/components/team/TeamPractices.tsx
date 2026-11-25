@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useLayoutEffect,
+  useRef,
   Suspense,
 } from "react";
 import { useRouter } from "@/i18n/navigation";
@@ -31,6 +32,13 @@ import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import TeamPracticeDetailModal from "./TeamPracticeDetailModal";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import type { EditingData } from "@/stores/types";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  TEAM_PRACTICES_PAGE_SIZE,
+  useTeamPracticesPageQuery,
+  type TeamPractice,
+} from "@/hooks/queries/teamPracticeQueries";
+import { invalidateTeamPracticeQueries } from "@/hooks/queries/teamDetailKeys";
 
 const PracticeBasicForm = dynamic(
   () => import("@/components/forms/PracticeBasicForm"),
@@ -47,86 +55,7 @@ const PracticeTabModal = dynamic(
   },
 );
 
-// Supabase から返されるスネークケースの型
-// Supabaseのリレーションは配列または単一オブジェクトで返る可能性がある
-interface PracticeRecord {
-  id: string;
-  user_id: string;
-  date: string;
-  title: string | null;
-  place: string | null;
-  note: string | null;
-  created_at: string;
-  created_by: string | null;
-  users?: { name: string } | { name: string }[];
-  created_by_user?: { name: string } | { name: string }[];
-  practice_logs?: {
-    id: string;
-    style: string;
-    distance: number;
-    practice_times?: {
-      time: number;
-    }[];
-  }[];
-}
-
-// UI で使用するキャメルケースの型
-export interface TeamPractice {
-  id: string;
-  userId: string;
-  date: string;
-  title: string | null;
-  place: string | null;
-  note: string | null;
-  createdAt: string;
-  createdBy: string | null;
-  users?: {
-    name: string;
-  };
-  createdByUser?: {
-    name: string;
-  };
-  practiceLogs?: {
-    id: string;
-    style: string;
-    distance: number;
-    practiceTimes?: {
-      time: number;
-    }[];
-  }[];
-}
-
-// ヘルパー: 配列または単一オブジェクトを単一オブジェクトに正規化
-function normalizeUser(
-  user: { name: string } | { name: string }[] | undefined,
-): { name: string } | undefined {
-  if (!user) return undefined;
-  return Array.isArray(user) ? user[0] : user;
-}
-
-// スネークケース → キャメルケース変換関数
-function mapPracticeRecordToTeamPractice(record: PracticeRecord): TeamPractice {
-  return {
-    id: record.id,
-    userId: record.user_id,
-    date: record.date,
-    title: record.title,
-    place: record.place,
-    note: record.note,
-    createdAt: record.created_at,
-    createdBy: record.created_by,
-    users: normalizeUser(record.users),
-    createdByUser: normalizeUser(record.created_by_user),
-    practiceLogs: record.practice_logs?.map((log) => ({
-      id: log.id,
-      style: log.style,
-      distance: log.distance,
-      practiceTimes: log.practice_times?.map((pt) => ({
-        time: pt.time,
-      })),
-    })),
-  };
-}
+export type { TeamPractice } from "@/hooks/queries/teamPracticeQueries";
 
 export interface TeamPracticesProps {
   teamId: string;
@@ -140,18 +69,31 @@ export default function TeamPractices({
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
-  const [practices, setPractices] = useState<TeamPractice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(
     null,
   );
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const pageSize = 20;
+  const pageSize = TEAM_PRACTICES_PAGE_SIZE;
+
+  // チームの練習記録 (ページ単位)。タブを開くたびに再取得するが (staleTime 0)、
+  // 再取得中は前回の内容をそのまま表示する
+  const practicesQuery = useTeamPracticesPageQuery(supabase, teamId, currentPage, pageSize);
+  const practices = practicesQuery.data?.practices ?? [];
+  const totalCount = practicesQuery.data?.totalCount ?? 0;
+  // スケルトン / 取得エラーは「表示できるデータが1件も無い」ときだけ出す
+  const loading = practicesQuery.isPending;
+  const displayError =
+    error ?? (practicesQuery.isError && !practicesQuery.data ? t("practices.error") : null);
+  const fetchError = practicesQuery.error;
+  useEffect(() => {
+    if (fetchError) console.error("チーム練習情報の取得に失敗:", fetchError);
+  }, [fetchError]);
 
   const {
     isBasicFormOpen,
@@ -184,73 +126,17 @@ export default function TeamPractices({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // チームの練習記録を取得（関数として抽出）
-  const loadTeamPractices = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const offset = (currentPage - 1) * pageSize;
-
-      // 総件数とデータを並列取得（パフォーマンス最適化）
-      const [countResult, practicesResult] = await Promise.all([
-        // 総件数を取得
-        supabase
-          .from("practices")
-          .select("*", { count: "exact", head: true })
-          .eq("team_id", teamId),
-        // チームIDが設定された練習記録を取得
-        supabase
-          .from("practices")
-          .select(
-            `
-            id,
-            user_id,
-            date,
-            title,
-            place,
-            note,
-            created_at,
-            created_by,
-            users!practices_user_id_fkey (
-              name
-            ),
-            created_by_user:users!practices_created_by_fkey (
-              name
-            ),
-            practice_logs (
-              id,
-              style,
-              distance,
-              practice_times (time)
-            )
-          `,
-          )
-          .eq("team_id", teamId)
-          .order("date", { ascending: false })
-          .range(offset, offset + pageSize - 1),
-      ]);
-
-      if (countResult.error) throw countResult.error;
-      if (practicesResult.error) throw practicesResult.error;
-
-      setTotalCount(countResult.count || 0);
-      const mappedPractices = (practicesResult.data || []).map((record) =>
-        mapPracticeRecordToTeamPractice(record as PracticeRecord),
-      );
-      setPractices(mappedPractices);
-    } catch (err) {
-      console.error("チーム練習情報の取得に失敗:", err);
-      setError(t("practices.error"));
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, supabase, currentPage, pageSize, t]);
-
-  // 初回読み込みとページ変更時の読み込み
-  useEffect(() => {
-    loadTeamPractices();
-  }, [loadTeamPractices]);
+  // 練習一覧 (全ページ)・出欠の月別サマリ・(指定時は) その練習の詳細モーダルを最新化する。
+  // 保存・削除の直後に呼び、保存前の内容が残らないよう再取得の完了まで待つ。
+  // 表示していないページ・閉じている詳細モーダルのキャッシュは捨てるので、保存後に
+  // 1 ページ目へ戻したり詳細を開き直したりしても保存前の内容は出ない
+  // (refreshQueriesAfterWrite の docstring 参照)
+  const loadTeamPractices = useCallback(
+    async (practiceId?: string) => {
+      await invalidateTeamPracticeQueries(queryClient, teamId, practiceId);
+    },
+    [queryClient, teamId],
+  );
 
   const handleAddPractice = () => {
     openBasicForm(new Date());
@@ -304,11 +190,8 @@ export default function TeamPractices({
       }
 
       closeBasicForm();
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        await loadTeamPractices();
-      }
+      await loadTeamPractices(editingData?.id);
+      setCurrentPage(1);
     } catch (err) {
       console.error("練習の保存に失敗:", err);
       setError(
@@ -338,7 +221,7 @@ export default function TeamPractices({
       const api = new TeamPracticesAPI(supabase);
       await api.remove(pendingDeleteId);
       setPendingDeleteId(null);
-      await loadTeamPractices();
+      await loadTeamPractices(pendingDeleteId);
     } catch (err) {
       console.error("練習の削除に失敗:", err);
       setError(t("practiceForm.deleteFailed"));
@@ -362,9 +245,16 @@ export default function TeamPractices({
     })();
   };
 
-  // 自分のログを追加した後、チームの練習一覧を再読込する
+  // 自分のログを保存した練習の ID。usePracticeTabSave の onSaved は引数を持たないので、
+  // 作成 (createPractice) / 既存練習への再送信 (onSave の editingPracticeId) の時点で控えておき、
+  // 保存後にその練習の詳細モーダルのキャッシュも落とす (保存前のログを表示しないため)
+  const selfLogPracticeIdRef = useRef<string | null>(null);
+
+  // 自分のログを追加した後、チームの練習一覧とその練習の詳細を再読込する
   const handleSelfLogSaved = useCallback(() => {
-    loadTeamPractices();
+    const practiceId = selfLogPracticeIdRef.current ?? undefined;
+    selfLogPracticeIdRef.current = null;
+    void loadTeamPractices(practiceId);
   }, [loadTeamPractices]);
 
   const practiceApiForLog = new PracticeAPI(supabase);
@@ -374,11 +264,13 @@ export default function TeamPractices({
     user,
     createPractice: async (practice) => {
       const api = new TeamPracticesAPI(supabase);
-      return await api.create({
+      const created = await api.create({
         ...practice,
         user_id: user!.id,
         team_id: teamId,
       });
+      selfLogPracticeIdRef.current = created.id;
+      return created;
     },
     updatePractice: async (id, updates) => {
       const api = new TeamPracticesAPI(supabase);
@@ -398,9 +290,19 @@ export default function TeamPractices({
     onSaved: handleSelfLogSaved,
   });
 
+  // 既存の練習への保存 (子の保存に失敗したあとの再送信) でも対象の練習 ID を控える
+  const handleSelfLogSave = async (
+    params: Parameters<typeof handleSelfLogTabSave>[0],
+  ) => {
+    if (params.editingPracticeId) {
+      selfLogPracticeIdRef.current = params.editingPracticeId;
+    }
+    return handleSelfLogTabSave(params);
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // loadTeamPracticesはuseEffectで自動実行される
+    // 新しいページのクエリは useTeamPracticesPageQuery がキーの変化で取得する
   };
 
   // 練習ログ入力ページへ遷移
@@ -474,11 +376,15 @@ export default function TeamPractices({
               ))}
             </div>
           </div>
-        ) : error ? (
+        ) : displayError ? (
           <div className="text-center py-8">
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-red-600 mb-4">{displayError}</p>
             <button
-              onClick={() => router.refresh()}
+              onClick={() => {
+                setError(null);
+                void practicesQuery.refetch();
+                router.refresh();
+              }}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
               {t("practices.retry")}
@@ -750,7 +656,7 @@ export default function TeamPractices({
           <PracticeTabModal
             isOpen={isTabModalOpen}
             onClose={closeTabModal}
-            onSave={handleSelfLogTabSave}
+            onSave={handleSelfLogSave}
             selectedDate={selectedDate || new Date()}
             editingData={editingPracticeId ? editingData : null}
             editingPracticeId={editingPracticeId}

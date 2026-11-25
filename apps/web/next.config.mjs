@@ -40,6 +40,17 @@ const nextConfig = {
     // "stream is closing or closed" / "Cannot close a writable stream..." が出る。
     // アプリ側は stream API を一切使っておらず、dev 専用機能なので無効化する。
     reactDebugChannel: false,
+    // ページ遷移時のクライアントキャッシュ (Client Cache)。
+    // 認証後のページは全て動的レンダリングで、既定 (dynamic: 0) では画面を行き来するたびに
+    // サーバーで描画し直していた。30秒以内に戻った画面は前回の描画を使い回す。
+    // - 一覧の中身は React Query (HydrationBoundary) から出しているので、手元のキャッシュの方が
+    //   新しければそちらが使われる (サーバーの古い描画で巻き戻らない)
+    // - 保存後に router.refresh() している画面は、その画面のキャッシュが捨てられる
+    // - ログイン・ログアウトの後はページ全体を読み直す (前のユーザーの描画を使い回さないため。
+    //   contexts/AuthProvider.tsx・ログイン画面を参照)
+    staleTimes: {
+      dynamic: 30,
+    },
     optimizePackageImports: [
       "@heroicons/react/24/outline",
       "@heroicons/react/24/solid",

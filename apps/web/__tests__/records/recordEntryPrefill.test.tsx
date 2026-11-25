@@ -16,7 +16,7 @@
  */
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { Style } from "@apps/shared/types";
 import { formatTimeBest } from "@/utils/formatters";

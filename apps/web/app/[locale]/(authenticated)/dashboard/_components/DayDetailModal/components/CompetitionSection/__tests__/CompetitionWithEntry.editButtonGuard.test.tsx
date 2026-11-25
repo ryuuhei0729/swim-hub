@@ -10,7 +10,8 @@
  *              編集ボタンが描画される (デフォルト値の意味を固定するリグレッションガード)
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQueryClient } from "@/__tests__/helpers/dashboardQueryTestUtils";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
@@ -51,7 +52,7 @@ vi.mock("@/i18n/navigation", () => ({
 const renderWithIntl = (props: Partial<CompetitionWithEntryProps>) => {
   fakeSupabase = createFakeSupabase();
 
-  return render(
+  return renderWithQueryClient(
     <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
       <CompetitionWithEntry
         entryId="entry-1"

@@ -12,7 +12,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { EntryWithDetails } from "@swim-hub/shared/types";
 import { formatTimeBest } from "@apps/shared/utils/time";
@@ -75,6 +78,8 @@ function groupEntriesByStyle(
   }, {});
 }
 
+const NO_ENTRIES: EntryWithDetails[] = [];
+
 export function TeamCompetitionEntryModal({
   visible,
   onClose,
@@ -93,9 +98,6 @@ export function TeamCompetitionEntryModal({
     [supabase],
   );
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [entries, setEntries] = useState<EntryWithDetails[]>([]);
   // 受付状況は resolveEntryStatus (isPastDate 込みの実効ステータス) を親から受け取った
   // 値をそのまま保持する。ステータス変更はカード上プルダウンに一本化済み(R5)のため、
   // このモーダル内で楽観的に書き換えることはない。
@@ -103,26 +105,33 @@ export function TeamCompetitionEntryModal({
   // 削除処理中のエントリー行 (二重タップ防止)
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
+  // 開くたびに取り直すが、同じ大会を開き直したときは前回の一覧をすぐ表示する
+  const entriesQuery = useQuery({
+    queryKey: teamDetailKeys.competitionEntries(competitionId),
+    queryFn: async () => {
+      try {
+        return await entryApi.getEntriesByCompetition(competitionId);
+      } catch (err) {
+        console.error("TeamCompetitionEntryModal: failed to load entries", err);
+        throw err;
+      }
+    },
+    enabled: visible,
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const entries = entriesQuery.data ?? NO_ENTRIES;
+  const { isLoading: loading, isFailed } = getCachedQueryStatus(entriesQuery);
+  const error = isFailed ? t("teams.mobile.teamCompetitionEntryModal.fetchFailed") : null;
+  const refetchEntries = entriesQuery.refetch;
   const loadEntries = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await entryApi.getEntriesByCompetition(competitionId);
-      setEntries(data);
-    } catch (err) {
-      console.error("TeamCompetitionEntryModal: failed to load entries", err);
-      setError(t("teams.mobile.teamCompetitionEntryModal.fetchFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [entryApi, competitionId, t]);
+    await refetchEntries();
+  }, [refetchEntries]);
 
   useEffect(() => {
     if (visible) {
       setStatus(entryStatus);
-      loadEntries();
     }
-  }, [visible, entryStatus, loadEntries]);
+  }, [visible, entryStatus]);
 
   const getStatusLabel = useCallback(
     (s: EntryStatus) =>

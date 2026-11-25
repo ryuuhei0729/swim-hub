@@ -31,7 +31,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, waitFor, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
 import type { Style } from "@apps/shared/types";
 import {
   buildRecordSaveSupabaseMock,

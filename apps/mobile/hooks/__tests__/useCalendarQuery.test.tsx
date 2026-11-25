@@ -5,10 +5,10 @@
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 import { DashboardAPI } from "@apps/shared/api/dashboard";
 import type { CalendarItem } from "@apps/shared/types/ui";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCalendarQuery } from "../useCalendarQuery";
 
 // React Queryのテスト用ラッパー
@@ -301,5 +301,67 @@ describe("useCalendarQuery", () => {
     expect(types).toContain("practice");
     expect(types).toContain("team_practice");
     expect(types).toContain("team_competition");
+  });
+  describe("前後の月の先読み", () => {
+    afterEach(() => {
+      onlineManager.setOnline(true);
+    });
+
+    it("表示中の月が取得できたら、前後の月も取得しておく", async () => {
+      const spy = vi.spyOn(mockApi, "getCalendarEntries").mockResolvedValue([]);
+
+      const { result } = renderHook(
+        () => useCalendarQuery(mockClient, { currentDate: new Date(2025, 0, 15), api: mockApi }),
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
+      const requestedMonths = spy.mock.calls.map(([startDate]) => startDate).sort();
+      expect(requestedMonths).toEqual(["2024-12-01", "2025-01-01", "2025-02-01"]);
+    });
+
+    it("先読み済みの月へ切り替えたときは、取り直さずにすぐデータを返す", async () => {
+      const spy = vi
+        .spyOn(mockApi, "getCalendarEntries")
+        .mockImplementation(async (startDate) => [
+          { id: startDate, type: "practice", date: startDate, title: "", metadata: {} },
+        ]);
+
+      const { result, rerender } = renderHook(
+        ({ currentDate }) => useCalendarQuery(mockClient, { currentDate, api: mockApi }),
+        { wrapper: createWrapper(), initialProps: { currentDate: new Date(2025, 0, 15) } },
+      );
+      await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(result.current.data?.[0]?.id).toBe("2025-01-01"));
+      const callsToFebruary = () =>
+        spy.mock.calls.filter(([startDate]) => startDate === "2025-02-01").length;
+      await waitFor(() => expect(callsToFebruary()).toBe(1));
+      // 先読みの結果がキャッシュに入るのを待つ
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      rerender({ currentDate: new Date(2025, 1, 1) });
+
+      // 読み込み中を挟まず、切り替えた直後のレンダーで2月のデータが返る
+      expect(result.current.isPending).toBe(false);
+      expect(result.current.data?.[0]?.id).toBe("2025-02-01");
+      expect(callsToFebruary()).toBe(1);
+    });
+
+    it("圏外では先読みしない", async () => {
+      const spy = vi.spyOn(mockApi, "getCalendarEntries").mockResolvedValue([]);
+      onlineManager.setOnline(false);
+
+      const { result } = renderHook(
+        () => useCalendarQuery(mockClient, { currentDate: new Date(2025, 0, 15), api: mockApi }),
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() => expect(result.current.fetchStatus).not.toBe("fetching"));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const requestedMonths = spy.mock.calls.map(([startDate]) => startDate);
+      expect(requestedMonths).not.toContain("2024-12-01");
+      expect(requestedMonths).not.toContain("2025-02-01");
+    });
   });
 });

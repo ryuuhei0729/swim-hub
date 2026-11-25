@@ -45,9 +45,19 @@ import type {
   StyleOption,
 } from "@/components/forms/record-log/types";
 import type { EntryInfo } from "@apps/shared/types/ui";
-import type { RecordInsert, RecordUpdate, PoolType, Style } from "@apps/shared/types";
-import { isPoolType } from "@apps/shared/types";
+import type { RecordInsert, RecordUpdate, Style } from "@apps/shared/types";
 import type { EditingData } from "@/stores/types";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  TEAM_COMPETITIONS_PAGE_SIZE,
+  useTeamCompetitionsPageQuery,
+  type TeamCompetition,
+} from "@/hooks/queries/teamCompetitionQueries";
+import {
+  invalidateTeamCompetitionQueries,
+  invalidateTeamMemberBestTimes,
+  teamDetailKeys,
+} from "@/hooks/queries/teamDetailKeys";
 
 const CompetitionBasicForm = dynamic(
   () => import("@/components/forms/CompetitionBasicForm"),
@@ -56,81 +66,7 @@ const CompetitionBasicForm = dynamic(
   },
 );
 
-export interface TeamCompetition {
-  id: string;
-  user_id: string;
-  team_id: string;
-  title: string;
-  date: string;
-  end_date: string | null;
-  place: string | null;
-  pool_type: PoolType;
-  entry_status?: "before" | "open" | "closed";
-  note: string | null;
-  created_at: string;
-  created_by: string | null;
-  users?: {
-    name: string;
-  };
-  created_by_user?: {
-    name: string;
-  };
-  records?: {
-    id: string;
-    time: number;
-    users?: {
-      name: string;
-    };
-  }[];
-  entries?: {
-    id: string;
-    user_id: string;
-    style_id: number;
-    entry_time: number | null;
-    users?: {
-      name: string;
-    };
-  }[];
-}
-
-// Supabaseクエリ結果の型定義
-// Note: Supabaseはリレーションを配列として返す場合がある
-interface RawCompetitionUser {
-  name: string;
-}
-
-interface RawCompetitionRecord {
-  id: string;
-  time: number;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
-}
-
-interface RawCompetitionEntry {
-  id: string;
-  user_id: string;
-  style_id: number;
-  entry_time: number | null;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
-}
-
-interface RawCompetitionData {
-  id: string;
-  user_id: string;
-  team_id: string;
-  title: string;
-  date: string;
-  end_date?: string | null;
-  place: string | null;
-  pool_type?: number | null;
-  entry_status: string | null;
-  note: string | null;
-  created_at: string;
-  created_by: string | null;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
-  created_by_user?: RawCompetitionUser | RawCompetitionUser[] | null;
-  records?: RawCompetitionRecord[] | null;
-  entries?: RawCompetitionEntry[] | null;
-}
+export type { TeamCompetition } from "@/hooks/queries/teamCompetitionQueries";
 
 // 「自分の記録を追加」フォームの初期値復元専用: 一覧クエリの軽量な records とは別に、
 // 編集フォームに必要な全フィールドをオンデマンド取得するための型 (styles 取得と同じパターン)
@@ -152,68 +88,6 @@ interface RawSelfRecordEntry {
   split_times?: RawSelfRecordSplitTime[] | null;
 }
 
-/**
- * Supabaseが返すユーザー情報（配列または単一オブジェクト）を単一オブジェクトに正規化
- */
-function normalizeUser(
-  user: RawCompetitionUser | RawCompetitionUser[] | null | undefined,
-): { name: string } | undefined {
-  if (!user) return undefined;
-  if (Array.isArray(user)) {
-    return user.length > 0 ? { name: user[0]!.name } : undefined; // user.length > 0 を三項演算子内で確認済み
-  }
-  return { name: user.name };
-}
-
-/**
- * Supabaseのクエリ結果をTeamCompetition[]に変換するマッパー関数
- */
-function mapToTeamCompetitions(
-  data: RawCompetitionData[] | null,
-): TeamCompetition[] {
-  if (!data) return [];
-
-  return data.map(
-    (item): TeamCompetition => ({
-      id: item.id,
-      user_id: item.user_id,
-      team_id: item.team_id,
-      title: item.title,
-      date: item.date,
-      end_date: item.end_date ?? null,
-      place: item.place,
-      // DB 由来の生の数値を PoolType (0 | 1) の値域に narrowing する。範囲外/NULL は 0 (短水路) にフォールバック
-      pool_type: isPoolType(item.pool_type) ? item.pool_type : 0,
-      entry_status: isValidEntryStatus(item.entry_status)
-        ? item.entry_status
-        : undefined,
-      note: item.note,
-      created_at: item.created_at,
-      created_by: item.created_by,
-      users: normalizeUser(item.users),
-      created_by_user: normalizeUser(item.created_by_user),
-      records: item.records?.map((record) => ({
-        id: record.id,
-        time: record.time,
-        users: normalizeUser(record.users),
-      })),
-      entries: item.entries?.map((entry) => ({
-        id: entry.id,
-        user_id: entry.user_id,
-        style_id: entry.style_id,
-        entry_time: entry.entry_time,
-        users: normalizeUser(entry.users),
-      })),
-    }),
-  );
-}
-
-function isValidEntryStatus(
-  status: string | null,
-): status is "before" | "open" | "closed" {
-  return status === "before" || status === "open" || status === "closed";
-}
-
 export interface TeamCompetitionsProps {
   teamId: string;
   isAdmin?: boolean;
@@ -227,8 +101,8 @@ export default function TeamCompetitions({
   const invalidateRankings = useInvalidateTeamRankings();
   const router = useRouter();
   const t = useTranslations("teams");
-  const [competitions, setCompetitions] = useState<TeamCompetition[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
   const [selectedCompetition, setSelectedCompetition] =
     useState<TeamCompetition | null>(null);
@@ -237,7 +111,6 @@ export default function TeamCompetitions({
   const [selectedCompetitionForRecords, setSelectedCompetitionForRecords] =
     useState<TeamCompetition | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selfRecordCompetition, setSelfRecordCompetition] =
@@ -263,7 +136,7 @@ export default function TeamCompetitions({
   const [entryEditorTargetEntryId, setEntryEditorTargetEntryId] = useState<string | undefined>(
     undefined,
   );
-  const pageSize = 20;
+  const pageSize = TEAM_COMPETITIONS_PAGE_SIZE;
 
   const {
     isBasicFormOpen,
@@ -284,88 +157,32 @@ export default function TeamCompetitions({
     setCreatedEntries: setEntryTabCreatedEntries,
   } = useCompetitionStore();
 
-  // チームの大会一覧を取得（関数として抽出）
-  const loadTeamCompetitions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const offset = (currentPage - 1) * pageSize;
-
-      // 総件数とデータを並列取得（パフォーマンス最適化）
-      const [countResult, competitionsResult] = await Promise.all([
-        // 総件数を取得
-        supabase
-          .from("competitions")
-          .select("*", { count: "exact", head: true })
-          .eq("team_id", teamId),
-        // チームIDが設定された大会を取得（エントリー情報も含む）
-        supabase
-          .from("competitions")
-          .select(
-            `
-            id,
-            user_id,
-            team_id,
-            title,
-            date,
-            end_date,
-            place,
-            pool_type,
-            entry_status,
-            note,
-            created_at,
-            created_by,
-            users!competitions_user_id_fkey (
-              name
-            ),
-            created_by_user:users!competitions_created_by_fkey (
-              name
-            ),
-            records (
-              id,
-              time,
-              users!records_user_id_fkey (
-                name
-              )
-            ),
-            entries (
-              id,
-              user_id,
-              style_id,
-              entry_time,
-              users!entries_user_id_fkey (
-                name
-              )
-            )
-          `,
-          )
-          .eq("team_id", teamId)
-          .order("date", { ascending: false })
-          .range(offset, offset + pageSize - 1),
-      ]);
-
-      if (countResult.error) throw countResult.error;
-      if (competitionsResult.error) throw competitionsResult.error;
-
-      setTotalCount(countResult.count || 0);
-      setCompetitions(
-        mapToTeamCompetitions(
-          competitionsResult.data as RawCompetitionData[] | null,
-        ),
-      );
-    } catch (err) {
-      console.error("チーム大会情報の取得に失敗:", err);
-      setError(t("competitions.error"));
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, supabase, currentPage, pageSize, t]);
-
-  // 初回読み込み
+  // チームの大会一覧 (ページ単位)。タブを開くたびに再取得するが (staleTime 0)、
+  // 再取得中は前回の内容をそのまま表示する
+  const competitionsQuery = useTeamCompetitionsPageQuery(supabase, teamId, currentPage, pageSize);
+  const competitions = competitionsQuery.data?.competitions ?? [];
+  const totalCount = competitionsQuery.data?.totalCount ?? 0;
+  // スケルトン / 取得エラーは「表示できるデータが1件も無い」ときだけ出す
+  const loading = competitionsQuery.isPending;
+  const displayError =
+    error ??
+    (competitionsQuery.isError && !competitionsQuery.data ? t("competitions.error") : null);
+  const fetchError = competitionsQuery.error;
   useEffect(() => {
-    loadTeamCompetitions();
-  }, [loadTeamCompetitions]);
+    if (fetchError) console.error("チーム大会情報の取得に失敗:", fetchError);
+  }, [fetchError]);
+
+  // 大会一覧 (全ページ)・出欠の月別サマリ・(指定時は) その大会のモーダルを最新化する。
+  // 保存・削除の直後に呼び、保存前の内容が残らないよう再取得の完了まで待つ。
+  // 表示していないページ・閉じているモーダルのキャッシュは捨てるので、保存後に
+  // 1 ページ目へ戻したりモーダルを開き直したりしても保存前の内容は出ない
+  // (refreshQueriesAfterWrite の docstring 参照)
+  const loadTeamCompetitions = useCallback(
+    async (competitionId?: string) => {
+      await invalidateTeamCompetitionQueries(queryClient, teamId, competitionId);
+    },
+    [queryClient, teamId],
+  );
 
   const handleAddCompetition = () => {
     openBasicForm(new Date());
@@ -434,11 +251,13 @@ export default function TeamCompetitions({
       }
 
       closeBasicForm();
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        await loadTeamCompetitions();
+      if (editingData?.id) {
+        // 大会日の変更で紐づく記録が別年度のランキングへ移るため、更新は対象
+        // (作成は記録が紐づいていないので対象外。判断軸は invalidateTeamRankings の docstring)
+        invalidateRankings();
       }
+      await loadTeamCompetitions(editingData?.id);
+      setCurrentPage(1);
     } catch (err) {
       console.error(
         editingData?.id ? "大会の更新に失敗:" : "大会の作成に失敗:",
@@ -476,8 +295,10 @@ export default function TeamCompetitions({
       // 使わず自前で再読み込みするため、ランキング側は明示的に落とす。
       // (Provider が無い環境では no-op。理由は useInvalidateTeamRankings の docstring)
       invalidateRankings();
+      // 紐づく記録の大会名が消えるのでベストタイム表 (大会名を表示する) も落とす
+      void invalidateTeamMemberBestTimes(queryClient, teamId);
       setPendingDeleteId(null);
-      await loadTeamCompetitions();
+      await loadTeamCompetitions(pendingDeleteId);
     } catch (err) {
       console.error("大会の削除に失敗:", err);
       setError(t("competitionForm.deleteFailed"));
@@ -488,7 +309,7 @@ export default function TeamCompetitions({
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // loadTeamCompetitionsはuseEffectで自動実行される
+    // 新しいページのクエリは useTeamCompetitionsPageQuery がキーの変化で取得する
   };
 
   // 記録入力ページへ遷移
@@ -691,8 +512,15 @@ export default function TeamCompetitions({
       // TeamCompetitionEntryModal の一覧・カード一覧は自動更新されない。
       // entryModalNonce を bump して TeamCompetitionEntryModal を強制再マウントし、
       // カード一覧も合わせて再読み込みする (SC1)。
+      // 再マウント時に保存前のエントリー一覧がキャッシュから一瞬表示されないよう、
+      // そのモーダルのキャッシュは捨ててから再マウントする (以前と同じ 読み込み表示 → 最新)。
+      if (selectedCompetition) {
+        queryClient.removeQueries({
+          queryKey: teamDetailKeys.competitionEntriesAll(teamId, selectedCompetition.id),
+        });
+      }
       setEntryModalNonce((n) => n + 1);
-      loadTeamCompetitions();
+      void loadTeamCompetitions();
     },
     allowParentUpdate: false,
   });
@@ -878,7 +706,10 @@ export default function TeamCompetitions({
       }
 
       handleCloseSelfRecordForm();
-      await loadTeamCompetitions();
+      // 記録が増減・変化したので、ランキング・ベストタイム表・この大会の記録一覧も落とす
+      invalidateRankings();
+      void invalidateTeamMemberBestTimes(queryClient, teamId);
+      await loadTeamCompetitions(selfRecordCompetition.id);
     } catch (err) {
       console.error("記録の登録に失敗:", err);
       // ここで setError しない (Reviewer/PM 実測: このモーダルは RecordLogForm の
@@ -925,11 +756,15 @@ export default function TeamCompetitions({
               ))}
             </div>
           </div>
-        ) : error ? (
+        ) : displayError ? (
           <div className="text-center py-8">
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-red-600 mb-4">{displayError}</p>
             <button
-              onClick={() => router.refresh()}
+              onClick={() => {
+                setError(null);
+                void competitionsQuery.refetch();
+                router.refresh();
+              }}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
               {t("competitions.retry")}
@@ -1185,7 +1020,7 @@ export default function TeamCompetitions({
         )}
 
         {/* ページング */}
-        {!loading && !error && totalCount > 0 && (
+        {!loading && !displayError && totalCount > 0 && (
           <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
             <Pagination
               currentPage={currentPage}
@@ -1234,7 +1069,7 @@ export default function TeamCompetitions({
             setShowEntryModal(false);
             setSelectedCompetition(null);
             // モーダルを閉じた後、リストを再読み込み（ステータス変更が反映されるように）
-            loadTeamCompetitions();
+            void loadTeamCompetitions();
           }}
           competitionId={selectedCompetition.id}
           competitionTitle={

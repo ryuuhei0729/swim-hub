@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import PracticeLogDataLoader from "./_server/PracticeLogDataLoader";
+import { FreshServerRender } from "@/components/ui/FreshServerRender";
+import PracticeLogLoading from "./loading";
 
 export async function generateMetadata({
   params,
@@ -53,7 +55,11 @@ export default async function PracticeLogPage({ params }: PracticeLogPageProps) 
         </div>
       }
     >
-      <PracticeLogDataLoader teamId={teamId} practiceId={practiceId} />
+      {/* 保存した直後に同じ画面を開き直すと、ページ遷移のキャッシュに残った保存前のデータで
+          フォームが開き、重複登録や上書きになる。使い回された描画なら最新を取り直す */}
+      <FreshServerRender renderId={crypto.randomUUID()} fallback={<PracticeLogLoading />}>
+        <PracticeLogDataLoader teamId={teamId} practiceId={practiceId} />
+      </FreshServerRender>
     </Suspense>
   );
 }

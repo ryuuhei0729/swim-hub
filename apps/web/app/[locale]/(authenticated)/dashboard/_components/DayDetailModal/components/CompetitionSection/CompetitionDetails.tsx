@@ -46,6 +46,12 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
+import {
+  DayDetailTimeoutError,
+  useCompetitionRecordsQuery,
+} from "@/hooks/queries/dayDetailQueries";
+
+const EMPTY_RECORDS: CalendarItem[] = [];
 
 // 色の明度に基づいてテキスト色を決定する関数(PracticeDetails.tsx と同一アルゴリズム)
 const getTextColor = (backgroundColor: string) => {
@@ -136,167 +142,48 @@ export function CompetitionDetails({
       name_jp: nameJp ?? fallback,
     });
   };
-  const [actualRecords, setActualRecords] = useState<CalendarItem[]>([]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>(
     [],
   );
-
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareRecordData, setShareRecordData] =
     useState<CompetitionShareData | null>(null);
 
+  // 大会の記録 (開くたびに取り直す。同じ大会を開き直したときは前回の内容を先に表示する)
+  const { data: competitionRecords, error: recordsError } =
+    useCompetitionRecordsQuery(supabase, {
+      competitionId,
+      isTeamCompetition,
+      userId: user?.id ?? null,
+    });
+  const actualRecords = competitionRecords?.records ?? EMPTY_RECORDS;
+  // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)。
+  // タイムアウト以外の失敗は従来どおり「記録なし」の表示にする
+  const loading = !competitionRecords && !recordsError;
+  const loadError =
+    !competitionRecords && recordsError instanceof DayDetailTimeoutError
+      ? t("competition.loadTimeout")
+      : null;
+
+  // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）。
+  // 署名付きURLは期限があるのでクエリデータには入れず、表示のたびに解決する
+  const imagePathsKey = competitionRecords
+    ? JSON.stringify(competitionRecords.imagePaths)
+    : null;
   useEffect(() => {
+    if (imagePathsKey === null) return;
     let cancelled = false;
-    const timeoutId = window.setTimeout(() => {
-      if (cancelled) return;
-      setLoading(false);
-      setLoadError(t("competition.loadTimeout"));
-    }, 15000);
-
-    const loadRecords = async () => {
-      try {
-        setLoading(true);
-        setLoadError(null);
-        setActualRecords([]);
-        setCompetitionImages([]);
-
-        // 大会画像パスとレコードを並行取得
-        let recordQuery = supabase
-          .from("records")
-          .select(
-            `
-              *,
-              style:styles(*),
-              competition:competitions(*),
-              split_times(*)
-            `,
-          )
-          .eq("competition_id", competitionId);
-
-        // チーム大会の場合は自分の記録だけを表示
-        if (isTeamCompetition && user?.id) {
-          recordQuery = recordQuery.eq("user_id", user.id);
-        }
-
-        const [{ data: competitionData }, { data, error }] = await Promise.all([
-          supabase
-            .from("competitions")
-            .select("image_paths")
-            .eq("id", competitionId)
-            .single(),
-          recordQuery,
-        ]);
-
-        if (error) throw error;
-
-        // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
-        const competition = competitionData as {
-          image_paths?: string[] | null;
-        } | null;
-        const imagePaths = competition?.image_paths || [];
-        resolveGalleryImages("competition-images", imagePaths).then(
-          (images: GalleryImage[]) => {
-            if (cancelled) return;
-            setCompetitionImages(images);
-          },
-        );
-
-        // calendar_view形式に変換
-        type RecordFromDB = {
-          id: string;
-          competition_id: string | null;
-          style_id: number;
-          time: number;
-          video_path: string | null;
-          video_thumbnail_path: string | null;
-          note: string | null;
-          is_relaying: boolean;
-          reaction_time?: number | null;
-          competition?: {
-            id: string;
-            title: string;
-            date: string;
-            place: string | null;
-            pool_type: number;
-          } | null;
-          style?: {
-            id: number;
-            name_jp: string;
-            distance: number;
-          } | null;
-          split_times?: Array<{
-            id: string;
-            record_id: string;
-            distance: number;
-            split_time: number;
-            created_at: string;
-          }>;
-        };
-        const formattedRecords = ((data || []) as RecordFromDB[]).map(
-          (record): CalendarItem => ({
-            id: record.id,
-            type: "record" as const,
-            date: record.competition?.date || "",
-            title: record.competition?.title || "",
-            place: record.competition?.place || "",
-            note: record.note || undefined,
-            metadata: {
-              record: {
-                time: record.time,
-                is_relaying: record.is_relaying,
-                video_path: record.video_path || undefined,
-                video_thumbnail_path: record.video_thumbnail_path || undefined,
-                reaction_time: record.reaction_time ?? null,
-                style: record.style
-                  ? {
-                      id: record.style.id.toString(),
-                      name_jp: record.style.name_jp,
-                      distance: record.style.distance,
-                    }
-                  : {
-                      id: record.style_id.toString(),
-                      name_jp: "",
-                      distance: 0,
-                    },
-                competition_id: record.competition_id || undefined,
-                split_times: record.split_times || [],
-              },
-              competition: record.competition || undefined,
-              style: record.style || undefined,
-              // PM報告(Warning2トリアージ): record.competition は RecordFromDB 上 optional。
-              // このクエリは .eq("competition_id", competitionId) で現在表示中の大会に紐づく
-              // record のみを取得するため通常は必ず join されるが、表示中に大会が削除される
-              // 競合（レース）では null になり得る。この値は line ~508 の onEditRecord 経路で
-              // editData.pool_type として記録編集フォームに渡り、そのまま保存され得るため
-              // 「0が業務的に正しいデフォルトか」を独断で決めず残す。
-              pool_type: record.competition?.pool_type || 0,
-            },
-          }),
-        );
-
+    const imagePaths = JSON.parse(imagePathsKey) as string[];
+    resolveGalleryImages("competition-images", imagePaths).then(
+      (images: GalleryImage[]) => {
         if (cancelled) return;
-        setActualRecords(formattedRecords);
-        clearTimeout(timeoutId);
-      } catch (err) {
-        clearTimeout(timeoutId);
-        console.error("記録の取得エラー:", err);
-        if (cancelled) return;
-        setActualRecords([]);
-        setCompetitionImages([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    loadRecords();
-
+        setCompetitionImages(images);
+      },
+    );
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
     };
-  }, [competitionId, supabase, isTeamCompetition, user?.id, t]);
+  }, [imagePathsKey]);
 
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1

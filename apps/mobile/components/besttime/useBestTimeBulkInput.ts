@@ -10,6 +10,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { useTranslation } from "react-i18next";
 import { RecordAPI } from "@apps/shared/api/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
@@ -118,7 +119,7 @@ export function useBestTimeBulkInput(): BestTimeBulkInput {
       // ホームのベストタイム表・大会タブの記録一覧 (大会未紐付けの記録)・カレンダーを最新化
       await queryClient.invalidateQueries({ queryKey: recordKeys.bestTimes(user?.id) });
       await queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
-      await queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      await invalidateCalendarAfterSave(queryClient);
       return result.created;
     } catch (error) {
       setSaveError(toUserFacingMessage(error, t("bulkBestTime.error.registerFailed")));

@@ -27,7 +27,8 @@
 // - MemberDetailModal もスタブ化し、ソート挙動の検証に無関係な依存を切り離す。
 // =============================================================================
 
-import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { harness, buildMember } from "./teamMemberListHarness";
