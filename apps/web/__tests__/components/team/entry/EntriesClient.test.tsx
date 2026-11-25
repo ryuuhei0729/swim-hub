@@ -33,7 +33,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, fireEvent, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BestTime, Style } from "@apps/shared/types";
 import EntriesClient, {

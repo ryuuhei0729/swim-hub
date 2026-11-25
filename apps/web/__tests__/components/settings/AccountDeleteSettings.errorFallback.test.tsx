@@ -20,6 +20,12 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
+// ログイン・ログアウト直後の遷移はページ全体を読み直す useFullPageRouter を使う
+// (前のユーザーの画面のキャッシュを使い回さないため)。渡すパスの検証は従来どおり同じモックで行う。
+vi.mock("@/i18n/fullPageNavigation", () => ({
+  useFullPageRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
+
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));

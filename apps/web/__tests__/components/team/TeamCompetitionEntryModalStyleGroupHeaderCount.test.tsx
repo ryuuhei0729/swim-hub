@@ -13,7 +13,7 @@
  */
 
 import React from "react";
-import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
+import { renderWithI18n as render, screen, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import jaMessages from "@apps/shared/messages/ja.json";
 import enMessages from "@apps/shared/messages/en.json";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
@@ -38,6 +41,8 @@ interface TeamMemberForSelection {
     birthday?: string | null;
   };
 }
+
+const NO_TEAM_MEMBERS: TeamMemberForSelection[] = [];
 
 export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   teamId,
@@ -73,10 +78,6 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
     isBusy: isGroupDeleteBusy,
   } = usePendingAction();
 
-  // チームメンバー一覧（メンバー割り当て用）
-  const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([]);
-  const [memberError, setMemberError] = useState<string | null>(null);
-
   // モーダル状態
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TeamGroupWithCount | null>(null);
@@ -88,14 +89,11 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   // メンバー詳細モーダル（web TeamGroupManagement.tsx:186-189 の onMemberClick 相当）
   const [detailMember, setDetailMember] = useState<TeamMembershipWithUser | null>(null);
 
-  // 初期読み込み
-  useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
-
-  // チームメンバー一覧を取得
-  useEffect(() => {
-    const loadTeamMembers = async () => {
+  // チームメンバー一覧（メンバー割り当て用）
+  // キャッシュに載せ、タブを開き直したときは前回の一覧をすぐ使えるようにする
+  const teamMembersQuery = useQuery({
+    queryKey: teamDetailKeys.selectableMembers(teamId),
+    queryFn: async (): Promise<TeamMemberForSelection[]> => {
       const { data, error: fetchError } = await supabase
         .from("team_memberships")
         .select(
@@ -115,19 +113,17 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         .eq("is_active", true);
       if (fetchError) {
         console.error("Failed to fetch team members:", fetchError);
-        setMemberError(t("teams.mobile.memberFetchFailed"));
-        return;
+        throw fetchError;
       }
-      if (data) {
-        setMemberError(null);
-        // グループへのメンバー割り当てもメンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
-        setTeamMembers(
-          (data as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday),
-        );
-      }
-    };
-    loadTeamMembers();
-  }, [teamId, supabase, t]);
+      // グループへのメンバー割り当てもメンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
+      return ((data ?? []) as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday);
+    },
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const teamMembers = teamMembersQuery.data ?? NO_TEAM_MEMBERS;
+  const memberError = getCachedQueryStatus(teamMembersQuery).isFailed
+    ? t("teams.mobile.memberFetchFailed")
+    : null;
 
   // グループ作成/編集ハンドラ
   const handleFormSubmit = useCallback(

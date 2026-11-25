@@ -77,7 +77,7 @@ const listIds = () =>
   Array.from(screen.getByTestId("goal-list").querySelectorAll("button")).map((b) => b.textContent);
 
 function renderClient() {
-  return render(<GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} />);
+  return render(<GoalsClient styles={[]} />);
 }
 
 describe("GoalsClient: 大会が終わった目標を出さない", () => {
@@ -116,7 +116,7 @@ describe("GoalsClient: 大会が終わった目標を出さない", () => {
     expect(screen.getByTestId("goal-detail").textContent).toBe("b");
 
     h.goals = [goal("a", "2026-11-01")];
-    rerender(<GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} />);
+    rerender(<GoalsClient styles={[]} />);
     expect(screen.getByTestId("goal-detail").textContent).toBe("a");
   });
 
@@ -124,7 +124,7 @@ describe("GoalsClient: 大会が終わった目標を出さない", () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     h.goals = [goal("a", "2026-11-01"), goal("b", "2026-12-01")];
-    render(<GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} initialGoalId="b" />);
+    render(<GoalsClient styles={[]} initialGoalId="b" />);
     expect(screen.getByTestId("goal-detail").textContent).toBe("b");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
@@ -134,7 +134,7 @@ describe("GoalsClient: 大会が終わった目標を出さない", () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     h.goals = [goal("past", "2026-09-01"), goal("a", "2026-11-01")];
     render(
-      <GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} initialGoalId="past" />,
+      <GoalsClient styles={[]} initialGoalId="past" />,
     );
     expect(screen.getByTestId("goal-detail").textContent).toBe("a");
     expect(scrollIntoView).not.toHaveBeenCalled();

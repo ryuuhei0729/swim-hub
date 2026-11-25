@@ -14,7 +14,8 @@
  *              (同じセレクタが機能することの証明、V-M-RE01 の偽陽性防止)
  */
 
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/contexts/AuthProvider");

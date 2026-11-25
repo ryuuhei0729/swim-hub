@@ -19,7 +19,8 @@
 //   「どの行/どのセルに属するか」と「行内での前後関係」のみ。
 // =============================================================================
 
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, it, expect } from "vitest";
 import { buildMember, mockEmptyRecordsQuery } from "./teamMemberListHarness";
 import { TeamMemberList } from "../TeamMemberList";

@@ -15,6 +15,8 @@ import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import Avatar from "@/components/ui/Avatar";
 import BestTimeBadge from "@/components/ui/BestTimeBadge";
 import { TeamRelayRecordsAPI } from "@apps/shared/api/teams/relayRecords";
+import { useQuery } from "@tanstack/react-query";
+import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
 import { calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
 import type { RelayRecordWithLegs } from "@apps/shared/types";
 
@@ -186,6 +188,10 @@ function RecordTimeCell({
   );
 }
 
+// useMemo の依存を安定させるための空配列 (データが無い間に毎回新しい配列を作らない)
+const EMPTY_RECORDS: RecordEntry[] = [];
+const EMPTY_RELAY_RECORDS: RelayRecordWithLegs[] = [];
+
 export default function TeamCompetitionRecordsModal({
   isOpen,
   onClose,
@@ -197,78 +203,77 @@ export default function TeamCompetitionRecordsModal({
   // リレー種目ラベル・レグ表示は既存のランキング画面の文言を流用する
   // (CLAUDE.md「種目コードの canonical」節と同じ理由で、二重管理にしない)。
   const tRelay = useTranslations("teams.ranking");
-  const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
-  const [records, setRecords] = useState<RecordEntry[]>([]);
-  const [relayRecords, setRelayRecords] = useState<RelayRecordWithLegs[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [expandedRelayIds, setExpandedRelayIds] = useState<ReadonlySet<string>>(new Set());
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const [compResult, recordsResult, relayResult] = await Promise.all([
-          supabase
-            .from("competitions")
-            .select("id, title, date, place, pool_type, note")
-            .eq("id", competitionId)
-            .single(),
-          supabase
-            .from("records")
-            .select(
-              `
+  // 開くたびに再取得するが (staleTime 0)、前回開いたときの内容があれば先に表示する。
+  // 大会が見つからない (.single() の PGRST116) 場合も取得エラーとして扱い、空の結果を
+  // キャッシュしない (以前のコードも読み込みエラーを表示していた)
+  const recordsQuery = useQuery({
+    queryKey: teamDetailKeys.competitionRecords(competitionId),
+    queryFn: async () => {
+      const [compResult, recordsResult, relayResult] = await Promise.all([
+        supabase
+          .from("competitions")
+          .select("id, title, date, place, pool_type, note")
+          .eq("id", competitionId)
+          .single(),
+        supabase
+          .from("records")
+          .select(
+            `
+            id,
+            user_id,
+            style_id,
+            time,
+            reaction_time,
+            is_relaying,
+            note,
+            pool_type,
+            users!records_user_id_fkey (
+              name,
+              profile_image_path
+            ),
+            styles (
               id,
-              user_id,
-              style_id,
-              time,
-              reaction_time,
-              is_relaying,
-              note,
-              pool_type,
-              users!records_user_id_fkey (
-                name,
-                profile_image_path
-              ),
-              styles (
-                id,
-                name_jp,
-                name,
-                style,
-                distance
-              ),
-              split_times (
-                id,
-                distance,
-                split_time
-              )
-            `,
+              name_jp,
+              name,
+              style,
+              distance
+            ),
+            split_times (
+              id,
+              distance,
+              split_time
             )
-            .eq("competition_id", competitionId)
-            .order("time", { ascending: true }),
-          TeamRelayRecordsAPI.getByCompetition(supabase, competitionId),
-        ]);
+          `,
+          )
+          .eq("competition_id", competitionId)
+          .order("time", { ascending: true }),
+        TeamRelayRecordsAPI.getByCompetition(supabase, competitionId),
+      ]);
 
-        if (compResult.error) throw compResult.error;
-        if (recordsResult.error) throw recordsResult.error;
+      if (compResult.error) throw compResult.error;
+      if (recordsResult.error) throw recordsResult.error;
 
-        setCompetition(compResult.data as CompetitionDetail);
-        setRecords((recordsResult.data || []) as unknown as RecordEntry[]);
-        setRelayRecords(relayResult);
-      } catch (err) {
-        console.error("大会記録の取得エラー:", err);
-        setError(t("loadError"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [isOpen, competitionId, supabase, t]);
+      return {
+        competition: compResult.data as CompetitionDetail,
+        records: (recordsResult.data || []) as unknown as RecordEntry[],
+        relayRecords: relayResult,
+      };
+    },
+    enabled: isOpen,
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  });
+  const competition = recordsQuery.data?.competition ?? null;
+  const records = recordsQuery.data?.records ?? EMPTY_RECORDS;
+  const relayRecords = recordsQuery.data?.relayRecords ?? EMPTY_RELAY_RECORDS;
+  // 読み込み表示 / エラーは表示できる内容が無いときだけ出す
+  const loading = !recordsQuery.data && recordsQuery.isPending;
+  const error = !recordsQuery.data && recordsQuery.isError ? t("loadError") : null;
+  const fetchError = recordsQuery.error;
+  useEffect(() => {
+    if (fetchError) console.error("大会記録の取得エラー:", fetchError);
+  }, [fetchError]);
 
   // relay_records に取り込まれたレグの元 records.id。個人種目一覧から除外するために使う
   // (is_relaying の値に関わらず除外する。第1泳者は is_relaying=false でもここに載る)。

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import BaseModal from "@/components/ui/BaseModal";
@@ -25,6 +27,8 @@ interface GroupMemberListModalProps {
   membersRefreshSignal?: number;
 }
 
+const EMPTY_MEMBERS: MemberDetail[] = [];
+
 export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   isOpen,
   onClose,
@@ -35,32 +39,35 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
 }) => {
   const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
-  const [members, setMembers] = useState<MemberDetail[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 閉じるときに親が group を null に戻しても、閉じアニメーション中にクエリキーが
+  // 変わって一覧が空にならないよう、最後に開いていたグループを保持して使う
+  // (React 公式の「レンダー中に state を調整する」パターン)
+  const [lastGroup, setLastGroup] = useState<TeamGroupWithCount | null>(group);
+  if (group && group !== lastGroup) {
+    setLastGroup(group);
+  }
+  const displayGroup = group ?? lastGroup;
+  const groupId = displayGroup?.id ?? null;
 
-  const loadMembers = useCallback(
-    async (options?: { silent?: boolean }) => {
-      if (!group) return;
-      if (!options?.silent) setLoading(true);
-      try {
-        // グループに所属するuser_idを取得
-        const { data: groupMemberships, error: gmError } = await supabase
-          .from("team_group_memberships")
-          .select("user_id")
-          .eq("team_group_id", group.id);
-        if (gmError) throw gmError;
+  // 開くたびに再取得するが (staleTime 0)、前回開いたときの一覧があれば先に表示する
+  const membersQuery = useQuery({
+    queryKey: teamDetailKeys.groupMembers(teamId, groupId ?? ""),
+    queryFn: async (): Promise<MemberDetail[]> => {
+      // グループに所属するuser_idを取得
+      const { data: groupMemberships, error: gmError } = await supabase
+        .from("team_group_memberships")
+        .select("user_id")
+        .eq("team_group_id", groupId!); // enabled で groupId !== null を保証済み
+      if (gmError) throw gmError;
 
-        const userIds = (groupMemberships ?? []).map((m) => m.user_id);
-        if (userIds.length === 0) {
-          setMembers([]);
-          return;
-        }
+      const userIds = (groupMemberships ?? []).map((m) => m.user_id);
+      if (userIds.length === 0) return [];
 
-        // team_membershipsからMemberDetail情報を取得
-        const { data, error: tmError } = await supabase
-          .from("team_memberships")
-          .select(
-            `
+      // team_membershipsからMemberDetail情報を取得
+      const { data, error: tmError } = await supabase
+        .from("team_memberships")
+        .select(
+          `
           id,
           user_id,
           role,
@@ -75,43 +82,39 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             gender
           )
         `,
-          )
-          .eq("team_id", teamId)
-          .eq("status", "approved")
-          .eq("is_active", true)
-          .in("user_id", userIds);
+        )
+        .eq("team_id", teamId)
+        .eq("status", "approved")
+        .eq("is_active", true)
+        .in("user_id", userIds);
 
-        if (tmError) throw tmError;
-        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
-        setMembers(((data ?? []) as unknown as MemberDetail[]).sort(compareMembersByBirthday));
-      } catch (err) {
-        console.error("グループメンバー取得エラー:", err);
-      } finally {
-        if (!options?.silent) setLoading(false);
-      }
+      if (tmError) throw tmError;
+      // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+      return ((data ?? []) as unknown as MemberDetail[]).sort(compareMembersByBirthday);
     },
-    [group, teamId, supabase],
-  );
-
+    enabled: isOpen && groupId !== null,
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  });
+  const members = membersQuery.data ?? EMPTY_MEMBERS;
+  // 以前と同じく、取得に失敗したら (表示できる一覧が無ければ) 空の一覧になる
+  const loading = !membersQuery.data && membersQuery.isFetching;
+  const fetchError = membersQuery.error;
   useEffect(() => {
-    if (isOpen && group) {
-      loadMembers();
-    }
-  }, [isOpen, group, loadMembers]);
+    if (fetchError) console.error("グループメンバー取得エラー:", fetchError);
+  }, [fetchError]);
 
   // メンバー詳細モーダル (このモーダルの上に開く) での変更をバックグラウンドで反映する
+  const { refetch } = membersQuery;
   useEffect(() => {
     if (membersRefreshSignal === undefined) return;
-    if (!isOpen || !group) return;
-    loadMembers({ silent: true });
-    // loadMembers 自体を deps に含めると group/teamId 変化のたびにも再実行されるが、
-    // それは元の isOpen effect と同じ読み込みなので害はない
-  }, [membersRefreshSignal, isOpen, group, loadMembers]);
+    if (!isOpen || groupId === null) return;
+    void refetch();
+  }, [membersRefreshSignal, isOpen, groupId, refetch]);
 
-  if (!group) return null;
+  if (!displayGroup) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={`${group.name}`} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={`${displayGroup.name}`} size="md">
       <div className="space-y-1">
         {/* ヘッダー */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">

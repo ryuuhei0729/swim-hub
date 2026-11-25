@@ -453,6 +453,12 @@ export function useUpdateCompetitionMutation(
       // ⚠️ `useCreateCompetitionMutation` には**足さない**。作成直後の大会には
       // 記録が1件も紐づいていないので、どの年度のランキングも変わらない。
       invalidateTeamRankings(queryClient);
+      // 水路を変えると DB トリガー (sync_record_pool_type_with_competition) が
+      // その大会の records / relay_records の pool_type も書き換える。
+      // 記録一覧・詳細・ベストタイムのキャッシュに旧水路が残らないよう取り直す。
+      if (variables.updates.pool_type !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: recordKeys.all });
+      }
     },
   });
 }

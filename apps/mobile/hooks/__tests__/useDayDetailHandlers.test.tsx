@@ -28,7 +28,8 @@
 // 「キーが呼ばれたか」だけでなく「正しい件数が渡ったか」まで検証可能にする。
 
 import { Alert } from "react-native";
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import { renderHookWithQuery as renderHook } from "@/__tests__/helpers/testUtils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

@@ -1,18 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import {
+  useInvalidateWhenChanged,
+  useIsAwaitingFreshData,
+} from "@/hooks/cachedQuery";
+import { DAY_DETAIL_QUERY_OPTIONS, dayDetailKeys } from "@/hooks/dayDetailQueries";
+import { useGalleryImages } from "@/hooks/useGalleryImages";
 import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
 import { ShareCardModal } from "@/components/share";
 import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
-import { resolveGalleryImages } from "@/utils/imageUpload";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
@@ -27,6 +33,36 @@ import type {
   PracticeLogDetailData,
   PracticeLogFromDB,
 } from "../types";
+
+/** practice_logs の行 (タグ・タイムつき)。キャッシュにはこの形のまま持つ */
+type PracticeLogRow = Omit<PracticeLogFromDB, "practice_id"> & {
+  practice_id: string | null;
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
+  practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
+};
+
+/** practices の行とそのメニュー */
+interface PracticeWithLogsRow {
+  image_paths?: string[] | null;
+  practice_logs?: Array<
+    PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> }
+  > | null;
+}
+
+interface PracticeLogRowWithImages {
+  log: PracticeLogRow;
+  imagePaths: string[];
+}
+
+/** PostgREST: .single() で該当行が0件だったときのエラーコード */
+const NO_ROWS_ERROR_CODE = "PGRST116";
+
+interface LatestRecordDetail {
+  time: number;
+  note: string;
+  reactionTime: number | null;
+}
 
 // DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色。
 // (このコンポーネントは練習/大会/エントリー/記録いずれのアイテムでも使われるため、
@@ -80,7 +116,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     ? "#F0FDF4"
     : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
   const { t } = useTranslation();
-  const { supabase, getAccessToken } = useAuth();
+  const { supabase, user } = useAuth();
+  const userId = user?.id;
   const locale = useDateLocale();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   // チームの練習/大会のみ出欠確認ボタンを表示する（web PracticeDetails/CompetitionDetails の
@@ -92,25 +129,256 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   // (PM裁定: 管理者判定は使わず type のみで判定。チームタブからの削除は別経路で維持)
   const isTeamItem = item.type === "team_practice" || item.type === "team_competition";
   const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
-  const [recordDetail, setRecordDetail] = useState<{
-    time: number;
-    note: string;
-    reactionTime: number | null;
-  } | null>(null);
-  const [loadingRecordDetail, setLoadingRecordDetail] = useState(false);
-  const [practiceLogs, setPracticeLogs] = useState<PracticeLogData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [practiceImages, setPracticeImages] = useState<Array<{ id: string; url: string }>>([]);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [shareVisible, setShareVisible] = useState(false);
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
-  const [practiceLogImages, setPracticeLogImages] = useState<Array<{ id: string; url: string }>>(
-    [],
-  );
   const [logViewerVisible, setLogViewerVisible] = useState(false);
   const [logViewerIndex, setLogViewerIndex] = useState(0);
+
+  // ---------------------------------------------------------------------------
+  // 詳細データの取得
+  // 同じ日を開き直したときは前回の内容をすぐ表示し、裏で取り直す。保存・削除で無効化された
+  // ものは取り直しが済むまで読み込み中にする。キャッシュには DB の行をそのまま持たせ、
+  // 失効する画像の署名付きURLは useGalleryImages で表示のたびに解決する。
+  // ---------------------------------------------------------------------------
+
+  const queryClient = useQueryClient();
+
+  // 練習1件とそのメニュー
+  const practiceKey = dayDetailKeys.practice(practiceId ?? "");
+  const practiceEnabled = isPractice && !!practiceId;
+  const practiceQuery = useQuery({
+    queryKey: practiceKey,
+    queryFn: async (): Promise<PracticeWithLogsRow | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("practices")
+          .select(
+            `
+          *,
+          practice_logs (
+            *,
+            practice_times (*),
+            practice_log_tags (
+              practice_tag_id,
+              practice_tags (
+                id,
+                name,
+                color
+              )
+            )
+          )
+        `,
+          )
+          .eq("id", practiceId)
+          .single();
+
+        if (error) throw error;
+        return (data as PracticeWithLogsRow | null) ?? null;
+      } catch (error) {
+        console.error("練習ログの取得エラー:", error);
+        throw error;
+      }
+    },
+    enabled: practiceEnabled,
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  const practiceAwaitingFresh = useIsAwaitingFreshData(practiceKey, practiceQuery.isFetching);
+  const practiceData = practiceQuery.data;
+  const loading =
+    practiceEnabled &&
+    ((practiceData === undefined && !practiceQuery.isError) || practiceAwaitingFresh);
+
+  const practiceLogs = useMemo<PracticeLogData[]>(
+    () =>
+      (practiceData?.practice_logs || []).map((log) => ({
+        id: log.id,
+        practiceId: log.practice_id,
+        style: log.style,
+        swim_category: log.swim_category,
+        repCount: log.rep_count,
+        setCount: log.set_count,
+        distance: log.distance,
+        circle: log.circle,
+        note: log.note,
+        times: (log.practice_times || []).map((time: PracticeTime) => ({
+          id: time.id,
+          time: time.time,
+          repNumber: time.rep_number,
+          setNumber: time.set_number,
+        })),
+        tags: (log.practice_log_tags || [])
+          .map((plt) => plt.practice_tags)
+          .filter(Boolean) as PracticeTag[],
+      })),
+    [practiceData],
+  );
+  // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+  const practiceImages = useGalleryImages(
+    "practice-images",
+    practiceEnabled ? practiceData?.image_paths : null,
+  );
+
+  // 練習メニュー1件
+  const practiceLogKey = dayDetailKeys.practiceLog(practiceId ?? "", item.id ?? "");
+  const practiceLogEnabled = isPracticeLog && !!item.id;
+  const practiceLogQuery = useQuery({
+    queryKey: practiceLogKey,
+    queryFn: async (): Promise<PracticeLogRowWithImages | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("practice_logs")
+          .select(
+            `
+          *,
+          practice_times (*),
+          practice_log_tags (
+            practice_tag_id,
+            practice_tags (
+              id,
+              name,
+              color
+            )
+          )
+        `,
+          )
+          .eq("id", item.id)
+          .single();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        const log = data as PracticeLogRow;
+
+        // 紐づく練習の画像パス。取得に失敗しても練習メニュー自体は表示し、画像パスは前回の
+        // ものを保つ (「画像なし」をキャッシュに上書きすると、次に成功するまで画像が消える)
+        const previousImagePaths = () =>
+          queryClient.getQueryData<PracticeLogRowWithImages | null>(practiceLogKey)?.imagePaths ??
+          [];
+        let imagePaths: string[] = [];
+        if (log.practice_id) {
+          try {
+            const { data: practiceRow, error: practiceError } = await supabase
+              .from("practices")
+              .select("image_paths")
+              .eq("id", log.practice_id)
+              .single();
+            if (practiceError) {
+              imagePaths = previousImagePaths();
+            } else if (practiceRow) {
+              imagePaths =
+                (practiceRow as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            }
+          } catch (err) {
+            console.warn("practice_log 画像取得に失敗:", err);
+            imagePaths = previousImagePaths();
+          }
+        }
+
+        return { log, imagePaths };
+      } catch (error) {
+        console.error("練習ログ詳細の取得エラー:", error);
+        throw error;
+      }
+    },
+    enabled: practiceLogEnabled,
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  const practiceLogAwaitingFresh = useIsAwaitingFreshData(
+    practiceLogKey,
+    practiceLogQuery.isFetching,
+  );
+  const practiceLogData = practiceLogQuery.data;
+  const loadingLogDetail =
+    practiceLogEnabled &&
+    ((practiceLogData === undefined && !practiceLogQuery.isError) || practiceLogAwaitingFresh);
+
+  const practiceLogDetail = useMemo<PracticeLogDetailData | null>(() => {
+    const log = practiceLogData?.log;
+    if (!log) return null;
+    return {
+      id: log.id,
+      style: log.style,
+      swim_category: log.swim_category,
+      repCount: log.rep_count,
+      setCount: log.set_count,
+      distance: log.distance,
+      circle: log.circle,
+      note: log.note,
+      times: (log.practice_times || []).map((time: PracticeTime) => ({
+        id: time.id,
+        time: time.time,
+        repNumber: time.rep_number,
+        setNumber: time.set_number,
+      })),
+      tags: (log.practice_log_tags || [])
+        .map((plt) => plt.practice_tags)
+        .filter(Boolean) as PracticeTag[],
+      videoPath: log.video_path ?? null,
+      videoThumbnailPath: log.video_thumbnail_path ?? null,
+    };
+  }, [practiceLogData]);
+  // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+  const practiceLogImages = useGalleryImages(
+    "practice-images",
+    practiceLogEnabled ? practiceLogData?.imagePaths : null,
+  );
+
+  // 記録詳細を取得（record表示用）
+  const recordCompetitionId: string | undefined =
+    item.type === "record"
+      ? item.metadata?.competition?.id || item.metadata?.record?.competition_id || item.id
+      : undefined;
+  const latestRecordKey = dayDetailKeys.latestRecord(recordCompetitionId ?? "", userId ?? "");
+  const latestRecordEnabled = !!recordCompetitionId && !!userId;
+  const latestRecordQuery = useQuery({
+    queryKey: latestRecordKey,
+    queryFn: async (): Promise<LatestRecordDetail | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("records")
+          .select("id, time, note, reaction_time")
+          .eq("competition_id", recordCompetitionId!)
+          .eq("user_id", userId!)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          // 記録が1件も無い (.single() が0件のとき返すエラー) のは「記録なし」という正常な結果
+          if ((error as { code?: string }).code === NO_ROWS_ERROR_CODE) return null;
+          // それ以外 (通信エラーなど) は失敗として扱う。「記録なし」として成功扱いにすると、
+          // 表示できていた記録が一時的な失敗で「記録なし」に上書きされ、端末にも保存されてしまう
+          throw error;
+        }
+        if (!data) return null;
+
+        return {
+          time: data.time,
+          note: data.note || "",
+          reactionTime: data.reaction_time ?? null,
+        };
+      } catch (error) {
+        console.error("記録詳細取得エラー:", error);
+        throw error;
+      }
+    },
+    enabled: latestRecordEnabled,
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  // カレンダー側の項目が差し替わったら (編集のあと) 取り直す
+  useInvalidateWhenChanged(item, latestRecordKey);
+  const latestRecordAwaitingFresh = useIsAwaitingFreshData(
+    latestRecordKey,
+    latestRecordQuery.isFetching,
+  );
+  const recordDetail = latestRecordQuery.data ?? null;
+  const loadingRecordDetail =
+    latestRecordEnabled &&
+    ((latestRecordQuery.data === undefined && !latestRecordQuery.isError) ||
+      latestRecordAwaitingFresh);
 
   // 共有ボタン押下: その日の practiceLogs 全件を menuItems に集約する
   // （web PracticeDetails.tsx の share-practice-log-button と同一方針。押されたログに
@@ -150,280 +418,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     setShareVisible(true);
   }, [practiceLogs, item.date, item.place, item.note, title, locale]);
 
-  // isCancelled: 呼び出し元 effect のクリーンアップで true になるガード。
-  // practiceId 切替時に 2 段 await (fetch → getAccessToken → resolveGalleryImages) の
-  // 古いレスポンスが新しい state を上書きするのを防ぐ。
-  const loadPracticeLogs = useCallback(async (isCancelled: () => boolean = () => false) => {
-    if (!isPractice || !practiceId) return;
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("practices")
-        .select(
-          `
-          *,
-          practice_logs (
-            *,
-            practice_times (*),
-            practice_log_tags (
-              practice_tag_id,
-              practice_tags (
-                id,
-                name,
-                color
-              )
-            )
-          )
-        `,
-        )
-        .eq("id", practiceId)
-        .single();
-
-      if (isCancelled()) return;
-      if (error) throw error;
-      if (!data) return;
-
-      const imagePaths = (data as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-      // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
-      const accessToken = await getAccessToken();
-      if (isCancelled()) return;
-      if (accessToken) {
-        try {
-          const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
-          if (!isCancelled()) setPracticeImages(images);
-        } catch (err) {
-          console.warn("練習画像の取得に失敗:", err);
-          // 取得失敗時に古い練習の画像を表示し続けない（RecordDetail と同一の挙動）
-          if (!isCancelled()) setPracticeImages([]);
-        }
-      } else {
-        // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
-        setPracticeImages([]);
-      }
-
-      const formattedLogs = (data.practice_logs || []).map(
-        (
-          log: PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> },
-        ) => ({
-          id: log.id,
-          practiceId: log.practice_id,
-          style: log.style,
-          swim_category: log.swim_category,
-          repCount: log.rep_count,
-          setCount: log.set_count,
-          distance: log.distance,
-          circle: log.circle,
-          note: log.note,
-          times: (log.practice_times || []).map((time: PracticeTime) => ({
-            id: time.id,
-            time: time.time,
-            repNumber: time.rep_number,
-            setNumber: time.set_number,
-          })),
-          tags: (log.practice_log_tags || [])
-            .map((plt) => plt.practice_tags)
-            .filter(Boolean) as PracticeTag[],
-        }),
-      );
-
-      if (!isCancelled()) {
-        setPracticeLogs(formattedLogs);
-      }
-    } catch (error) {
-      console.error("練習ログの取得エラー:", error);
-    } finally {
-      if (!isCancelled()) setLoading(false);
-    }
-  }, [isPractice, practiceId, supabase, getAccessToken]);
-
-  useEffect(() => {
-    if (!isPractice || !practiceId) return;
-    let cancelled = false;
-    loadPracticeLogs(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [isPractice, practiceId, loadPracticeLogs]);
-
-  const [practiceLogDetail, setPracticeLogDetail] = useState<PracticeLogDetailData | null>(null);
-  const [loadingLogDetail, setLoadingLogDetail] = useState(false);
-
-  // isCancelled: loadPracticeLogs と同じく、古いレスポンスによる state 上書きを防ぐガード
-  const loadPracticeLogDetail = useCallback(async (isCancelled: () => boolean = () => false) => {
-    if (!isPracticeLog || !item.id) return;
-
-    try {
-      setLoadingLogDetail(true);
-      const { data, error } = await supabase
-        .from("practice_logs")
-        .select(
-          `
-          *,
-          practice_times (*),
-          practice_log_tags (
-            practice_tag_id,
-            practice_tags (
-              id,
-              name,
-              color
-            )
-          )
-        `,
-        )
-        .eq("id", item.id)
-        .single();
-
-      if (isCancelled()) return;
-      if (error) throw error;
-      if (!data) return;
-
-      const log = data as {
-        id: string;
-        practice_id: string | null;
-        style: string;
-        swim_category?: "Swim" | "Pull" | "Kick" | null;
-        rep_count: number;
-        set_count: number;
-        distance: number;
-        circle: number | null;
-        note: string | null;
-        video_path?: string | null;
-        video_thumbnail_path?: string | null;
-        practice_times?: PracticeTime[];
-        practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
-      };
-
-      const times = (log.practice_times || []).map((time: PracticeTime) => ({
-        id: time.id,
-        time: time.time,
-        repNumber: time.rep_number,
-        setNumber: time.set_number,
-      }));
-
-      const tags = (log.practice_log_tags || [])
-        .map((plt) => plt.practice_tags)
-        .filter(Boolean) as PracticeTag[];
-
-      if (isCancelled()) return;
-      setPracticeLogDetail({
-        id: log.id,
-        style: log.style,
-        swim_category: log.swim_category,
-        repCount: log.rep_count,
-        setCount: log.set_count,
-        distance: log.distance,
-        circle: log.circle,
-        note: log.note,
-        times,
-        tags,
-        videoPath: log.video_path ?? null,
-        videoThumbnailPath: log.video_thumbnail_path ?? null,
-      });
-
-      const logPracticeId = log.practice_id;
-      if (logPracticeId) {
-        try {
-          const { data: practiceData, error: practiceError } = await supabase
-            .from("practices")
-            .select("image_paths")
-            .eq("id", logPracticeId)
-            .single();
-
-          if (isCancelled()) return;
-          if (!practiceError && practiceData) {
-            const imagePaths =
-              (practiceData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-            // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
-            const accessToken = await getAccessToken();
-            if (isCancelled()) return;
-            if (accessToken) {
-              const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
-              if (!isCancelled()) setPracticeLogImages(images);
-            } else {
-              // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
-              setPracticeLogImages([]);
-            }
-          }
-        } catch (err) {
-          console.warn("practice_log 画像取得に失敗:", err);
-          // 取得失敗時に古い練習の画像を表示し続けない（RecordDetail と同一の挙動）
-          if (!isCancelled()) setPracticeLogImages([]);
-        }
-      } else {
-        // 紐づく practice が無い場合も前の画像を残さない
-        setPracticeLogImages([]);
-      }
-    } catch (error) {
-      console.error("練習ログ詳細の取得エラー:", error);
-    } finally {
-      if (!isCancelled()) setLoadingLogDetail(false);
-    }
-  }, [isPracticeLog, item.id, supabase, getAccessToken]);
-
-  useEffect(() => {
-    if (!isPracticeLog || !item.id) return;
-    let cancelled = false;
-    loadPracticeLogDetail(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [isPracticeLog, item.id, loadPracticeLogDetail]);
-
-  // 記録詳細を取得（record表示用）
-  useEffect(() => {
-    if (item.type !== "record") return;
-
-    let isMounted = true;
-    const loadRecordDetail = async () => {
-      try {
-        setLoadingRecordDetail(true);
-        const competitionId =
-          item.metadata?.competition?.id || item.metadata?.record?.competition_id || item.id;
-        if (!competitionId) return;
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from("records")
-          .select("id, time, note, reaction_time")
-          .eq("competition_id", competitionId)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!isMounted) return;
-        if (error) {
-          console.error("記録詳細取得エラー:", error);
-          return;
-        }
-        if (!data) return;
-
-        setRecordDetail({
-          time: data.time,
-          note: data.note || "",
-          reactionTime: data.reaction_time ?? null,
-        });
-      } catch (error) {
-        if (!isMounted) return;
-        console.error("記録詳細取得エラー:", error);
-      } finally {
-        if (isMounted) {
-          setLoadingRecordDetail(false);
-        }
-      }
-    };
-
-    loadRecordDetail();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [item, supabase]);
 
   if (isPracticeLog) {
     return (

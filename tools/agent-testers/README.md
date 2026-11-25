@@ -33,7 +33,7 @@ iOS シミュレーターを用意して、Claude Code のエージェントに�
      `AGENT_TESTERS_LOGIN_EMAIL`、`AGENT_TESTERS_LOGIN_PASSWORD`
    - `apps/mobile/.env.keys` から `DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE` を設定（`apps/mobile/.env.development` の復号用。
      web/ルートの `DOTENV_PRIVATE_KEY_DEVELOPMENT` とは別の鍵）
-3. `tools/agent-testers/results_public.pem` をコミットし、develop にマージする
+3. `tools/agent-testers/results_public.pem` をコミットし、main にマージする
    （`workflow_dispatch` のワークフローはデフォルトブランチにないと実行できない）。
 
 ## 実行と回収

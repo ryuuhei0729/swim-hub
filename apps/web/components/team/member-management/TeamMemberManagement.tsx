@@ -2,10 +2,15 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useMemberBestTimes } from "../shared/hooks/useMemberBestTimes";
+import { pickBestTime } from "../shared/hooks/useMemberBestTimes";
 import {
-  useMembers,
+  useApprovedTeamMembersQuery,
+  useTeamMemberBestTimesQuery,
+} from "@/hooks/queries/teamMemberQueries";
+import { invalidateTeamMemberQueries } from "@/hooks/queries/teamDetailKeys";
+import {
   usePendingMembers,
   useMembershipActions,
   useMemberSort,
@@ -18,6 +23,9 @@ import {
   MemberGroupSorter,
 } from "./components";
 import type { TeamMember } from "./hooks/useMembers";
+
+// 取得前に毎回新しい配列を作ってソート・ベストタイム取得を無駄に走らせないための空配列
+const EMPTY_MEMBERS: TeamMember[] = [];
 
 export interface TeamMemberManagementProps {
   teamId: string;
@@ -51,15 +59,22 @@ export default function TeamMemberManagement({
   const { supabase } = useAuth();
   const t = useTranslations("teams");
 
-  // メンバーデータ管理
-  const { members, loading, error, loadMembers } = useMembers(teamId, supabase);
+  const queryClient = useQueryClient();
+
+  // メンバーデータ (タブを開くたびに再取得するが、再取得中は前回の一覧を表示する)
+  const membersQuery = useApprovedTeamMembersQuery(supabase, teamId);
+  const members = membersQuery.data ?? EMPTY_MEMBERS;
+  // スケルトン / エラーは表示できる一覧が無いときだけ出す
+  const loading = membersQuery.isPending;
+  const error = membersQuery.isError && !membersQuery.data ? t("membersHook.loadError") : null;
+  const membersFetchError = membersQuery.error;
+  useEffect(() => {
+    if (membersFetchError) console.error("メンバー情報の取得に失敗:", membersFetchError);
+  }, [membersFetchError]);
+  const { refetch: refetchMembers } = membersQuery;
 
   // 承認待ちメンバー管理
-  const {
-    pendingMembers,
-    loading: loadingPending,
-    loadPendingMembers,
-  } = usePendingMembers(teamId, isCurrentUserAdmin, supabase);
+  const { pendingMembers, loading: loadingPending } = usePendingMembers(teamId, isCurrentUserAdmin, supabase);
 
   // 承認/却下アクション
   const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange);
@@ -70,12 +85,20 @@ export default function TeamMemberManagement({
     supabase,
   );
 
-  // ベストタイム管理
-  const {
-    loading: loadingBestTimes,
-    loadAllBestTimes,
-    getBestTimeForMember: getBestTimeBase,
-  } = useMemberBestTimes(supabase);
+  // ベストタイム管理 (メンバー一覧が取れてから取得。重いので teamKeys の外のキー)
+  const bestTimesQuery = useTeamMemberBestTimesQuery(supabase, teamId, members);
+  const memberBestTimes = bestTimesQuery.data;
+  // 前回の表があれば再取得中も表示し続ける
+  const loadingBestTimes = members.length > 0 && !memberBestTimes && bestTimesQuery.isFetching;
+  const bestTimesFetchError = bestTimesQuery.error;
+  useEffect(() => {
+    if (bestTimesFetchError) console.error("ベストタイム取得エラー:", bestTimesFetchError);
+  }, [bestTimesFetchError]);
+  const getBestTimeBase = useCallback(
+    (memberId: string, style: string, distance: number, includeRelaying: boolean) =>
+      pickBestTime(memberBestTimes?.[memberId] ?? [], style, distance, includeRelaying),
+    [memberBestTimes],
+  );
 
   // UI状態
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
@@ -91,39 +114,27 @@ export default function TeamMemberManagement({
   const { sortStyle, sortDistance, sortOrder, sortedMembers, groupHeaders, handleSort } =
     useMemberSort(members, getBestTimeForMemberWithRelaying, groupMembers);
 
-  // 初期データ読み込み
-  useEffect(() => {
-    loadMembers();
-    if (isCurrentUserAdmin) {
-      loadPendingMembers();
-    }
-  }, [teamId, isCurrentUserAdmin, loadMembers, loadPendingMembers]);
+  // 承認待ちはマウント時に useQuery が取得する (管理者のときだけ)
 
   // メンバー詳細モーダル (ページ側) での変更をバックグラウンドで反映する。
-  // undefined のままなら (シグナルが一度も来ていない) 何もしない
+  // undefined のままなら (シグナルが一度も来ていない) 何もしない。
+  // 再取得中も一覧はそのまま表示される (以前の silent 再取得と同じ見え方)
   useEffect(() => {
     if (membersRefreshSignal === undefined) return;
-    loadMembers({ silent: true });
-  }, [membersRefreshSignal, loadMembers]);
-
-  // メンバーが読み込まれたらベストタイムを取得
-  useEffect(() => {
-    if (members.length > 0) {
-      loadAllBestTimes(members);
-    }
-  }, [members, loadAllBestTimes]);
+    void refetchMembers();
+  }, [membersRefreshSignal, refetchMembers]);
 
   // 承認処理（再読み込み含む）
   const handleApproveWithRefresh = useCallback(
     async (membershipId: string) => {
       const success = await handleApprove(membershipId);
       if (success) {
-        await loadMembers();
-        await loadPendingMembers();
+        // メンバー一覧・承認待ち・グループ人数をまとめて最新化する
+        await invalidateTeamMemberQueries(queryClient, teamId);
       }
       return success;
     },
-    [handleApprove, loadMembers, loadPendingMembers],
+    [handleApprove, queryClient, teamId],
   );
 
   // 却下処理（再読み込み含む）
@@ -131,11 +142,11 @@ export default function TeamMemberManagement({
     async (membershipId: string) => {
       const success = await handleReject(membershipId);
       if (success) {
-        await loadPendingMembers();
+        await invalidateTeamMemberQueries(queryClient, teamId);
       }
       return success;
     },
-    [handleReject, loadPendingMembers],
+    [handleReject, queryClient, teamId],
   );
 
   // ローディング表示

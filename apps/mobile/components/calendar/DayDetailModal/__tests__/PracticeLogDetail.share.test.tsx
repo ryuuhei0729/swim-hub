@@ -28,7 +28,8 @@
  *   読んでコピーしたものではない。
  */
 
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 

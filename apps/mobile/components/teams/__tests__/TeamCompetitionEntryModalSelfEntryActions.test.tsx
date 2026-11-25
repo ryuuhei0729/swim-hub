@@ -25,7 +25,8 @@
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { Alert } from "react-native";
 import { UserFacingError } from "@apps/shared/utils/userFacingError";
 
@@ -83,6 +84,12 @@ function getByAccessibilityLabel(container: HTMLElement, label: string): HTMLEle
   return el as HTMLElement;
 }
 
+// 一覧は React Query 経由で届くため、取得関数が呼ばれた直後にはまだ描画されていない。
+// 行が現れるまで待ってから操作する。
+function findByAccessibilityLabel(container: HTMLElement, label: string): Promise<HTMLElement> {
+  return waitFor(() => getByAccessibilityLabel(container, label));
+}
+
 function queryByAccessibilityLabel(container: HTMLElement, label: string): HTMLElement | null {
   return container.querySelector(`[accessibilitylabel="${label}"]`);
 }
@@ -102,7 +109,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       );
       await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
 
-      const editButton = getByAccessibilityLabel(container, "50m自由形のエントリーを編集");
+      const editButton = await findByAccessibilityLabel(container, "50m自由形のエントリーを編集");
       fireEvent.click(editButton);
 
       expect(onEditEntry).toHaveBeenCalledTimes(1);
@@ -118,7 +125,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       const { container } = render(<TeamCompetitionEntryModal {...baseProps} />);
       await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalledTimes(1));
 
-      const deleteButton = getByAccessibilityLabel(container, "50m自由形のエントリーを削除");
+      const deleteButton = await findByAccessibilityLabel(container, "50m自由形のエントリーを削除");
       fireEvent.click(deleteButton);
 
       expect(Alert.alert).toHaveBeenCalledTimes(1);
@@ -140,7 +147,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       const { container } = render(<TeamCompetitionEntryModal {...baseProps} />);
       await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
 
-      fireEvent.click(getByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
+      fireEvent.click(await findByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
 
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
       const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void; style?: string }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
@@ -239,7 +246,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       const { container } = render(<TeamCompetitionEntryModal {...baseProps} />);
       await waitFor(() => expect(screen.getByText(/山田太郎/)).toBeDefined());
 
-      fireEvent.click(getByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
+      fireEvent.click(await findByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
       const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
       await act(async () => {
@@ -260,7 +267,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       const { container } = render(<TeamCompetitionEntryModal {...baseProps} />);
       await waitFor(() => expect(screen.getByText(/山田太郎/)).toBeDefined());
 
-      fireEvent.click(getByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
+      fireEvent.click(await findByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
       const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
       await act(async () => {
@@ -282,7 +289,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
       await waitFor(() => expect(screen.getByText(/山田太郎/)).toBeDefined());
 
       const container = document.body;
-      fireEvent.click(getByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
+      fireEvent.click(await findByAccessibilityLabel(container, "50m自由形のエントリーを削除"));
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
       const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
       await act(async () => {

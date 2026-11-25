@@ -17,7 +17,7 @@
  */
 
 import React from "react";
-import { renderWithI18n as render, screen, cleanup } from "../../utils/render";
+import { renderWithI18n as render, screen, cleanup } from "@/__tests__/helpers/teamQueryTestUtils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { addDays, format } from "date-fns";

@@ -177,6 +177,12 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// expo-store-review のモック (ネイティブモジュールを読み込まない。既定は「使えない端末」)
+vi.mock("expo-store-review", () => ({
+  isAvailableAsync: vi.fn(async () => false),
+  requestReview: vi.fn(async () => {}),
+}));
+
 // expo-localization のモック (i18n/index.ts が getDeviceLocale, I18nProvider が useLocales で参照)
 vi.mock("expo-localization", () => {
   const jaLocales = [{ languageCode: "ja", languageTag: "ja-JP", regionCode: "JP" }];

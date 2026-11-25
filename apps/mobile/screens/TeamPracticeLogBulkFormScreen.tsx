@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -779,7 +780,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient, { practiceId });
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
       queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
 

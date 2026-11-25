@@ -44,6 +44,11 @@ import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
 import { format, parseISO, isValid } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
+import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
+import {
+  resetTeamQueriesAfterExternalSave,
+  teamDetailKeys,
+} from "@/hooks/queries/teamDetailKeys";
 
 type Tag = PracticeTag;
 
@@ -144,6 +149,8 @@ export default function PracticeLogClient({
   const locale = useLocale();
   const router = useRouter();
   const { supabase, subscription } = useAuth();
+  // チーム画面のキャッシュ (練習一覧・練習詳細モーダル) を落とすため。Provider が無い環境では null
+  const queryClient = useOptionalQueryClient();
   const isPremium = checkIsPremium(subscription);
 
   const SWIM_STYLES = useMemo(
@@ -745,6 +752,14 @@ export default function PracticeLogClient({
       console.error("チーム練習ログ作成エラー:", err);
       setSubmitError(t("practiceLog.errorSave"));
     } finally {
+      // 保存後はチーム画面の練習タブへ戻る。キャッシュに残る保存前の内容 (カードのログ件数・
+      // 練習詳細モーダル) が戻った直後に一瞬表示されないよう捨てる (途中まで書き込めた失敗時も古い)
+      if (queryClient) {
+        void resetTeamQueriesAfterExternalSave(queryClient, [
+          teamDetailKeys.practicePages(teamId),
+          teamDetailKeys.practiceDetail(practiceId),
+        ]);
+      }
       setSaving(false);
     }
   };

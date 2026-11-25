@@ -13,6 +13,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format as formatDate } from "date-fns";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateDayDetailsAfterDelete } from "@/hooks/dayDetailQueries";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useDeletePracticeMutation, usePracticesQuery } from "@apps/shared/hooks/queries/practices";
 import {
@@ -55,8 +57,16 @@ export interface UseDayDetailHandlersReturn {
  */
 export function useDayDetailHandlers(
   supabase: SupabaseClient,
-  refetch: () => void,
+  refetchList: () => void,
 ): UseDayDetailHandlersReturn {
+  const queryClient = useQueryClient();
+  // 削除のあとは、一覧の再取得に加えて日別詳細のキャッシュも無効化する。
+  // 詳細は前回の内容をキャッシュから先に表示するため、無効化しておかないと
+  // 開き直したときに削除済みの内容が一瞬表示されてしまう。
+  const refetch = () => {
+    invalidateDayDetailsAfterDelete(queryClient);
+    refetchList();
+  };
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);

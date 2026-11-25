@@ -21,11 +21,6 @@ interface PendingTeamWithInviteCode {
   inviteCode: string | null;
 }
 
-interface TeamsClientProps {
-  // サーバー側で取得したデータ
-  initialTeams: TeamMembershipWithUser[];
-}
-
 /**
  * チームの入口 (/teams)。
  *
@@ -33,17 +28,16 @@ interface TeamsClientProps {
  * (利用者 / 管理者) でそのまま開く。別のチームへはチーム画面のヘッダーのチーム名から移る。
  * 承認済みのチームが無いときだけ、ここで承認待ちの状況と作成・参加の案内を出す。
  */
-export default function TeamsClient({ initialTeams }: TeamsClientProps) {
+export default function TeamsClient() {
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
   const t = useTranslations("teams");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
-  // チーム一覧を取得（リアルタイム更新用）
-  const { teams = [], isLoading: teamsLoading } = useTeamsQuery(supabase, {
-    initialTeams,
-  });
+  // チーム一覧を取得（リアルタイム更新用）。サーバーが同じキー (teamKeys.list()) で
+  // prefetch して HydrationBoundary で渡しているので、初回は取得を待たずに表示できる
+  const { teams = [], isLoading: teamsLoading } = useTeamsQuery(supabase);
 
   // 表示用のデータ（React Queryのキャッシュを使用）
   // 承認済みと承認待ちを分ける

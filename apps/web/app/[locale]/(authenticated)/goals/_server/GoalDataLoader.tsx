@@ -1,20 +1,41 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { createQueryClient } from "@apps/shared/lib/react-query";
 import { runMilestoneJudgment } from "@/utils/milestoneJudgment";
 import { getStyles } from "@/lib/data-loaders/common";
-import type { Goal, Style, Competition } from "@apps/shared/types";
+import type { Style } from "@apps/shared/types";
 import GoalsClient from "../_client/GoalsClient";
+
+/**
+ * 目標一覧を prefetch するクエリキー。クライアントの useGoalsQuery が使うキー
+ * (goalKeys.list()) と同一でなければならない (SSR/CSR でキーがずれると
+ * ハイドレートしたデータが使われず二重取得になる)。テストで一致を検証するため export している。
+ */
+//
+// ⚠️ goalKeys を @apps/shared/hooks/queries/goals から import してはいけない。そのファイルは
+// "use client" なので、Server Component から読むと中身がクライアント参照に置き換わり、
+// goalKeys.list() が「関数ではない」として next build が失敗する (テストでは再現しない)。
+// 共有パッケージは mobile も使うので動かさず、ここでは値を直接書く。
+// goalKeys.list() と一致することは GoalDataLoader.hydration.test.tsx で検証している。
+export const GOALS_LIST_QUERY_KEY = ["goals", "list", undefined] as const;
 
 /**
  * 目標管理ページのデータを並行取得するServer Component
  * Waterfall問題を完全に解消
  */
 export default async function GoalDataLoader({ initialGoalId }: { initialGoalId?: string }) {
+  const queryClient = createQueryClient();
+
   // 認証情報とSupabaseクライアントを取得
   const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   if (!user) {
-    return <GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} />;
+    return (
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <GoalsClient styles={[]} />
+      </HydrationBoundary>
+    );
   }
 
   // 代理入力 (チーム管理者による練習・大会記録の代理保存) は保存時点では判定しない
@@ -25,7 +46,7 @@ export default async function GoalDataLoader({ initialGoalId }: { initialGoalId?
   await runMilestoneJudgment(new GoalAPI(supabase), user.id);
 
   // すべてのデータ取得を並行実行（真の並列取得）
-  const [stylesResult, goalsResult, competitionsResult] = await Promise.all([
+  const [stylesResult] = await Promise.all([
     // Styles取得（キャッシュ付き、認証なしクライアントを使用 - 全ユーザー共通）
     getStyles().catch((error) => {
       console.error("[GoalDataLoader] Styles取得エラー:", {
@@ -35,36 +56,32 @@ export default async function GoalDataLoader({ initialGoalId }: { initialGoalId?
       });
       return [] as Style[];
     }),
-    // 大会目標取得（認証必要）
-    (async () => {
-      try {
-        const goalAPI = new GoalAPI(supabase);
-        return await goalAPI.getGoals();
-      } catch (error) {
-        console.error("大会目標取得エラー:", error);
-        return [] as Goal[];
-      }
-    })(),
-    // 大会一覧取得（competition情報表示用）。個人大会 + 所属チームの大会
-    // (RecordAPI.getCompetitions() は個人大会限定のため、チーム大会を対象にした
-    // 目標のタイトルが解決できず「大会情報なし」に誤って落ちる)
-    (async () => {
-      try {
-        const goalAPI = new GoalAPI(supabase);
-        return await goalAPI.getSelectableCompetitions();
-      } catch (error) {
-        console.error("大会一覧取得エラー:", error);
-        return [] as Competition[];
-      }
-    })(),
+    // 目標一覧 + 大会一覧を React Query キャッシュに prefetch (useGoalsQuery と同じキー・同じ形)。
+    // 大会一覧は個人大会 + 所属チームの大会 (RecordAPI.getCompetitions() は個人大会限定のため、
+    // チーム大会を対象にした目標のタイトルが解決できず「大会情報なし」に誤って落ちる)。
+    // 失敗は成功として dehydrate されない (retry:false で1回だけ試し、クライアントが取り直す)
+    queryClient.prefetchQuery({
+      queryKey: GOALS_LIST_QUERY_KEY,
+      retry: false,
+      queryFn: async () => {
+        try {
+          const goalAPI = new GoalAPI(supabase);
+          const [goals, competitions] = await Promise.all([
+            goalAPI.getGoals(),
+            goalAPI.getSelectableCompetitions(),
+          ]);
+          return { goals, competitions };
+        } catch (error) {
+          console.error("[GoalDataLoader] Goals prefetch エラー:", error);
+          throw error;
+        }
+      },
+    }),
   ]);
 
   return (
-    <GoalsClient
-      initialGoals={goalsResult}
-      initialCompetitions={competitionsResult}
-      styles={stylesResult}
-      initialGoalId={initialGoalId}
-    />
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <GoalsClient styles={stylesResult} initialGoalId={initialGoalId} />
+    </HydrationBoundary>
   );
 }

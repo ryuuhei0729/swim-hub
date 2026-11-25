@@ -24,7 +24,8 @@
 // =============================================================================
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, it, expect, vi } from "vitest";
 import deMessages from "@apps/shared/messages/de.json";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";

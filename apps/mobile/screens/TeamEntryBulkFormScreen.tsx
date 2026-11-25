@@ -18,6 +18,7 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -653,7 +654,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       // 「何度保存しても失敗する」状態にはならない
       await entryApi.deleteBulkEntries(teamId, diffResult.toDelete);
 
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient, { competitionId });
       queryClient.invalidateQueries({
         queryKey: teamKeys.competitions(teamId),
       });

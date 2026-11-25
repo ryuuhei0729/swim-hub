@@ -40,7 +40,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { Style } from "@apps/shared/types";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";

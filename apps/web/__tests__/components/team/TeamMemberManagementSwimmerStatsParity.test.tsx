@@ -18,7 +18,7 @@
  * MemberStatsHeader・MembersTimeTable は実装をそのまま結合する) を踏襲する。
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { renderWithQueryClient as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -56,6 +56,28 @@ vi.mock("../../../components/team/member-management/hooks", () => ({
 const useMemberBestTimesMock = vi.fn();
 vi.mock("../../../components/team/shared/hooks/useMemberBestTimes", () => ({
   useMemberBestTimes: (...args: unknown[]) => useMemberBestTimesMock(...args),
+  pickBestTime: () => null,
+}));
+
+// メンバー一覧・ベストタイム表の取得は React Query (hooks/queries/teamMemberQueries) に
+// 移った。既存の useMembersMock の戻り値 (members / loading / error) を useQuery の
+// 結果の形に写して返す (テストが与えるデータと表示の対応は以前と同じ)
+vi.mock("@/hooks/queries/teamMemberQueries", () => ({
+  useApprovedTeamMembersQuery: () => {
+    const result = useMembersMock() as {
+      members: unknown[];
+      loading: boolean;
+      error: string | null;
+    };
+    return {
+      data: result.loading ? undefined : result.members,
+      isPending: result.loading,
+      isError: result.error !== null,
+      error: result.error,
+      refetch: vi.fn(),
+    };
+  },
+  useTeamMemberBestTimesQuery: () => ({ data: {}, isFetching: false, error: null }),
 }));
 
 import TeamMemberManagement from "../../../components/team/member-management/TeamMemberManagement";

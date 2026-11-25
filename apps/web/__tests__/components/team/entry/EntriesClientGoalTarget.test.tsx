@@ -7,7 +7,7 @@
  *   - goalTargets 未指定 (optional) でも壊れない
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { renderWithQueryClient as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { BestTime, Style } from "@apps/shared/types";
 import EntriesClient, {

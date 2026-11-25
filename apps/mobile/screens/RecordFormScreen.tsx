@@ -16,9 +16,11 @@ import {
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
+import { hasPendingAchievementPrompt, requestStoreReviewOnce } from "@/lib/storeReview";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
@@ -673,11 +675,14 @@ export const RecordFormScreen: React.FC = () => {
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient);
 
       // 成功: 前の画面に戻る
       reset();
       toast.success(t("common.savedToast"));
+      if (!isEditMode) {
+        void requestStoreReviewOnce(() => hasPendingAchievementPrompt(queryClient, supabase));
+      }
       navigation.goBack();
     } catch (error) {
       console.error("保存エラー:", error);

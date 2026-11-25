@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { formatTimeBest } from "@/utils/formatters";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
@@ -34,6 +37,15 @@ interface TeamCompetitionRecordsModalProps {
   competitionId: string;
   competitionTitle: string;
 }
+
+interface CompetitionRecordsData {
+  competition: CompetitionDetail;
+  records: RecordEntry[];
+  relayRecords: RelayRecordWithLegs[];
+}
+
+const NO_RECORDS: RecordEntry[] = [];
+const NO_RELAY_RECORDS: RelayRecordWithLegs[] = [];
 
 /** 個人行のアバター / リレー展開行のアバターの直径 */
 const AVATAR_SIZE = 28;
@@ -334,77 +346,73 @@ export function TeamCompetitionRecordsModal({
   // スクロール余白に下部インセットを加算する (パターンB)。
   const insets = useSafeInsets();
 
-  const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
-  const [records, setRecords] = useState<RecordEntry[]>([]);
-  const [relayRecords, setRelayRecords] = useState<RelayRecordWithLegs[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [compResult, recordsResult, relayRecordsResult] = await Promise.all([
-        supabase
-          .from("competitions")
-          .select("id, title, date, place, pool_type, note")
-          .eq("id", competitionId)
-          .single(),
-        supabase
-          .from("records")
-          .select(
-            `
-            id,
-            user_id,
-            style_id,
-            time,
-            reaction_time,
-            is_relaying,
-            pool_type,
-            note,
-            users!records_user_id_fkey (
-              name,
-              profile_image_path
-            ),
-            styles (
+  // 開くたびに取り直すが、同じ大会を開き直したときは前回の内容をすぐ表示する
+  const recordsQuery = useQuery({
+    queryKey: teamDetailKeys.competitionRecords(competitionId),
+    queryFn: async (): Promise<CompetitionRecordsData> => {
+      try {
+        const [compResult, recordsResult, relayRecordsResult] = await Promise.all([
+          supabase
+            .from("competitions")
+            .select("id, title, date, place, pool_type, note")
+            .eq("id", competitionId)
+            .single(),
+          supabase
+            .from("records")
+            .select(
+              `
               id,
-              name_jp,
-              name,
-              style,
-              distance
-            ),
-            split_times (
-              id,
-              distance,
-              split_time
+              user_id,
+              style_id,
+              time,
+              reaction_time,
+              is_relaying,
+              pool_type,
+              note,
+              users!records_user_id_fkey (
+                name,
+                profile_image_path
+              ),
+              styles (
+                id,
+                name_jp,
+                name,
+                style,
+                distance
+              ),
+              split_times (
+                id,
+                distance,
+                split_time
+              )
+            `,
             )
-          `,
-          )
-          .eq("competition_id", competitionId)
-          .order("time", { ascending: true }),
-        TeamRelayRecordsAPI.getByCompetition(supabase, competitionId),
-      ]);
+            .eq("competition_id", competitionId)
+            .order("time", { ascending: true }),
+          TeamRelayRecordsAPI.getByCompetition(supabase, competitionId),
+        ]);
 
-      if (compResult.error) throw compResult.error;
-      if (recordsResult.error) throw recordsResult.error;
+        if (compResult.error) throw compResult.error;
+        if (recordsResult.error) throw recordsResult.error;
 
-      setCompetition(compResult.data as CompetitionDetail);
-      setRecords((recordsResult.data || []) as unknown as RecordEntry[]);
-      setRelayRecords(relayRecordsResult);
-    } catch (err) {
-      console.error("TeamCompetitionRecordsModal: failed to load records", err);
-      setError(t("teams.competitionRecordsModal.loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase, competitionId, t]);
-
-  useEffect(() => {
-    if (visible) {
-      loadData();
-    }
-  }, [visible, loadData]);
+        return {
+          competition: compResult.data as CompetitionDetail,
+          records: (recordsResult.data || []) as unknown as RecordEntry[],
+          relayRecords: relayRecordsResult,
+        };
+      } catch (err) {
+        console.error("TeamCompetitionRecordsModal: failed to load records", err);
+        throw err;
+      }
+    },
+    enabled: visible,
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const competition = recordsQuery.data?.competition ?? null;
+  const records = recordsQuery.data?.records ?? NO_RECORDS;
+  const relayRecords = recordsQuery.data?.relayRecords ?? NO_RELAY_RECORDS;
+  const { isLoading: loading, isFailed } = getCachedQueryStatus(recordsQuery);
+  const error = isFailed ? t("teams.competitionRecordsModal.loadError") : null;
 
   // relay_records に取り込み済みのレグ (leg0〜3、is_relaying を問わない) の records.id 集合。
   // 個人一覧・旧来のリレー平置き一覧の両方から除外する (このモジュール冒頭の docstring)。

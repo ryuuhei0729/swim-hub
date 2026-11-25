@@ -57,7 +57,8 @@
 // selectBestTime/formatTime をそのまま実行させ、期待値だけテスト側で計算する)。
 // =============================================================================
 
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, it, expect, beforeEach } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import ja from "@apps/shared/messages/ja.json";
