@@ -33,6 +33,7 @@ const h = vi.hoisted(() => ({
   mockReplaceSplitTimesMutateAsync: vi.fn(),
   mockRecordApiGetRecords: vi.fn(),
   mockStyleApiGetStyles: vi.fn(),
+  mockRequestStoreReviewOnce: vi.fn(),
 }));
 
 h.navigationObject = {
@@ -172,6 +173,7 @@ vi.mock("@/utils/imageUpload", () => ({
   mergeImagePaths: vi.fn((saved: string[]) => saved),
 }));
 vi.mock("@/utils/videoUpload", () => ({ uploadVideo: vi.fn(async () => {}) }));
+vi.mock("@/lib/storeReview", () => ({ requestStoreReviewOnce: h.mockRequestStoreReviewOnce }));
 
 // 新規記録の ID はクライアントで決める (再保存での二重登録防止)。どの呼び出しで
 // どの ID が使われたかを区別できるよう、連番を返す
@@ -499,5 +501,80 @@ describe("低速回線での再保存 (二重登録しない)", () => {
     expect(h.mockUpdateRecordMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ id: firstRecordId }),
     );
+  });
+});
+
+describe("ストアの評価の依頼 (既存の大会の編集)", () => {
+  /** n 番目の記録に 100m 自由形とタイムを入れる */
+  function fillRecord(n: number, time: string) {
+    fireEvent.click(screen.getByTestId(`record-style-${n}-pick`));
+    fireEvent.change(screen.getByTestId(`record-time-${n}`), { target: { value: time } });
+  }
+
+  it("[SR-1] 記録を新しく登録して保存できたら依頼する", async () => {
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    h.mockCreateRecordMutateAsync.mockImplementation(async (data: { id: string }) => ({ id: data.id }));
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    pressSave();
+
+    await waitFor(() => expect(h.navigationObject.goBack).toHaveBeenCalledTimes(1));
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(1);
+    expect(h.mockRequestStoreReviewOnce).toHaveBeenCalledTimes(1);
+    // マイルストーン達成の確認ダイアログが出るときは見送る判定を渡している
+    expect(h.mockRequestStoreReviewOnce).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it("[SR-2] 既存の記録を書き戻すだけの保存では依頼しない", async () => {
+    h.mockRecordApiGetRecords.mockResolvedValue([recordWithSplit]);
+    await renderEditScreenOnRecordTab();
+    await screen.findByDisplayValue("30.50");
+
+    pressSave();
+
+    await waitFor(() => expect(h.navigationObject.goBack).toHaveBeenCalledTimes(1));
+    expect(h.mockUpdateRecordMutateAsync).toHaveBeenCalledTimes(1);
+    expect(h.mockCreateRecordMutateAsync).not.toHaveBeenCalled();
+    expect(h.mockRequestStoreReviewOnce).not.toHaveBeenCalled();
+  });
+
+  it("[SR-3] 記録の作成に失敗した保存では依頼しない", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    h.mockCreateRecordMutateAsync.mockRejectedValue({
+      message: "TypeError: Network request failed",
+      code: "",
+    });
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    pressSave();
+
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    expect(h.navigationObject.goBack).not.toHaveBeenCalled();
+    expect(h.mockRequestStoreReviewOnce).not.toHaveBeenCalled();
+  });
+
+  it("[SR-6] 1件目の記録を作った後に2件目で失敗した保存では依頼しない", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    let createCalls = 0;
+    h.mockCreateRecordMutateAsync.mockImplementation(async (data: { id: string }) => {
+      createCalls += 1;
+      if (createCalls === 2) throw { message: "TypeError: Network request failed", code: "" };
+      return { id: data.id };
+    });
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    fireEvent.click(screen.getByTestId("item-tab-add"));
+    fillRecord(2, "1:01.00");
+    pressSave();
+
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(2);
+    expect(h.navigationObject.goBack).not.toHaveBeenCalled();
+    expect(h.mockRequestStoreReviewOnce).not.toHaveBeenCalled();
   });
 });

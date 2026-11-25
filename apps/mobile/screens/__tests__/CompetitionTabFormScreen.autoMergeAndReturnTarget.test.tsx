@@ -60,6 +60,7 @@ const h = vi.hoisted(() => ({
   mockEntryApiGetEntriesByCompetition: vi.fn(),
   mockRecordApiGetRecords: vi.fn(),
   mockStyleApiGetStyles: vi.fn(),
+  mockRequestStoreReviewOnce: vi.fn(),
 }));
 
 h.navigationObject = {
@@ -164,6 +165,7 @@ vi.mock("@/components/layout/LoadingSpinner", () => ({
 }));
 
 vi.mock("@/components/shared/ImageUploader", () => ({ ImageUploader: () => null }));
+vi.mock("@/lib/storeReview", () => ({ requestStoreReviewOnce: h.mockRequestStoreReviewOnce }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/ui/DatePickerField", () => ({ DatePickerField: () => null }));
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
@@ -591,5 +593,50 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 
       h.mockGoBack.mock.calls.length +
       h.mockPopToTop.mock.calls.length;
     expect(total).toBe(1);
+  });
+});
+
+describe("CompetitionTabFormScreen — ストアの評価の依頼 (大会の新規作成)", () => {
+  beforeEach(() => {
+    setupCommonMocks();
+  });
+
+  it("[SR-4] 大会を新しく登録して保存できたら、記録が無くても依頼する", async () => {
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(makeCompetitionRow()),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({ params: { date: TODAY_DATE } });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockGoBack).toHaveBeenCalledTimes(1));
+    const createCompetition = h.mockUseCreateCompetitionMutation.mock.results[0]!.value.mutateAsync; // 描画時に呼ばれている
+    expect(createCompetition).toHaveBeenCalledTimes(1);
+    expect(h.mockRequestStoreReviewOnce).toHaveBeenCalledTimes(1);
+  });
+
+  it("[SR-5] 既存の大会を編集して保存しただけでは依頼しない", async () => {
+    const competitionRow = makeCompetitionRow({ id: "comp-review-edit" });
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(competitionRow),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({
+      params: { competitionId: competitionRow.id, date: competitionRow.date },
+    });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockGoBack).toHaveBeenCalledTimes(1));
+    expect(h.mockRequestStoreReviewOnce).not.toHaveBeenCalled();
   });
 });
