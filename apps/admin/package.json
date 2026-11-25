@@ -4,8 +4,8 @@
   "private": true,
   "description": "SwimHub 運営者用コンソール (ローカル専用・読み取り専用。デプロイしない)",
   "scripts": {
-    "dev": "dotenvx run -f ../web/.env.production -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
-    "dev:local": "dotenvx run -f ../web/.env.local -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
+    "dev": "dotenvx run -f ../web/.env.production -f ../../supabase/.env.local -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
+    "dev:local": "dotenvx run -f ../web/.env.local -f ../../supabase/.env.local -fk ../web/.env.keys -- next dev -H 127.0.0.1 -p 3100",
     "build": "next build",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

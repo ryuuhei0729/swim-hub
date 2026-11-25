@@ -41,6 +41,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             {isLocal ? "LOCAL" : connection.environment.toUpperCase()}
           </span>
           <span className="font-mono text-xs text-gray-500">{connection.host}</span>
+          <Link href="/billing" className="ml-4 text-sm text-blue-700 hover:underline">
+            課金サマリー
+          </Link>
           <span className="ml-auto text-xs text-gray-500">読み取り専用</span>
         </header>
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">

@@ -41,7 +41,7 @@ async function fetchAllPages<T>(
 
 type SubscriptionRow = { plan: string; status: string | null; premium_expires_at: string | null };
 
-function isPremium(row: SubscriptionRow | null | undefined): boolean {
+export function isPremium(row: SubscriptionRow | null | undefined): boolean {
   if (!row) return false;
   return checkIsPremium({
     plan: row.plan === "premium" ? "premium" : "free",
@@ -144,7 +144,7 @@ export async function getUserHeader(userId: string) {
     supabase
       .from("user_subscriptions")
       .select(
-        "plan, status, provider, provider_environment, premium_expires_at, current_period_start, cancel_at_period_end, trial_start, trial_end, created_at, updated_at",
+        "plan, status, provider, provider_environment, provider_subscription_id, stripe_customer_id, premium_expires_at, current_period_start, cancel_at_period_end, trial_start, trial_end, created_at, updated_at",
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -476,3 +476,35 @@ export async function listTeamCompetitions(teamId: string) {
     attendance: countAttendance(team_attendance),
   }));
 }
+
+// ---------------------------------------------------------------------------
+// 課金
+// ---------------------------------------------------------------------------
+
+// Premium の行と、決済元が付いたことのある行 (解約済みも含む)
+export async function listBillingRows() {
+  const supabase = getReadOnlyClient();
+  const [subscriptions, users] = await Promise.all([
+    fetchAllPages("user_subscriptions", (from, to) =>
+      supabase
+        .from("user_subscriptions")
+        .select(
+          "id, plan, status, provider, provider_environment, stripe_customer_id, premium_expires_at, cancel_at_period_end, created_at, updated_at",
+        )
+        .or("plan.eq.premium,provider.not.is.null")
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAllPages("users", (from, to) =>
+      supabase.from("users").select("id, name").order("id").range(from, to),
+    ),
+  ]);
+
+  const userNames = new Map(users.map((user) => [user.id, user.name]));
+  return {
+    userNames,
+    rows: subscriptions.map((row) => ({ ...row, premium: isPremium(row) })),
+  };
+}
+
+export type BillingRow = Awaited<ReturnType<typeof listBillingRows>>["rows"][number];

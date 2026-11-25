@@ -1,19 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types/supabase-schema";
-
-// service role は RLS を越えて書き込みもできる。このコンソールは読むだけなので、
-// GET / HEAD 以外のリクエストは送信前に落とす (rpc も POST なので通らない)。
-const readOnlyFetch: typeof fetch = (input, init) => {
-  const method = (
-    init?.method ?? (input instanceof Request ? input.method : "GET")
-  ).toUpperCase();
-  if (method !== "GET" && method !== "HEAD") {
-    return Promise.reject(
-      new Error(`読み取り専用コンソールのため ${method} リクエストは送信しません`),
-    );
-  }
-  return fetch(input, init);
-};
+import { readOnlyFetch } from "./read-only-fetch";
 
 let client: SupabaseClient<Database> | undefined;
 

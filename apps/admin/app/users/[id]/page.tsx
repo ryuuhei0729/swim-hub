@@ -1,7 +1,15 @@
 import { formatTime } from "@swim-hub/shared/utils/time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
+import {
+  LoadError,
+  RcSubscriptionRows,
+  StripeInvoiceRows,
+  StripeSubscriptionRows,
+} from "@/components/billing";
 import { Empty, Pill, Table, TabNav } from "@/components/ui";
+import { listRcSubscriptions, listStripeInvoices, listStripeSubscriptions } from "@/lib/billing";
 import { formatAgo, formatDay, formatDayTime, formatPool, formatStyle } from "@/lib/format";
 import {
   getOverview,
@@ -147,31 +155,86 @@ function TeamsTab({ header }: { header: UserHeader }) {
   );
 }
 
-function BillingTab({ header }: { header: UserHeader }) {
-  const subscription = header.subscription;
-  if (!subscription) return <Empty>課金情報の行がありません</Empty>;
-  const rows: [string, string][] = [
-    ["プラン", subscription.plan],
-    ["状態", subscription.status ?? "-"],
-    ["決済元", subscription.provider ?? "-"],
-    ["決済環境", subscription.provider_environment ?? "-"],
-    ["現在の期間の開始", formatDayTime(subscription.current_period_start)],
-    ["Premium 期限", formatDayTime(subscription.premium_expires_at)],
-    ["期間終了で解約", subscription.cancel_at_period_end ? "はい" : "いいえ"],
-    ["トライアル開始", formatDayTime(subscription.trial_start)],
-    ["トライアル終了", formatDayTime(subscription.trial_end)],
-    ["作成日時", formatDayTime(subscription.created_at)],
-    ["更新日時", formatDayTime(subscription.updated_at)],
-  ];
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <dl className="grid max-w-xl grid-cols-[10rem_1fr] gap-y-1.5 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="text-gray-500">{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <section className="mt-5">
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+async function BillingTab({ header }: { header: UserHeader }) {
+  const subscription = header.subscription;
+  const stripeCustomerId = subscription?.stripe_customer_id ?? null;
+  // RevenueCat は DB に記録が無くても購入していることがあるので、常に問い合わせる
+  const [stripeSubscriptions, stripeInvoices, rcSubscriptions] = await Promise.all([
+    stripeCustomerId ? listStripeSubscriptions(stripeCustomerId) : null,
+    stripeCustomerId ? listStripeInvoices(stripeCustomerId) : null,
+    listRcSubscriptions(header.user.id),
+  ]);
+
+  const rows: [string, string][] = subscription
+    ? [
+        ["プラン", subscription.plan],
+        ["状態", subscription.status ?? "-"],
+        ["決済元", subscription.provider ?? "なし"],
+        ["決済環境", subscription.provider_environment ?? "-"],
+        ["現在の期間の開始", formatDayTime(subscription.current_period_start)],
+        ["Premium 期限", formatDayTime(subscription.premium_expires_at)],
+        ["期間終了で解約", subscription.cancel_at_period_end ? "はい" : "いいえ"],
+        ["トライアル開始", formatDayTime(subscription.trial_start)],
+        ["トライアル終了", formatDayTime(subscription.trial_end)],
+        ["作成日時", formatDayTime(subscription.created_at)],
+        ["更新日時", formatDayTime(subscription.updated_at)],
+      ]
+    : [];
+
+  return (
+    <div>
+      <Section title="アプリの DB (user_subscriptions)">
+        {rows.length === 0 ? (
+          <Empty>課金情報の行がありません</Empty>
+        ) : (
+          <dl className="grid max-w-xl grid-cols-[10rem_1fr] gap-y-1.5 text-sm">
+            {rows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-gray-500">{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Section>
+
+      <Section title="Stripe の契約">
+        {!stripeSubscriptions ? (
+          <Empty>Stripe の顧客 ID が DB にありません</Empty>
+        ) : stripeSubscriptions.ok ? (
+          <StripeSubscriptionRows subscriptions={stripeSubscriptions.data} />
+        ) : (
+          <LoadError message={stripeSubscriptions.error} />
+        )}
+      </Section>
+
+      {stripeInvoices && (
+        <Section title="Stripe の請求履歴">
+          {stripeInvoices.ok ? (
+            <StripeInvoiceRows invoices={stripeInvoices.data} />
+          ) : (
+            <LoadError message={stripeInvoices.error} />
+          )}
+        </Section>
+      )}
+
+      <Section title="RevenueCat の契約 (scanner / timer の購入も含む)">
+        {rcSubscriptions.ok ? (
+          <RcSubscriptionRows subscriptions={rcSubscriptions.data} />
+        ) : (
+          <LoadError message={rcSubscriptions.error} />
+        )}
+      </Section>
+    </div>
   );
 }
 
