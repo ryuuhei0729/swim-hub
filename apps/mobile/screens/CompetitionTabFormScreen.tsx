@@ -20,6 +20,7 @@ import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
+import { hasPendingAchievementPrompt, requestStoreReviewOnce } from "@/lib/storeReview";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import {
@@ -976,6 +977,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
       }
 
       let savedCompetitionId = resolvedCompetitionId;
+      // 大会か記録を新しく登録した保存のときだけ、ストアの評価を依頼する
+      let registeredNew = false;
 
       // --- 編集不可なのに基本情報が変わっている場合は「何も書かずに成功」を防ぐ ---
       // チーム管理者ビューではエントリー/レースレコードのタブが無く、書き込み対象は
@@ -1103,6 +1106,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             updateCompetitionMutation.mutateAsync({ id: newCompetitionId, updates: formData }),
         });
         savedCompetitionId = newCompetition.id;
+        registeredNew = true;
         // 親INSERT成功 → 編集モードへ遷移
         setResolvedCompetitionId(newCompetition.id);
 
@@ -1342,6 +1346,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   updateRecordMutation.mutateAsync({ id: recordIdForSave, updates: recordData }),
               });
           createdRecordIdsRef.current.set(record.draftId, savedRecord.id);
+          registeredNew = true;
           const validSplitTimes = buildValidSplitTimes(record.splitTimes, record.styleId, swimStyles);
           // 作成済みの記録を再保存するときは、スプリットを全部消した場合も空配列で置き換える
           if (savedRecord && (validSplitTimes.length > 0 || alreadyCreatedId)) {
@@ -1387,6 +1392,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
       void invalidateCalendarAfterSave(queryClient, { competitionId: savedCompetitionId });
       if (competitionTeamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(competitionTeamId) });
+      }
+
+      if (registeredNew) {
+        void requestStoreReviewOnce(() => hasPendingAchievementPrompt(queryClient, supabase));
       }
 
       // navigation.goBack() はここで直接呼ばず、isSaved を state 化してレンダーを
