@@ -66,7 +66,7 @@ fi
 cat <<MSG
 
 完了。次の手順:
-  1. git add tools/agent-testers/results_public.pem して、develop に入れる (ワークフローは develop にないと実行できない)
+  1. git add tools/agent-testers/results_public.pem して、main に入れる (ワークフローは main にないと実行できない)
   2. 実行:  gh workflow run agent-testers.yml
   3. 回収:  bash tools/agent-testers/collect.sh <run id>
 MSG

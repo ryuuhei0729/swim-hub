@@ -1,10 +1,5 @@
 name: Supabase Database
 
-# push トリガに develop を含める。開発は develop に直接 push される運用のため
-# main 限定だと Edge Function を変更しても main にマージされるまで一度も検証されず、
-# 壊れたまま develop に積み上がってしまう (実際に本ワークフローが走らないまま
-# Edge Function の変更が develop に入った)。
-#
 # paths には deno.lock とこのワークフロー自身も含める。テスト/型チェックは
 # deno.lock を --frozen で参照しており、lock だけの変更やワークフロー自体の変更でも
 # 結果が変わるため、これらを対象外にすると検証を素通りさせてしまう。
@@ -13,7 +8,7 @@ name: Supabase Database
 # 対象外だった 2026-10-13 に turbo の版だけを上げた PR が素通りし、以降の全実行が落ちていた。
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
@@ -21,7 +16,7 @@ on:
       - 'package.json'
       - '.github/workflows/supabase.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
