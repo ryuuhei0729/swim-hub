@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
+  # feature ブランチを選んで手動実行すると、テスト後に preview 環境 (development の DB・R2) へデプロイする。
+  #   gh workflow run ci.yml --ref <branch>
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -229,7 +232,7 @@ jobs:
 
   build:
     needs: [lint, type-check, unit-tests, e2e-build, e2e-tests]
-    # e2e を実行しないイベント (develop への push) では e2e-build / e2e-tests とも skipped になるので、それは通す。
+    # e2e を実行しないイベント (手動実行) では e2e-build / e2e-tests とも skipped になるので、それは通す。
     # 上流が落ちたときも依存先は skipped になるため、skipped だけを見ると失敗のまま deploy まで進む。
     # lint / type-check と e2e-build は直接確認する
     if: always() && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || (needs.e2e-tests.result == 'skipped' && needs.e2e-build.result == 'skipped'))
@@ -329,7 +332,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: needs.build.result == 'success' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    # main で手動実行すると build は .env.production で作られるので、preview には出さない
+    if: needs.build.result == 'success' && github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     concurrency:
       group: deploy-preview
       cancel-in-progress: false
