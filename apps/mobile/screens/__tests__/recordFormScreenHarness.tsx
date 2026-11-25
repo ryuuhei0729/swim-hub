@@ -16,6 +16,7 @@
 //   ImageUploader                       「画像アップローダー」と harness.imageUploaderActions の
 //                                       ボタンを描画する (押すと onImagesChange を呼ぶ)
 //   VideoUploader / PremiumBadge / LapTimeDisplay → 描画しない
+//   @/lib/storeReview                   requestStoreReviewOnce (harness.requestStoreReviewOnce)
 //
 // 🚨 テストファイル側で上記モジュールを vi.mock し直してはいけない。ファイル側の
 //    vi.mock は巻き上げで先に登録され、このファイルの import 時に上書きされて
@@ -107,6 +108,7 @@ const harness = vi.hoisted(() => {
     getStyles: vi.fn(),
     getAccessToken: vi.fn(),
     refetchRecordById: vi.fn(),
+    requestStoreReviewOnce: vi.fn(),
   };
 });
 
@@ -222,6 +224,7 @@ vi.mock("@/components/shared/ImageUploader", () => ({
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records", () => ({ LapTimeDisplay: () => null }));
+vi.mock("@/lib/storeReview", () => ({ requestStoreReviewOnce: harness.requestStoreReviewOnce }));
 
 export { harness };
 
