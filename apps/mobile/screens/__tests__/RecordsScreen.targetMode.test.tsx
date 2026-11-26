@@ -387,3 +387,72 @@ describe("RecordsScreen — 行タップで DayDetailModal に渡る targetId/ta
     },
   );
 });
+
+// ダッシュボードの FB 受信ポップアップ「記録画面へ」(docs/specs/record-feedback.md):
+// 記録タブでカードをタップしたときと同じ DayDetailModal を開く
+describe("RecordsScreen — openRecordRequest (FB 受信ポップアップの「記録画面へ」)", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    tSpy.mockImplementation((key: string, options?: { defaultValue?: string }) => {
+      return resolveJaKey(key) ?? options?.defaultValue ?? key;
+    });
+    capturedModalProps.current = null;
+    apiMocks.getRecords.mockResolvedValue([RECORD_A]);
+    apiMocks.getCompetitions.mockResolvedValue([]);
+    apiMocks.getListBestCandidates.mockResolvedValue([]);
+    apiMocks.subscribeToRecords.mockReturnValue({});
+    apiMocks.subscribeToCompetitions.mockReturnValue({});
+    apiMocks.getCalendarEntries.mockResolvedValue([]);
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+  });
+
+  it("一覧にある記録なら、カードをタップしたときと同じ props で開き、処理済みを通知する", async () => {
+    const onHandled = vi.fn();
+    render(
+      <RecordsScreen
+        openRecordRequest={{
+          recordId: "record-A",
+          competitionId: "comp-1",
+          competitionTitle: "第10回市民大会",
+          competitionDate: "2026-07-15",
+          requestKey: "req-1",
+        }}
+        onOpenRecordRequestHandled={onHandled}
+      />,
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(capturedModalProps.current).not.toBeNull());
+    expect(capturedModalProps.current?.scope).toBe("competition");
+    expect(capturedModalProps.current?.targetId).toBe("comp-1");
+    expect(capturedModalProps.current?.targetRecordId).toBe("record-A");
+    expect(capturedModalProps.current?.titleOverride).toBe("第10回市民大会");
+    expect(onHandled).toHaveBeenCalledTimes(1);
+  });
+
+  it("一覧に無い記録でも、要求に含まれる大会情報で DayDetailModal を開く", async () => {
+    const onHandled = vi.fn();
+    render(
+      <RecordsScreen
+        openRecordRequest={{
+          recordId: "record-X",
+          competitionId: "comp-7",
+          competitionTitle: "県大会",
+          competitionDate: "2026-08-01",
+          requestKey: "req-2",
+        }}
+        onOpenRecordRequestHandled={onHandled}
+      />,
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(capturedModalProps.current).not.toBeNull());
+    expect(capturedModalProps.current?.targetId).toBe("comp-7");
+    expect(capturedModalProps.current?.targetRecordId).toBe("record-X");
+    expect(capturedModalProps.current?.titleOverride).toBe("県大会");
+    expect(onHandled).toHaveBeenCalledTimes(1);
+  });
+});

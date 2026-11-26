@@ -24,6 +24,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@apps/shared/hooks/queries/goals";
+import { recordFeedbackKeys } from "@apps/shared/hooks/queries/recordFeedbacks";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
@@ -55,6 +56,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useExpiredGoalCheck } from "@/hooks/useExpiredGoalCheck";
 import { GoalReflectionModal } from "@/components/goals/GoalReflectionModal";
 import { ReflectionModal } from "@/components/goals/ReflectionModal";
+import { RecordFeedbackArrivalHost } from "@/components/record-feedback/RecordFeedbackArrivalHost";
 import type { MainStackParamList } from "@/navigation/types";
 
 // 未設定 (取得前・未カスタマイズ) の色設定。resolver がデフォルト色にフォールバックするための空値。
@@ -277,6 +279,8 @@ export const DashboardScreen: React.FC = () => {
       }),
       // ベストタイム表の WA ポイント・区分記録に使う性別と生年月日
       queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() }),
+      // チーム内フィードバックの未読 (受信ポップアップ)。ダッシュボードを表示するたびに確認する
+      queryClient.invalidateQueries({ queryKey: recordFeedbackKeys.unread(user?.id) }),
     ]);
   }, [refetch, refetchTeams, refetchColorSettings, queryClient, user?.id]);
 
@@ -518,6 +522,11 @@ export const DashboardScreen: React.FC = () => {
             }}
           />
         )}
+
+        {/* チーム内フィードバックの受信ポップアップ (振り返り・日付詳細を出している間は重ねない) */}
+        <RecordFeedbackArrivalHost
+          enabled={!expiredGoal && !expiredMilestone && !showDayDetail}
+        />
 
         {/* 日付詳細モーダル */}
         {selectedDate && (

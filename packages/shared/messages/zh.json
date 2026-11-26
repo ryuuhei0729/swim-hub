@@ -4799,5 +4799,94 @@
         "security": "邮箱、密码、登录方式及删除账户"
       }
     }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}条",
+    "countBadgeAria": "反馈 {count}条",
+    "viewAria": "查看反馈（{count}条）",
+    "sectionTitle": "反馈",
+    "listModalTitle": "反馈",
+    "unknownAuthor": "已注销用户",
+    "edited": "已编辑",
+    "editAria": "编辑反馈",
+    "deleteAria": "删除反馈",
+    "loading": "加载中...",
+    "loadError": "获取反馈失败",
+    "empty": "暂无反馈",
+    "write": "写反馈",
+    "writeAria": "给{name}的记录写反馈",
+    "written": "已填写",
+    "deleteFailed": "删除反馈失败",
+    "form": {
+      "createTitle": "写反馈",
+      "editTitle": "编辑反馈",
+      "recipient": "致{name}",
+      "label": "反馈",
+      "placeholder": "请写下做得好的地方和需要改进的地方",
+      "counter": "{count} / {max}",
+      "submit": "发送",
+      "save": "保存",
+      "cancel": "取消",
+      "saving": "发送中...",
+      "tooLong": "请输入不超过{max}个字符"
+    },
+    "errors": {
+      "duplicate": "你已经为此记录写过反馈",
+      "not_team_record": "只能为团队记录写反馈",
+      "record_not_found": "未找到记录",
+      "not_authorized": "你没有执行此操作的权限",
+      "content_length": "请输入1到1000个字符",
+      "unknown": "保存反馈失败"
+    },
+    "popup": {
+      "title": "收到反馈",
+      "from": "收到来自{name}的反馈",
+      "goToRecord": "查看记录",
+      "close": "关闭",
+      "skipAnimation": "跳过动画",
+      "noCompetition": "无比赛",
+      "relay": "接力"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "反馈 {count}条",
+    "writtenByMe": "已填写",
+    "write": "写反馈",
+    "sectionTitle": "反馈 ({count})",
+    "loadFailed": "获取反馈失败",
+    "deletedUser": "已注销的用户",
+    "newLabel": "NEW",
+    "edit": "编辑反馈",
+    "delete": "删除",
+    "edited": "已编辑",
+    "deleteConfirmTitle": "删除反馈",
+    "deleteConfirmMessage": "要删除这条反馈吗？",
+    "deletedToast": "已删除反馈",
+    "savedToast": "已保存反馈",
+    "errors": {
+      "duplicate": "你已为此记录写过反馈",
+      "not_team_record": "只能为团队记录写反馈",
+      "record_not_found": "找不到记录",
+      "not_authorized": "你没有执行此操作的权限",
+      "content_length": "请输入1到1000个字符",
+      "unknown": "保存反馈失败",
+      "deleteFailed": "删除反馈失败"
+    },
+    "form": {
+      "createTitle": "写反馈",
+      "editTitle": "编辑反馈",
+      "placeholder": "请写下做得好的地方和需要改进的地方",
+      "inputLabel": "反馈内容",
+      "counter": "{count} / {max}",
+      "save": "保存"
+    },
+    "arrival": {
+      "title": "收到了反馈",
+      "from": "收到了来自{name}的反馈",
+      "openRecord": "查看记录",
+      "close": "关闭",
+      "animationText": "收到了反馈",
+      "skipAnimation": "跳过动画"
+    }
   }
 }

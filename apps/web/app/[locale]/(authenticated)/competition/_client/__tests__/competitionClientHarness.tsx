@@ -13,6 +13,7 @@
 //   CompetitionTabModal                 開いているときだけ、渡された props を data-testid="tab-*" で描画する
 //   CompetitionDetailModal              開いているときだけ、mode・competitionId と各操作のボタンを描画する
 //   RecordDetailModal                   開いているときだけ、record.id と編集・削除・閉じるボタンを描画する
+//   useRecordFeedbackSummaries          常に空 (FB 件数なし)
 //
 // RecordLogForm は本物を通して検証するファイルがあるため、ここではモックしない。
 //
@@ -99,6 +100,12 @@ vi.mock("@apps/shared/hooks/queries/records", () => ({
   // CompetitionRecordCard に組み込まれた BestTimeBadge が呼ぶ。既定はロード中相当 (data 未解決) にして
   // バッジを非表示のままにし、情報表示のテストと干渉しないようにする。
   useListBestCandidatesQuery: () => ({ data: undefined, error: null }),
+}));
+
+// カードの「FB n件」表示は React Query を使うが、このハーネスは QueryClientProvider を持たない。
+// 件数取得は record-feedback 側のテストで検証するので、ここでは常に件数なしにする
+vi.mock("@/components/record-feedback/useRecordFeedbackSummaries", () => ({
+  useRecordFeedbackSummaries: () => ({}),
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({

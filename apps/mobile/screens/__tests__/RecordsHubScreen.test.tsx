@@ -86,3 +86,32 @@ describe("RecordsHubScreen", () => {
     expect(stubs.competitionsProps[0]).toMatchObject({ embedded: true });
   });
 });
+
+describe("RecordsHubScreen — openRecord (FB 受信ポップアップの「記録画面へ」)", () => {
+  it("route.params.openRecord を大会記録一覧に渡し、処理済みでパラメータを消す", () => {
+    stubs.competitionsProps.length = 0;
+    const setParams = vi.fn();
+    const openRecord = {
+      recordId: "rec-1",
+      competitionId: "comp-1",
+      competitionTitle: "秋季大会",
+      competitionDate: "2026-11-20",
+      requestKey: "k1",
+    };
+    render(
+      <RecordsHubScreen
+        {...({
+          route: { key: "Records", name: "Records", params: { segment: "competitions", openRecord } },
+          navigation: { setParams },
+        } as unknown as Props)}
+      />,
+    );
+    const props = stubs.competitionsProps[0] as {
+      openRecordRequest?: unknown;
+      onOpenRecordRequestHandled?: () => void;
+    };
+    expect(props.openRecordRequest).toEqual(openRecord);
+    props.onOpenRecordRequestHandled?.();
+    expect(setParams).toHaveBeenCalledWith({ openRecord: undefined });
+  });
+});

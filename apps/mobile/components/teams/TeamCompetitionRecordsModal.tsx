@@ -14,6 +14,10 @@ import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import BestTimeBadge from "@/components/records/BestTimeBadge";
+import { RecordFeedbackSection } from "@/components/record-feedback/RecordFeedbackSection";
+import { RecordFeedbackToggleButton } from "@/components/record-feedback/RecordFeedbackToggleButton";
+import { useRecordFeedbackSummariesQuery } from "@apps/shared/hooks/queries/recordFeedbacks";
+import type { RecordFeedbackSummary } from "@apps/shared/types/recordFeedback";
 import { TeamRelayRecordsAPI } from "@apps/shared/api/teams/relayRecords";
 import type { RelayRecordWithLegs } from "@apps/shared/types/relayRecord";
 import { calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
@@ -36,6 +40,55 @@ interface TeamCompetitionRecordsModalProps {
   onClose: () => void;
   competitionId: string;
   competitionTitle: string;
+  /** 大会のチーム。リレーのレグ (team_id を引いていない) の FB 判定に使う */
+  teamId?: string | null;
+  /** 管理者ビューか。true のときだけ FB の書き込み導線を出す */
+  isAdmin?: boolean;
+}
+
+/** 行ごとの FB 表示に必要な情報 (モーダル単位で1回だけ集計する) */
+interface FeedbackContext {
+  summaries: Record<string, RecordFeedbackSummary> | undefined;
+  canWrite: boolean;
+  currentUserId: string | undefined;
+}
+
+const EMPTY_FEEDBACK_SUMMARY: RecordFeedbackSummary = { count: 0, hasMine: false, unreadCount: 0 };
+
+/** 行の下に出す FB の開閉ボタン + 開いたときのセクション */
+function useRowFeedback(
+  feedback: FeedbackContext | undefined,
+  recordId: string | null,
+  teamId: string | null | undefined,
+  ownerId: string | null,
+) {
+  const [open, setOpen] = useState(false);
+  if (!feedback || !recordId || !teamId) {
+    return { toggle: null, section: null };
+  }
+  const summary = feedback.summaries?.[recordId] ?? EMPTY_FEEDBACK_SUMMARY;
+  const isOwn = !!feedback.currentUserId && ownerId === feedback.currentUserId;
+  const canWriteNew = feedback.canWrite && !isOwn && !summary.hasMine;
+  return {
+    toggle: (
+      <RecordFeedbackToggleButton
+        testID={`record-feedback-toggle-${recordId}`}
+        count={summary.count}
+        hasMine={summary.hasMine}
+        canWriteNew={canWriteNew}
+        open={open}
+        onPress={() => setOpen((prev) => !prev)}
+      />
+    ),
+    section: open ? (
+      <RecordFeedbackSection
+        recordId={recordId}
+        teamId={teamId}
+        recordOwnerId={ownerId}
+        canWrite={feedback.canWrite}
+      />
+    ) : null,
+  };
 }
 
 interface CompetitionRecordsData {
@@ -121,12 +174,15 @@ function RecordRow({
   record,
   raceDistance,
   recordDate,
+  feedback,
 }: {
   record: RecordEntry;
   raceDistance: number;
   recordDate: string | null | undefined;
+  feedback?: FeedbackContext;
 }) {
   const { t } = useTranslation();
+  const rowFeedback = useRowFeedback(feedback, record.id, record.team_id, record.user_id);
   const userName = getRecordUserName(record.users, t("teams.competitionRecordsModal.unknownUser"));
   const avatarPath = getRecordUserAvatarPath(record.users);
   const [splitsOpen, setSplitsOpen] = useState(false);
@@ -183,6 +239,7 @@ function RecordRow({
               </Text>
             </Pressable>
           )}
+          {rowFeedback.toggle}
         </View>
         <BestTimeBadge
           recordId={record.id}
@@ -206,6 +263,8 @@ function RecordRow({
       {splitsOpen && hasSplits && (
         <LapTimeDisplay splitTimes={formattedSplits} raceDistance={raceDistance} />
       )}
+
+      {rowFeedback.section}
     </View>
   );
 }
@@ -217,6 +276,8 @@ function RelayLegRow({
   unknownLabel,
   poolType,
   recordDate,
+  feedback,
+  teamId,
 }: {
   leg: RelayLegDisplay;
   legNumberLabel: string;
@@ -224,10 +285,15 @@ function RelayLegRow({
   unknownLabel: string;
   poolType: number;
   recordDate: string | null | undefined;
+  feedback?: FeedbackContext;
+  teamId?: string | null;
 }) {
   const displayName = leg.userName ?? unknownLabel;
+  // リレーは個人のレグ (records の行) 単位で FB を付ける
+  const rowFeedback = useRowFeedback(feedback, leg.recordId, teamId, leg.userId);
 
   return (
+    <View style={styles.relayLegWrap}>
     <View style={styles.relayLegRow}>
       <RowAvatar path={leg.profileImagePath} name={displayName} size={AVATAR_SIZE} />
       <View style={styles.relayLegNameBlock}>
@@ -262,6 +328,9 @@ function RelayLegRow({
         />
       )}
     </View>
+    {rowFeedback.toggle && <View style={styles.relayLegFeedbackLine}>{rowFeedback.toggle}</View>}
+    {rowFeedback.section && <View style={styles.relayLegFeedbackSection}>{rowFeedback.section}</View>}
+    </View>
   );
 }
 
@@ -269,10 +338,14 @@ function RelayTeamRowCard({
   team,
   eventLabel,
   recordDate,
+  feedback,
+  teamId,
 }: {
   team: RelayTeamRow;
   eventLabel: string;
   recordDate: string | null | undefined;
+  feedback?: FeedbackContext;
+  teamId?: string | null;
 }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -315,6 +388,8 @@ function RelayTeamRowCard({
               unknownLabel={unknownLabel}
               poolType={team.poolType}
               recordDate={recordDate}
+              feedback={feedback}
+              teamId={teamId}
             />
           ))}
         </View>
@@ -338,8 +413,10 @@ export function TeamCompetitionRecordsModal({
   onClose,
   competitionId,
   competitionTitle,
+  teamId = null,
+  isAdmin = false,
 }: TeamCompetitionRecordsModalProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t } = useTranslation();
   // Android edge-to-edge: このシートはフッターを持たないため、ScrollView の
   // 最下段 (最後の記録行) がシステムナビゲーションバーに埋没する。
@@ -363,6 +440,7 @@ export function TeamCompetitionRecordsModal({
               `
               id,
               user_id,
+              team_id,
               style_id,
               time,
               reaction_time,
@@ -423,6 +501,25 @@ export function TeamCompetitionRecordsModal({
   );
   const recordsByStyle = useMemo(() => groupRecordsByStyle(visibleRecords), [visibleRecords]);
   const relayEventGroups = useMemo(() => groupRelayRecordsByEvent(relayRecords), [relayRecords]);
+  // FB の件数・自分が書いたか (チーム記録と、リレーのレグの records 行)
+  const feedbackRecordIds = useMemo(
+    () => [
+      ...visibleRecords.filter((r) => !!r.team_id).map((r) => r.id),
+      ...(teamId ? Array.from(groupedRecordIds) : []),
+    ],
+    [visibleRecords, groupedRecordIds, teamId],
+  );
+  const { data: feedbackSummaries } = useRecordFeedbackSummariesQuery(
+    supabase,
+    feedbackRecordIds,
+    user?.id,
+    { enabled: visible },
+  );
+  const feedbackContext = useMemo<FeedbackContext>(
+    () => ({ summaries: feedbackSummaries, canWrite: isAdmin, currentUserId: user?.id }),
+    [feedbackSummaries, isAdmin, user?.id],
+  );
+
   const relayTeamCount = useMemo(
     () => relayEventGroups.reduce((sum, group) => sum + group.teams.length, 0),
     [relayEventGroups],
@@ -522,6 +619,7 @@ export function TeamCompetitionRecordsModal({
                       record={record}
                       raceDistance={group.style.distance}
                       recordDate={competition?.date ?? null}
+                      feedback={feedbackContext}
                     />
                   ))}
 
@@ -538,6 +636,7 @@ export function TeamCompetitionRecordsModal({
                           record={record}
                           raceDistance={group.style.distance}
                           recordDate={competition?.date ?? null}
+                          feedback={feedbackContext}
                         />
                       ))}
                     </>
@@ -573,6 +672,8 @@ export function TeamCompetitionRecordsModal({
                           kind: t(`teams.ranking.relay.kind.${group.relayKind}`),
                         })}
                         recordDate={competition?.date ?? null}
+                        feedback={feedbackContext}
+                        teamId={teamId}
                       />
                     )),
                   )}
@@ -832,6 +933,19 @@ const styles = StyleSheet.create({
   relayLegsContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#EFF6FF",
+  },
+  relayLegWrap: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#F3F4F6",
+  },
+  relayLegFeedbackLine: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    marginLeft: AVATAR_SIZE + 10,
+  },
+  relayLegFeedbackSection: {
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
   relayLegRow: {
     flexDirection: "row",

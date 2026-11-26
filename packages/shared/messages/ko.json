@@ -4799,5 +4799,94 @@
         "security": "이메일·비밀번호·로그인 방법·계정 삭제"
       }
     }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}건",
+    "countBadgeAria": "피드백 {count}건",
+    "viewAria": "피드백 보기 ({count}건)",
+    "sectionTitle": "피드백",
+    "listModalTitle": "피드백",
+    "unknownAuthor": "탈퇴한 사용자",
+    "edited": "수정됨",
+    "editAria": "피드백 수정",
+    "deleteAria": "피드백 삭제",
+    "loading": "불러오는 중...",
+    "loadError": "피드백을 불러오지 못했습니다",
+    "empty": "아직 피드백이 없습니다",
+    "write": "FB 작성",
+    "writeAria": "{name}님의 기록에 피드백 작성",
+    "written": "작성 완료",
+    "deleteFailed": "피드백을 삭제하지 못했습니다",
+    "form": {
+      "createTitle": "피드백 작성",
+      "editTitle": "피드백 수정",
+      "recipient": "{name}님에게",
+      "label": "피드백",
+      "placeholder": "잘한 점과 개선할 점을 적어 주세요",
+      "counter": "{count} / {max}",
+      "submit": "보내기",
+      "save": "저장",
+      "cancel": "취소",
+      "saving": "보내는 중...",
+      "tooLong": "{max}자 이내로 입력해 주세요"
+    },
+    "errors": {
+      "duplicate": "이 기록에는 이미 피드백을 작성했습니다",
+      "not_team_record": "팀 기록에만 피드백을 작성할 수 있습니다",
+      "record_not_found": "기록을 찾을 수 없습니다",
+      "not_authorized": "이 작업을 수행할 권한이 없습니다",
+      "content_length": "1~1000자로 입력해 주세요",
+      "unknown": "피드백을 저장하지 못했습니다"
+    },
+    "popup": {
+      "title": "피드백이 도착했습니다",
+      "from": "{name}님에게서 피드백이 도착했습니다",
+      "goToRecord": "기록 화면으로",
+      "close": "닫기",
+      "skipAnimation": "애니메이션 건너뛰기",
+      "noCompetition": "대회 없음",
+      "relay": "릴레이"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "FB {count}건",
+    "writtenByMe": "작성함",
+    "write": "피드백 작성",
+    "sectionTitle": "피드백 ({count})",
+    "loadFailed": "피드백을 불러오지 못했습니다",
+    "deletedUser": "탈퇴한 사용자",
+    "newLabel": "NEW",
+    "edit": "피드백 수정",
+    "delete": "삭제",
+    "edited": "수정됨",
+    "deleteConfirmTitle": "피드백 삭제",
+    "deleteConfirmMessage": "이 피드백을 삭제하시겠습니까?",
+    "deletedToast": "피드백을 삭제했습니다",
+    "savedToast": "피드백을 저장했습니다",
+    "errors": {
+      "duplicate": "이 기록에는 이미 피드백을 작성했습니다",
+      "not_team_record": "팀 기록에만 피드백을 작성할 수 있습니다",
+      "record_not_found": "기록을 찾을 수 없습니다",
+      "not_authorized": "이 작업을 수행할 권한이 없습니다",
+      "content_length": "1~1000자로 입력해 주세요",
+      "unknown": "피드백을 저장하지 못했습니다",
+      "deleteFailed": "피드백을 삭제하지 못했습니다"
+    },
+    "form": {
+      "createTitle": "피드백 작성",
+      "editTitle": "피드백 수정",
+      "placeholder": "잘한 점과 개선할 점을 적어 주세요",
+      "inputLabel": "피드백 내용",
+      "counter": "{count} / {max}",
+      "save": "저장"
+    },
+    "arrival": {
+      "title": "피드백이 도착했습니다",
+      "from": "{name}님에게서 피드백이 도착했습니다",
+      "openRecord": "기록 화면으로",
+      "close": "닫기",
+      "animationText": "피드백이 도착했습니다",
+      "skipAnimation": "애니메이션 건너뛰기"
+    }
   }
 }

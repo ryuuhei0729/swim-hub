@@ -4796,5 +4796,94 @@
         "security": "Email, password, sign-in methods, and account deletion"
       }
     }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}",
+    "countBadgeAria": "{count} feedback",
+    "viewAria": "View feedback ({count})",
+    "sectionTitle": "Feedback",
+    "listModalTitle": "Feedback",
+    "unknownAuthor": "Deleted user",
+    "edited": "Edited",
+    "editAria": "Edit feedback",
+    "deleteAria": "Delete feedback",
+    "loading": "Loading...",
+    "loadError": "Failed to load feedback",
+    "empty": "No feedback yet",
+    "write": "Write FB",
+    "writeAria": "Write feedback on {name}'s record",
+    "written": "Written",
+    "deleteFailed": "Failed to delete feedback",
+    "form": {
+      "createTitle": "Write feedback",
+      "editTitle": "Edit feedback",
+      "recipient": "To {name}",
+      "label": "Feedback",
+      "placeholder": "Write what went well and what to improve",
+      "counter": "{count} / {max}",
+      "submit": "Send",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Sending...",
+      "tooLong": "Please enter no more than {max} characters"
+    },
+    "errors": {
+      "duplicate": "You have already written feedback on this record",
+      "not_team_record": "Feedback can only be written on team records",
+      "record_not_found": "Record not found",
+      "not_authorized": "You don't have permission to do this",
+      "content_length": "Please enter 1 to 1000 characters",
+      "unknown": "Failed to save feedback"
+    },
+    "popup": {
+      "title": "You've got feedback",
+      "from": "You received feedback from {name}",
+      "goToRecord": "View record",
+      "close": "Close",
+      "skipAnimation": "Skip animation",
+      "noCompetition": "No competition",
+      "relay": "Relay"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "FB {count}",
+    "writtenByMe": "Written",
+    "write": "Write feedback",
+    "sectionTitle": "Feedback ({count})",
+    "loadFailed": "Failed to load feedback",
+    "deletedUser": "Deleted user",
+    "newLabel": "NEW",
+    "edit": "Edit feedback",
+    "delete": "Delete",
+    "edited": "Edited",
+    "deleteConfirmTitle": "Delete feedback",
+    "deleteConfirmMessage": "Delete this feedback?",
+    "deletedToast": "Feedback deleted",
+    "savedToast": "Feedback saved",
+    "errors": {
+      "duplicate": "You have already written feedback on this record",
+      "not_team_record": "Feedback can only be written on team records",
+      "record_not_found": "Record not found",
+      "not_authorized": "You do not have permission to do this",
+      "content_length": "Enter between 1 and 1000 characters",
+      "unknown": "Failed to save feedback",
+      "deleteFailed": "Failed to delete feedback"
+    },
+    "form": {
+      "createTitle": "Write feedback",
+      "editTitle": "Edit feedback",
+      "placeholder": "Write what went well and what to improve",
+      "inputLabel": "Feedback text",
+      "counter": "{count} / {max}",
+      "save": "Save"
+    },
+    "arrival": {
+      "title": "You have new feedback",
+      "from": "You received feedback from {name}",
+      "openRecord": "View record",
+      "close": "Close",
+      "animationText": "You have new feedback",
+      "skipAnimation": "Skip animation"
+    }
   }
 }

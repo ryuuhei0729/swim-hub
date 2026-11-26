@@ -4799,5 +4799,94 @@
         "security": "メールアドレス・パスワード・ログイン方法・アカウント削除"
       }
     }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}件",
+    "countBadgeAria": "フィードバック {count}件",
+    "viewAria": "フィードバックを表示（{count}件）",
+    "sectionTitle": "フィードバック",
+    "listModalTitle": "フィードバック",
+    "unknownAuthor": "退会したユーザー",
+    "edited": "編集済み",
+    "editAria": "フィードバックを編集",
+    "deleteAria": "フィードバックを削除",
+    "loading": "読み込み中...",
+    "loadError": "フィードバックの取得に失敗しました",
+    "empty": "フィードバックはまだありません",
+    "write": "FBを書く",
+    "writeAria": "{name}さんの記録にフィードバックを書く",
+    "written": "記入済み",
+    "deleteFailed": "フィードバックの削除に失敗しました",
+    "form": {
+      "createTitle": "フィードバックを書く",
+      "editTitle": "フィードバックを編集",
+      "recipient": "{name}さんへ",
+      "label": "フィードバック",
+      "placeholder": "良かった点や改善点を書いてください",
+      "counter": "{count} / {max}",
+      "submit": "送信",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "saving": "送信中...",
+      "tooLong": "{max}文字以内で入力してください"
+    },
+    "errors": {
+      "duplicate": "この記録にはすでにフィードバックを書いています",
+      "not_team_record": "チーム記録以外にはフィードバックを書けません",
+      "record_not_found": "記録が見つかりません",
+      "not_authorized": "この操作を行う権限がありません",
+      "content_length": "1〜1000文字で入力してください",
+      "unknown": "フィードバックの保存に失敗しました"
+    },
+    "popup": {
+      "title": "フィードバックが届きました",
+      "from": "{name}さんからフィードバックが届きました",
+      "goToRecord": "記録画面へ",
+      "close": "閉じる",
+      "skipAnimation": "アニメーションをスキップ",
+      "noCompetition": "大会なし",
+      "relay": "リレー"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "FB {count}件",
+    "writtenByMe": "記入済み",
+    "write": "FBを書く",
+    "sectionTitle": "フィードバック ({count})",
+    "loadFailed": "フィードバックの取得に失敗しました",
+    "deletedUser": "退会したユーザー",
+    "newLabel": "NEW",
+    "edit": "フィードバックを編集",
+    "delete": "削除",
+    "edited": "編集済み",
+    "deleteConfirmTitle": "フィードバックを削除",
+    "deleteConfirmMessage": "このフィードバックを削除しますか？",
+    "deletedToast": "フィードバックを削除しました",
+    "savedToast": "フィードバックを保存しました",
+    "errors": {
+      "duplicate": "この記録にはすでにフィードバックを書いています",
+      "not_team_record": "チーム記録以外にはフィードバックを書けません",
+      "record_not_found": "記録が見つかりません",
+      "not_authorized": "この操作を行う権限がありません",
+      "content_length": "1〜1000文字で入力してください",
+      "unknown": "フィードバックの保存に失敗しました",
+      "deleteFailed": "フィードバックの削除に失敗しました"
+    },
+    "form": {
+      "createTitle": "フィードバックを書く",
+      "editTitle": "フィードバックを編集",
+      "placeholder": "良かった点や改善点を書いてください",
+      "inputLabel": "フィードバック本文",
+      "counter": "{count} / {max}",
+      "save": "保存"
+    },
+    "arrival": {
+      "title": "フィードバックが届きました",
+      "from": "{name}さんからフィードバックが届きました",
+      "openRecord": "記録画面へ",
+      "close": "閉じる",
+      "animationText": "フィードバックが届きました",
+      "skipAnimation": "アニメーションをスキップ"
+    }
   }
 }
