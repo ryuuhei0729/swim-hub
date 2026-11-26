@@ -13,7 +13,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { FocusPointAPI } from "../../api/focusPoints";
+import { FocusPointAPI, isFocusPointLimitError } from "../../api/focusPoints";
 import type {
   CreateFocusPointInput,
   FocusPoint,
@@ -55,6 +55,17 @@ export function useFocusPointsQuery(
   });
 }
 
+/**
+ * 上限で止められた = 手元の一覧が古い (別の端末・Web で増えていた) ので、取り直して件数を合わせる
+ */
+function refetchOnLimitError(queryClient: ReturnType<typeof useQueryClient>) {
+  return (error: Error) => {
+    if (isFocusPointLimitError(error)) {
+      void queryClient.invalidateQueries({ queryKey: focusPointKeys.all });
+    }
+  };
+}
+
 export function useCreateFocusPointMutation(
   supabase: SupabaseClient,
 ): UseMutationResult<FocusPoint, Error, CreateFocusPointInput> {
@@ -64,6 +75,7 @@ export function useCreateFocusPointMutation(
   return useMutation({
     mutationFn: (input: CreateFocusPointInput) => api.createFocusPoint(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: focusPointKeys.all }),
+    onError: refetchOnLimitError(queryClient),
   });
 }
 
@@ -88,6 +100,7 @@ export function useSetFocusPointStatusMutation(
   return useMutation({
     mutationFn: ({ id, status }) => api.setStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: focusPointKeys.all }),
+    onError: refetchOnLimitError(queryClient),
   });
 }
 

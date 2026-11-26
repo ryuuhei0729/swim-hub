@@ -12,7 +12,7 @@ import type { FocusPoint } from "@apps/shared/types";
 import FocusPointsCard from "../FocusPointsCard";
 
 const mocks = vi.hoisted(() => ({
-  query: { data: [] as FocusPoint[] | undefined, isLoading: false, isError: false },
+  query: { data: [] as FocusPoint[] | undefined, isPending: false, isError: false },
   create: vi.fn<(variables: unknown) => Promise<unknown>>(),
   update: vi.fn<(variables: unknown) => Promise<unknown>>(),
   setStatus: vi.fn<(variables: unknown) => Promise<unknown>>(),
@@ -68,7 +68,7 @@ const threeActive = [
 
 beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "me" } }));
-  mocks.query = { data: [], isLoading: false, isError: false };
+  mocks.query = { data: [], isPending: false, isError: false };
   mocks.create.mockReset().mockResolvedValue(point());
   mocks.update.mockReset().mockResolvedValue(point());
   mocks.setStatus.mockReset().mockResolvedValue(point());
@@ -100,15 +100,32 @@ describe("FocusPointsCard", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
+  it("空欄のエラーは、タイトルを入力し直したら消える", () => {
+    renderWithI18n(<FocusPointsCard />);
+    fireEvent.click(screen.getByRole("button", { name: "フォーカスポイントを追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "追加する" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("意識することを入力してください");
+    fireEvent.change(screen.getByLabelText("泳ぎで意識すること"), { target: { value: "腰" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("1 / 100")).toBeInTheDocument();
+  });
+
+  it("まだ読み込んでいない間 (ログイン直後でクエリが無効のときも) は空の案内を出さない", () => {
+    mocks.query = { data: undefined, isPending: true, isError: false };
+    renderWithI18n(<FocusPointsCard />);
+    expect(screen.queryByText("泳ぎで意識したいことを書いておこう")).toBeNull();
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
   it("取り組み中を番号付きで並べ、件数を出す", () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     renderWithI18n(<FocusPointsCard />);
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "「腰を浮かせる」を編集" })).toBeInTheDocument();
   });
 
   it("3つあるときに追加しようとすると、フォームを開かずにエラーを出す", () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     renderWithI18n(<FocusPointsCard />);
     fireEvent.click(screen.getByRole("button", { name: "フォーカスポイントを追加" }));
     expect(screen.getByRole("alert")).toHaveTextContent("同時に3つまでです");
@@ -125,7 +142,7 @@ describe("FocusPointsCard", () => {
   });
 
   it("行を押すと編集でき、「身についた」にできる", async () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     renderWithI18n(<FocusPointsCard />);
     fireEvent.click(screen.getByRole("button", { name: "「腰を浮かせる」を編集" }));
     expect(screen.getByLabelText("泳ぎで意識すること")).toHaveValue("腰を浮かせる");
@@ -137,7 +154,7 @@ describe("FocusPointsCard", () => {
   });
 
   it("確認してから削除する", async () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     renderWithI18n(<FocusPointsCard />);
     fireEvent.click(screen.getByRole("button", { name: "「腰を浮かせる」を編集" }));
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
@@ -187,7 +204,7 @@ describe("FocusPointsCard", () => {
           mastered_at: "2026-10-01T00:00:00Z",
         }),
       ],
-      isLoading: false,
+      isPending: false,
       isError: false,
     };
     const { unmount } = renderWithI18n(<FocusPointsCard />);
@@ -203,7 +220,7 @@ describe("FocusPointsCard", () => {
   });
 
   it("取得に失敗したらエラー文を出す", () => {
-    mocks.query = { data: undefined, isLoading: false, isError: true };
+    mocks.query = { data: undefined, isPending: false, isError: true };
     renderWithI18n(<FocusPointsCard />);
     expect(screen.getByText("フォーカスポイントを読み込めませんでした")).toBeInTheDocument();
   });

@@ -4810,7 +4810,7 @@
     "emptyDescription": "예: 오른손 입수를 멀리 / 킥과 풀의 타이밍 맞추기 / 허리를 띄우기",
     "loadError": "포커스 포인트를 불러오지 못했습니다",
     "limitTitle": "추가할 수 없습니다",
-    "limitError": "포커스 포인트는 동시에 {max}개까지입니다. 하나를 '몸에 익혔다'로 바꾸거나 삭제한 뒤 추가하세요",
+    "limitError": "포커스 포인트는 동시에 {max}개까지입니다. 하나를 '몸에 익혔다'로 바꾸거나 삭제한 뒤 추가하세요.",
     "masteredTitle": "몸에 익힘 ({count})",
     "masteredOn": "{date}에 몸에 익힘",
     "form": {

@@ -9,7 +9,7 @@ import type { FocusPoint } from "@apps/shared/types";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  query: { data: [] as FocusPoint[] | undefined, isLoading: false, isError: false },
+  query: { data: [] as FocusPoint[] | undefined, isPending: false, isError: false },
 }));
 
 vi.mock("@apps/shared/hooks/queries/focusPoints", async (importOriginal) => {
@@ -47,7 +47,7 @@ const threeActive = [
 beforeEach(() => {
   mocks.navigate.mockReset();
   vi.mocked(Alert.alert).mockReset();
-  mocks.query = { data: [], isLoading: false, isError: false };
+  mocks.query = { data: [], isPending: false, isError: false };
 });
 
 describe("FocusPointCard", () => {
@@ -59,7 +59,7 @@ describe("FocusPointCard", () => {
   });
 
   it("取り組み中を並べ、行を押すとその行の編集を開く", () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     const { getByText } = render(<FocusPointCard />);
     expect(getByText("3 / 3")).toBeTruthy();
     expect(getByText("コーチに言われた")).toBeTruthy();
@@ -68,7 +68,7 @@ describe("FocusPointCard", () => {
   });
 
   it("3つあるときに追加しようとすると、フォームを開かずにエラーを出す", () => {
-    mocks.query = { data: threeActive, isLoading: false, isError: false };
+    mocks.query = { data: threeActive, isPending: false, isError: false };
     const { getByText } = render(<FocusPointCard />);
     fireEvent.click(getByText("＋ 追加"));
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -79,7 +79,7 @@ describe("FocusPointCard", () => {
   });
 
   it("2つなら追加フォームを開ける", () => {
-    mocks.query = { data: threeActive.slice(0, 2), isLoading: false, isError: false };
+    mocks.query = { data: threeActive.slice(0, 2), isPending: false, isError: false };
     const { getByText } = render(<FocusPointCard />);
     fireEvent.click(getByText("＋ 追加"));
     expect(mocks.navigate).toHaveBeenCalledWith("FocusPointForm", {});
@@ -97,7 +97,7 @@ describe("FocusPointCard", () => {
           mastered_at: "2026-10-01T00:00:00Z",
         }),
       ],
-      isLoading: false,
+      isPending: false,
       isError: false,
     };
     const home = render(<FocusPointCard />);
@@ -110,8 +110,16 @@ describe("FocusPointCard", () => {
     expect(getByText("ストリームラインを締める")).toBeTruthy();
   });
 
+  it("まだ読み込んでいない間 (ログイン直後でクエリが無効のときも) は空の案内を出さない", () => {
+    mocks.query = { data: undefined, isPending: true, isError: false };
+    const { queryByText } = render(<FocusPointCard />);
+    expect(queryByText("泳ぎで意識したいことを書いておこう")).toBeNull();
+    expect(queryByText("フォーカスポイントを追加")).toBeNull();
+    expect(queryByText("フォーカスポイント")).toBeNull(); // 見出しも出さず、読み込み中の表示だけ
+  });
+
   it("取得に失敗したらエラー文を出す", () => {
-    mocks.query = { data: undefined, isLoading: false, isError: true };
+    mocks.query = { data: undefined, isPending: false, isError: true };
     const { getByText } = render(<FocusPointCard />);
     expect(getByText("フォーカスポイントを読み込めませんでした")).toBeTruthy();
   });

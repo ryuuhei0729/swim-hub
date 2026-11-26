@@ -37,7 +37,9 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
   const { t } = useTranslation();
   const locale = useDateLocale();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { data, isLoading, isError } = useFocusPointsQuery(supabase, user?.id);
+  // isPending: まだデータが無い間 (クエリが無効のあいだも含む)。isLoading だと無効のとき false になり、
+  // 読み込み前に「まだありません」の案内が一瞬出てしまう
+  const { data, isPending, isError } = useFocusPointsQuery(supabase, user?.id);
   const { active, mastered } = useMemo(() => splitFocusPoints(data ?? []), [data]);
   const [isMasteredOpen, setIsMasteredOpen] = useState(false);
 
@@ -54,7 +56,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
 
   const openEdit = (focusPointId: string) => navigation.navigate("FocusPointForm", { focusPointId });
 
-  if (isLoading) {
+  if (isPending && !isError) {
     return (
       <View style={[styles.card, styles.loading, style]} testID="focus-points-loading">
         <ActivityIndicator color={colors.primary} />
@@ -76,7 +78,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
         {!isError && active.length > 0 && (
           <Pressable
             onPress={handleAdd}
-            hitSlop={8}
+            style={styles.addButton}
             accessibilityRole="button"
             accessibilityLabel={t("focusPoints.addAria")}
             testID="focus-points-add"
@@ -139,6 +141,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
             style={styles.masteredToggle}
             onPress={() => setIsMasteredOpen((open) => !open)}
             accessibilityRole="button"
+            accessibilityLabel={t("focusPoints.masteredTitle", { count: mastered.length })}
             accessibilityState={{ expanded: isMasteredOpen }}
           >
             <Text style={styles.masteredToggleText}>
@@ -189,10 +192,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
+  // 大きな文字サイズでは「フォーカスポイント 3 / 3」を折り返し、右の「＋ 追加」を押し出さない
   headerTitle: {
+    flex: 1,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "baseline",
-    gap: 6,
+    columnGap: 6,
+  },
+  // 押せる範囲を 44pt 確保しつつ、見た目の位置はカードの右上に合わせる
+  addButton: {
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: 8,
+    marginVertical: -12,
+    marginRight: -8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   kicker: {
     fontSize: 12,
@@ -250,7 +266,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    paddingVertical: 9,
+    paddingVertical: 10,
+    minHeight: 48,
   },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -260,9 +277,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   badge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 20,
+    minHeight: 20,
+    paddingHorizontal: 5,
+    borderRadius: 999,
     backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
@@ -296,6 +314,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
+    minHeight: 48,
   },
   masteredToggleText: {
     fontSize: 13,
@@ -304,6 +323,8 @@ const styles = StyleSheet.create({
   },
   masteredRow: {
     paddingVertical: 8,
+    minHeight: 48,
+    justifyContent: "center",
   },
   masteredTitle: {
     fontSize: 14,

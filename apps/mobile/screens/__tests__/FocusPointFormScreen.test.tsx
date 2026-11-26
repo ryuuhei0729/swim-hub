@@ -3,7 +3,7 @@
  */
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react";
-import { Alert } from "react-native";
+import { Alert, Keyboard } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FocusPointLimitError } from "@apps/shared/api/focusPoints";
 import type { FocusPoint } from "@apps/shared/types";
@@ -11,7 +11,7 @@ import type { FocusPoint } from "@apps/shared/types";
 const mocks = vi.hoisted(() => ({
   goBack: vi.fn(),
   params: undefined as { focusPointId?: string } | undefined,
-  query: { data: [] as FocusPoint[] | undefined, isLoading: false, isError: false },
+  query: { data: [] as FocusPoint[] | undefined, isPending: false, isError: false },
   create: vi.fn(),
   update: vi.fn(),
   setStatus: vi.fn(),
@@ -92,12 +92,13 @@ const point = (overrides: Partial<FocusPoint> = {}): FocusPoint => ({
 beforeEach(() => {
   mocks.goBack.mockReset();
   mocks.params = undefined;
-  mocks.query = { data: [], isLoading: false, isError: false };
+  mocks.query = { data: [], isPending: false, isError: false };
   mocks.create.mockReset().mockResolvedValue(point());
   mocks.update.mockReset().mockResolvedValue(point());
   mocks.setStatus.mockReset().mockResolvedValue(point());
   mocks.remove.mockReset().mockResolvedValue(undefined);
   vi.mocked(Alert.alert).mockReset();
+  vi.mocked(Keyboard.dismiss).mockClear();
 });
 
 describe("FocusPointFormScreen — 追加", () => {
@@ -111,6 +112,17 @@ describe("FocusPointFormScreen — 追加", () => {
       expect(mocks.create).toHaveBeenCalledWith({ title: "右手の入水を遠くに", note: "" }),
     );
     expect(mocks.goBack).toHaveBeenCalled();
+    // Android ではキーボードが閉じないまま前の画面に残ることがあるので、閉じてから戻る
+    expect(Keyboard.dismiss).toHaveBeenCalled();
+  });
+
+  it("空欄のエラーは、タイトルを入力し直したら消える", () => {
+    const { getByTestId, getByText, queryByText } = render(<FocusPointFormScreen />);
+    fireEvent.click(getByText("追加する"));
+    expect(getByText("意識することを入力してください")).toBeTruthy();
+    fireEvent.change(getByTestId("focus-point-title-input"), { target: { value: "腰" } });
+    expect(queryByText("意識することを入力してください")).toBeNull();
+    expect(getByText("1 / 100")).toBeTruthy();
   });
 
   it("空欄ならエラーを出して保存しない", () => {
@@ -139,7 +151,7 @@ describe("FocusPointFormScreen — 追加", () => {
 describe("FocusPointFormScreen — 編集", () => {
   beforeEach(() => {
     mocks.params = { focusPointId: "fp-1" };
-    mocks.query = { data: [point()], isLoading: false, isError: false };
+    mocks.query = { data: [point()], isPending: false, isError: false };
   });
 
   it("今の内容を入れた状態で開き、保存すると更新する", async () => {
@@ -168,7 +180,7 @@ describe("FocusPointFormScreen — 編集", () => {
   it("身についたものは「もう一度取り組む」を出し、上限ならエラーを出す", async () => {
     mocks.query = {
       data: [point({ status: "mastered", mastered_at: "2026-10-01T00:00:00Z" })],
-      isLoading: false,
+      isPending: false,
       isError: false,
     };
     mocks.setStatus.mockRejectedValue(new FocusPointLimitError());
@@ -196,7 +208,7 @@ describe("FocusPointFormScreen — 編集", () => {
   it("削除で一覧から消えても、閉じるまでの間に「見つかりませんでした」を出さない", async () => {
     // 実際は削除の成功時に一覧を取り直し、対象が消えた状態で画面が描き直される
     mocks.remove.mockImplementation(async () => {
-      mocks.query = { data: [], isLoading: false, isError: false };
+      mocks.query = { data: [], isPending: false, isError: false };
     });
     const { getByText, queryByText, rerender } = render(<FocusPointFormScreen />);
     fireEvent.click(getByText("削除"));
@@ -228,7 +240,7 @@ describe("FocusPointFormScreen — 編集", () => {
   });
 
   it("見つからなければその旨を出す", () => {
-    mocks.query = { data: [], isLoading: false, isError: false };
+    mocks.query = { data: [], isPending: false, isError: false };
     const { getByText } = render(<FocusPointFormScreen />);
     expect(getByText("このフォーカスポイントは見つかりませんでした")).toBeTruthy();
   });

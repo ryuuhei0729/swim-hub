@@ -29,7 +29,9 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
   const t = useTranslations("focusPoints");
   const locale = useLocale() as SupportedLocale;
   const { supabase, user } = useAuth();
-  const { data, isLoading, isError } = useFocusPointsQuery(supabase, user?.id);
+  // isPending: まだデータが無い間 (クエリが無効のあいだも含む)。isLoading だと無効のとき false になり、
+  // 読み込み前に「まだありません」の案内が一瞬出てしまう
+  const { data, isPending, isError } = useFocusPointsQuery(supabase, user?.id);
   const { active, mastered } = useMemo(() => splitFocusPoints(data ?? []), [data]);
 
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
@@ -49,7 +51,7 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
     setFormTarget(point);
   };
 
-  if (isLoading) {
+  if (isPending && !isError) {
     return (
       <section className={CARD_CLASS} aria-busy="true">
         <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
@@ -76,7 +78,7 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
             type="button"
             onClick={handleAdd}
             aria-label={t("addAria")}
-            className="rounded-md px-2 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
+            className="-my-1 -mr-2 min-h-11 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
           >
             {t("add")}
           </button>

@@ -4807,7 +4807,7 @@
     "emptyDescription": "e.g. Reach further on the right-hand entry / Time the kick with the pull / Keep the hips high",
     "loadError": "Couldn't load your focus points",
     "limitTitle": "Can't add",
-    "limitError": "You can have up to {max} focus points at a time. Mark one as mastered or delete it first",
+    "limitError": "You can have up to {max} focus points at a time. Mark one as mastered or delete it first.",
     "masteredTitle": "Mastered ({count})",
     "masteredOn": "Mastered on {date}",
     "form": {

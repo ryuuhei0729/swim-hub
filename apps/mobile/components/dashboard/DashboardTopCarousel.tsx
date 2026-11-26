@@ -54,15 +54,14 @@ export const DashboardTopCarousel: React.FC<DashboardTopCarouselProps> = ({ page
   // 幅が変わった (回転・分割表示) ときは、今のカードの位置に合わせ直す。
   // そのままだと前の幅の位置に止まったままで、次にスワイプするまでカードがずれて見える。
   // 1枚目なら位置は 0 のままで合っているので何もしない (初回の描画も含む)
-  const indexRef = useRef(index);
-  indexRef.current = index;
+  // (今のカードが変わっただけのときは何もしない: 幅が同じなら位置は合っている)
   const prevIntervalRef = useRef(interval);
   useEffect(() => {
     if (prevIntervalRef.current === interval) return;
     prevIntervalRef.current = interval;
-    if (indexRef.current === 0) return;
-    scrollRef.current?.scrollTo({ x: indexRef.current * interval, animated: false });
-  }, [interval]);
+    if (index === 0) return;
+    scrollRef.current?.scrollTo({ x: index * interval, animated: false });
+  }, [interval, index]);
 
   const goTo = (i: number) => {
     scrollRef.current?.scrollTo({ x: i * interval, animated: true });
@@ -96,7 +95,7 @@ export const DashboardTopCarousel: React.FC<DashboardTopCarouselProps> = ({ page
             <Pressable
               key={page.key}
               onPress={() => goTo(i)}
-              hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
               accessibilityRole="button"
               accessibilityLabel={page.label}
               accessibilityState={{ selected: i === index }}
@@ -126,12 +125,15 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 6,
   },
-  // 点そのものは小さいので、押せる範囲は周りに広げる (補助の操作。主な操作はスワイプ)
+  // 点そのものは小さいので、押せる範囲は周りに広げる (補助の操作。主な操作はスワイプ)。
+  // 枠は 32pt 以上、hitSlop を足して約 44pt にする
   dotHit: {
+    minWidth: 32,
+    minHeight: 28,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
     width: 6,

@@ -6,6 +6,7 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Keyboard,
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
@@ -79,6 +80,18 @@ export const FocusPointFormScreen: React.FC = () => {
 
   const limitMessage = t("focusPoints.limitError", { max: FOCUS_POINT_MAX_ACTIVE });
 
+  // 画面を閉じるときはキーボードも閉じる (Android は閉じないまま前の画面に残ることがある)
+  const close = () => {
+    Keyboard.dismiss();
+    navigation.goBack();
+  };
+
+  // 入力し直したら、空欄のエラーは消す
+  const handleTitleChange = (text: string) => {
+    setTitle(text);
+    if (error && text.trim() !== "") setError(null);
+  };
+
   const handleSave = async () => {
     if (isBusy) return;
     if (title.trim() === "") {
@@ -92,7 +105,7 @@ export const FocusPointFormScreen: React.FC = () => {
       } else {
         await createMutation.mutateAsync({ title, note });
       }
-      navigation.goBack();
+      close();
     } catch (err) {
       console.error("Failed to save focus point:", err);
       setError(isFocusPointLimitError(err) ? limitMessage : t("focusPoints.form.saveFailed"));
@@ -108,7 +121,7 @@ export const FocusPointFormScreen: React.FC = () => {
         id: focusPoint.id,
         status: focusPoint.status === "active" ? "mastered" : "active",
       });
-      navigation.goBack();
+      close();
     } catch (err) {
       setIsClosing(false);
       console.error("Failed to change focus point status:", err);
@@ -131,7 +144,7 @@ export const FocusPointFormScreen: React.FC = () => {
             setIsClosing(true);
             try {
               await deleteMutation.mutateAsync(focusPoint.id);
-              navigation.goBack();
+              close();
             } catch (err) {
               setIsClosing(false);
               console.error("Failed to delete focus point:", err);
@@ -146,7 +159,7 @@ export const FocusPointFormScreen: React.FC = () => {
   if (isEdit && !focusPoint && !isClosing) {
     return (
       <View style={styles.container}>
-        {focusPointsQuery.isLoading ? (
+        {focusPointsQuery.isPending && !focusPointsQuery.isError ? (
           <LoadingSpinner />
         ) : (
           <Text style={styles.centerMessage}>{t("focusPoints.form.notFound")}</Text>
@@ -166,18 +179,24 @@ export const FocusPointFormScreen: React.FC = () => {
           <Text style={styles.label}>
             {t("focusPoints.form.titleLabel")}
           </Text>
+          {/* 長いタイトルも全文が見えるよう折り返す。改行は入れさせず、リターンで閉じる */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.titleInput]}
             value={title}
-            onChangeText={setTitle}
+            onChangeText={handleTitleChange}
             placeholder={t("focusPoints.form.titlePlaceholder")}
             placeholderTextColor="#9CA3AF"
             maxLength={FOCUS_POINT_TITLE_MAX_LENGTH}
             autoFocus={!isEdit}
+            multiline
+            submitBehavior="blurAndSubmit"
             returnKeyType="done"
             accessibilityLabel={t("focusPoints.form.titleLabel")}
             testID="focus-point-title-input"
           />
+          <Text style={styles.counter}>
+            {title.length} / {FOCUS_POINT_TITLE_MAX_LENGTH}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -280,6 +299,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
+  titleInput: {
+    paddingTop: 10,
+    paddingBottom: 10,
+    textAlignVertical: "top",
+  },
+  counter: {
+    alignSelf: "flex-end",
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
   textArea: {
     minHeight: 96,
     paddingTop: 10,
@@ -293,6 +322,8 @@ const styles = StyleSheet.create({
   outlineButton: {
     flex: 2,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -307,6 +338,8 @@ const styles = StyleSheet.create({
   deleteButton: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,

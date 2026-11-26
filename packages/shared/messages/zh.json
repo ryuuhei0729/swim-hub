@@ -4810,7 +4810,7 @@
     "emptyDescription": "例：右手入水再远一些 / 让踢腿与划手配合 / 保持髋部上浮",
     "loadError": "无法加载重点意识",
     "limitTitle": "无法添加",
-    "limitError": "重点意识最多同时{max}条。请先将其中一条标为“已掌握”或删除",
+    "limitError": "重点意识最多同时{max}条。请先将其中一条标为“已掌握”或删除。",
     "masteredTitle": "已掌握（{count}）",
     "masteredOn": "{date} 已掌握",
     "form": {

@@ -118,12 +118,20 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
               id="focus-point-title"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                // 入力し直したら、空欄のエラーは消す
+                if (error && e.target.value.trim() !== "") setError(null);
+              }}
               maxLength={FOCUS_POINT_TITLE_MAX_LENGTH}
               placeholder={t("form.titlePlaceholder")}
               autoFocus
+              aria-describedby="focus-point-title-count"
               className="block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+            <p id="focus-point-title-count" className="text-right text-xs text-gray-500">
+              {title.length} / {FOCUS_POINT_TITLE_MAX_LENGTH}
+            </p>
           </div>
 
           <div className="space-y-1">
