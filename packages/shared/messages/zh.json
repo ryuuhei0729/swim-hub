@@ -4799,5 +4799,40 @@
         "security": "邮箱、密码、登录方式及删除账户"
       }
     }
+  },
+  "focusPoints": {
+    "title": "重点意识",
+    "count": "{count} / {max}",
+    "add": "＋ 添加",
+    "addAria": "添加重点意识",
+    "editAria": "编辑“{title}”",
+    "emptyTitle": "写下游泳时想注意的要点",
+    "emptyDescription": "例：右手入水再远一些 / 让踢腿与划手配合 / 保持髋部上浮",
+    "loadError": "无法加载重点意识",
+    "limitTitle": "无法添加",
+    "limitError": "重点意识最多同时{max}条。请先将其中一条标为“已掌握”或删除",
+    "masteredTitle": "已掌握（{count}）",
+    "masteredOn": "{date} 已掌握",
+    "form": {
+      "createTitle": "添加重点意识",
+      "editTitle": "编辑重点意识",
+      "titleLabel": "要注意的点",
+      "titlePlaceholder": "例：右手入水再远一些",
+      "titleRequired": "请输入要注意的点",
+      "noteLabel": "备注（可选）",
+      "notePlaceholder": "教练说过的话、做得好时的诀窍等",
+      "create": "添加",
+      "save": "保存",
+      "cancel": "取消",
+      "saveFailed": "保存失败，请稍后重试",
+      "markMastered": "已掌握",
+      "reactivate": "重新练习",
+      "statusFailed": "更改失败，请稍后重试",
+      "delete": "删除",
+      "deleteConfirmTitle": "删除重点意识",
+      "deleteConfirmMessage": "将删除“{title}”。此操作无法撤销。",
+      "deleteFailed": "删除失败，请稍后重试",
+      "notFound": "找不到该重点意识"
+    }
   }
 }

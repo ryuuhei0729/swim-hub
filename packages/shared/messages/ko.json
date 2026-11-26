@@ -4799,5 +4799,40 @@
         "security": "이메일·비밀번호·로그인 방법·계정 삭제"
       }
     }
+  },
+  "focusPoints": {
+    "title": "포커스 포인트",
+    "count": "{count} / {max}",
+    "add": "＋ 추가",
+    "addAria": "포커스 포인트 추가",
+    "editAria": "\"{title}\" 편집",
+    "emptyTitle": "수영할 때 의식하고 싶은 점을 적어 두세요",
+    "emptyDescription": "예: 오른손 입수를 멀리 / 킥과 풀의 타이밍 맞추기 / 허리를 띄우기",
+    "loadError": "포커스 포인트를 불러오지 못했습니다",
+    "limitTitle": "추가할 수 없습니다",
+    "limitError": "포커스 포인트는 동시에 {max}개까지입니다. 하나를 '몸에 익혔다'로 바꾸거나 삭제한 뒤 추가하세요",
+    "masteredTitle": "몸에 익힘 ({count})",
+    "masteredOn": "{date}에 몸에 익힘",
+    "form": {
+      "createTitle": "포커스 포인트 추가",
+      "editTitle": "포커스 포인트 편집",
+      "titleLabel": "의식할 점",
+      "titlePlaceholder": "예: 오른손 입수를 멀리",
+      "titleRequired": "의식할 점을 입력하세요",
+      "noteLabel": "메모 (선택)",
+      "notePlaceholder": "코치가 한 말, 잘 됐을 때의 요령 등",
+      "create": "추가",
+      "save": "저장",
+      "cancel": "취소",
+      "saveFailed": "저장하지 못했습니다. 잠시 후 다시 시도하세요",
+      "markMastered": "몸에 익혔다",
+      "reactivate": "다시 연습하기",
+      "statusFailed": "변경하지 못했습니다. 잠시 후 다시 시도하세요",
+      "delete": "삭제",
+      "deleteConfirmTitle": "포커스 포인트 삭제",
+      "deleteConfirmMessage": "\"{title}\"을(를) 삭제합니다. 되돌릴 수 없습니다.",
+      "deleteFailed": "삭제하지 못했습니다. 잠시 후 다시 시도하세요",
+      "notFound": "이 포커스 포인트를 찾을 수 없습니다"
+    }
   }
 }

@@ -4796,5 +4796,40 @@
         "security": "Email, password, sign-in methods, and account deletion"
       }
     }
+  },
+  "focusPoints": {
+    "title": "Focus points",
+    "count": "{count} / {max}",
+    "add": "+ Add",
+    "addAria": "Add a focus point",
+    "editAria": "Edit \"{title}\"",
+    "emptyTitle": "Write down what you want to focus on",
+    "emptyDescription": "e.g. Reach further on the right-hand entry / Time the kick with the pull / Keep the hips high",
+    "loadError": "Couldn't load your focus points",
+    "limitTitle": "Can't add",
+    "limitError": "You can have up to {max} focus points at a time. Mark one as mastered or delete it first",
+    "masteredTitle": "Mastered ({count})",
+    "masteredOn": "Mastered on {date}",
+    "form": {
+      "createTitle": "Add focus point",
+      "editTitle": "Edit focus point",
+      "titleLabel": "What to focus on",
+      "titlePlaceholder": "e.g. Reach further on the right-hand entry",
+      "titleRequired": "Enter what you want to focus on",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "What your coach said, tips that worked, etc.",
+      "create": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveFailed": "Couldn't save. Please try again later",
+      "markMastered": "Mastered",
+      "reactivate": "Work on it again",
+      "statusFailed": "Couldn't update. Please try again later",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete focus point",
+      "deleteConfirmMessage": "\"{title}\" will be deleted. This can't be undone.",
+      "deleteFailed": "Couldn't delete. Please try again later",
+      "notFound": "This focus point couldn't be found"
+    }
   }
 }

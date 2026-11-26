@@ -28,6 +28,7 @@ import { PaywallScreen } from "@/screens/PaywallScreen";
 import { GoalDetailScreen } from "@/screens/GoalDetailScreen";
 import { GoalFormScreen } from "@/screens/GoalFormScreen";
 import { MilestoneFormScreen } from "@/screens/MilestoneFormScreen";
+import { FocusPointFormScreen } from "@/screens/FocusPointFormScreen";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -259,6 +260,16 @@ export const MainStack: React.FC = () => {
           title: route.params?.milestoneId
             ? t("goals.milestoneEdit.title")
             : t("goals.milestoneCreate.title"),
+        })}
+      />
+      <Stack.Screen
+        name="FocusPointForm"
+        component={FocusPointFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.focusPointId
+            ? t("focusPoints.form.editTitle")
+            : t("focusPoints.form.createTitle"),
         })}
       />
       <Stack.Screen

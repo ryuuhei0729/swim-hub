@@ -4799,5 +4799,40 @@
         "security": "メールアドレス・パスワード・ログイン方法・アカウント削除"
       }
     }
+  },
+  "focusPoints": {
+    "title": "フォーカスポイント",
+    "count": "{count} / {max}",
+    "add": "＋ 追加",
+    "addAria": "フォーカスポイントを追加",
+    "editAria": "「{title}」を編集",
+    "emptyTitle": "泳ぎで意識したいことを書いておこう",
+    "emptyDescription": "例: 右手の入水を遠くに / キックとプルのタイミングを合わせる / 腰を浮かせる",
+    "loadError": "フォーカスポイントを読み込めませんでした",
+    "limitTitle": "追加できません",
+    "limitError": "フォーカスポイントは同時に{max}つまでです。どれかを「身についた」にするか削除してから追加してください",
+    "masteredTitle": "身についた（{count}）",
+    "masteredOn": "{date} に身についた",
+    "form": {
+      "createTitle": "フォーカスポイントを追加",
+      "editTitle": "フォーカスポイントを編集",
+      "titleLabel": "泳ぎで意識すること",
+      "titlePlaceholder": "例: 右手の入水を遠くに",
+      "titleRequired": "意識することを入力してください",
+      "noteLabel": "メモ（任意）",
+      "notePlaceholder": "コーチに言われたこと、うまくいったときのコツなど",
+      "create": "追加する",
+      "save": "保存する",
+      "cancel": "キャンセル",
+      "saveFailed": "保存できませんでした。時間をおいてもう一度お試しください",
+      "markMastered": "身についた",
+      "reactivate": "もう一度取り組む",
+      "statusFailed": "変更できませんでした。時間をおいてもう一度お試しください",
+      "delete": "削除",
+      "deleteConfirmTitle": "フォーカスポイントを削除",
+      "deleteConfirmMessage": "「{title}」を削除します。元に戻せません。",
+      "deleteFailed": "削除できませんでした。時間をおいてもう一度お試しください",
+      "notFound": "このフォーカスポイントは見つかりませんでした"
+    }
   }
 }

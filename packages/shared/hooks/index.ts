@@ -17,6 +17,7 @@ export * from "./queries/goals";
 export * from "./queries/teamMemberGoals";
 export * from "./queries/goalTargets";
 export * from "./queries/practiceLogTemplates";
+export * from "./queries/focusPoints";
 export * from "./queries/dashboard";
 export * from "./queries/notifications";
 export * from "./queries/calendarColors";
