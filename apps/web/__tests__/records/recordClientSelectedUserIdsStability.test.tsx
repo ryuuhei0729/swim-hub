@@ -197,7 +197,7 @@ describe("RecordClient — selectedUserIds の参照安定化 [WV-19]", () => {
     () => {
       renderRecordClient();
 
-      fireEvent.click(screen.getByRole("button", { name: "メンバーを選択" }));
+      fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
 
       // 次郎 (まだ選ばれていない候補) を選択する
       const jiroChip = screen.getByRole("button", { name: "次郎" });
@@ -233,7 +233,7 @@ describe("RecordClient — selectedUserIds の参照安定化 [WV-19]", () => {
       renderRecordClientTwoEntries();
 
       // A (自由形50m) のメンバー選択モーダルを開く (1つ目の「メンバーを選択」ボタン)
-      const selectMemberButtons = screen.getAllByRole("button", { name: "メンバーを選択" });
+      const selectMemberButtons = screen.getAllByRole("button", { name: "record.selectMemberButton" });
       expect(selectMemberButtons.length).toBe(2);
       fireEvent.click(selectMemberButtons[0]!);
 

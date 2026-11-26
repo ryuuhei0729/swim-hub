@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamBulkRegisterAPI, BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -7,6 +8,7 @@ import { parseCompetitionExcelFile } from "@/utils/competitionExcel";
 import type { ParsedData, RegisterResult } from "@/types/bulk-register";
 
 export function useBulkRegister(supabase: SupabaseClient | null, teamId: string) {
+  const t = useTranslations("teamsAdmin.bulkRegisterHook");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
-      setError("Excelファイル（.xlsx または .xls）を選択してください");
+      setError(t("invalidFileType"));
       return;
     }
 
@@ -39,18 +41,14 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
         setParsedData({ type: "practice", data });
 
         if (data.errors.length > 0) {
-          setError(
-            `${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`,
-          );
+          setError(t("parseErrors", { count: data.errors.length }));
         }
       } else if (fileName.includes("大会") || fileName.includes("competition")) {
         const data = await parseCompetitionExcelFile(file);
         setParsedData({ type: "competition", data });
 
         if (data.errors.length > 0) {
-          setError(
-            `${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`,
-          );
+          setError(t("parseErrors", { count: data.errors.length }));
         }
       } else {
         // 自動判別
@@ -59,9 +57,7 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
           if (practiceData.practices.length > 0) {
             setParsedData({ type: "practice", data: practiceData });
             if (practiceData.errors.length > 0) {
-              setError(
-                `${practiceData.errors.length}件のエラーが見つかりました。プレビューを確認してください。`,
-              );
+              setError(t("parseErrors", { count: practiceData.errors.length }));
             }
             return;
           }
@@ -74,9 +70,7 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
           if (competitionData.competitions.length > 0) {
             setParsedData({ type: "competition", data: competitionData });
             if (competitionData.errors.length > 0) {
-              setError(
-                `${competitionData.errors.length}件のエラーが見つかりました。プレビューを確認してください。`,
-              );
+              setError(t("parseErrors", { count: competitionData.errors.length }));
             }
             return;
           }
@@ -84,19 +78,17 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
           // Ignore
         }
 
-        setError(
-          "ファイルの形式を判別できませんでした。「練習一括登録」または「大会一括登録」のテンプレートを使用してください。",
-        );
+        setError(t("unknownFormat"));
         setParsedData(null);
       }
     } catch (err) {
-      setError("ファイルの読み込みに失敗しました");
+      setError(t("readFailed"));
       console.error("ファイル読み込みエラー:", err);
       setParsedData(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleBulkRegister = useCallback(async () => {
     if (!parsedData || !bulkRegisterAPI) return;
@@ -107,16 +99,14 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
         : parsedData.data.competitions.length;
 
     if (totalItems === 0) {
-      setError("登録するデータがありません");
+      setError(t("noData"));
       return;
     }
 
     const errors = parsedData.type === "practice" ? parsedData.data.errors : parsedData.data.errors;
 
     if (errors.length > 0) {
-      const confirmed = window.confirm(
-        `${errors.length}件のエラーがありますが、エラーのないデータのみ登録しますか？`,
-      );
+      const confirmed = window.confirm(t("confirmWithErrors", { count: errors.length }));
       if (!confirmed) return;
     }
 
@@ -142,21 +132,21 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
       if (result.success) {
         const message =
           parsedData.type === "practice"
-            ? `練習 ${result.practicesCreated}件の登録が完了しました`
-            : `大会 ${result.competitionsCreated}件の登録が完了しました`;
+            ? t("successPractice", { count: result.practicesCreated })
+            : t("successCompetition", { count: result.competitionsCreated });
         setSuccess(message);
         setSelectedFile(null);
         setParsedData(null);
       } else {
-        setError(`一部の登録に失敗しました: ${result.errors.join(", ")}`);
+        setError(t("partialFailure", { errors: result.errors.join(", ") }));
       }
     } catch (err) {
-      setError(toUserFacingMessage(err, "一括登録に失敗しました"));
+      setError(toUserFacingMessage(err, t("registerFailed")));
       console.error("一括登録エラー:", err);
     } finally {
       setLoading(false);
     }
-  }, [parsedData, bulkRegisterAPI, teamId]);
+  }, [parsedData, bulkRegisterAPI, teamId, t]);
 
   return {
     selectedFile,

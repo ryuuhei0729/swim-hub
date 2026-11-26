@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { renderHook, act } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import { renderHookWithI18n } from "../utils/render";
 import { describe, expect, it, vi } from "vitest";
 
 import { useRecordForm } from "../../components/forms/record/hooks/useRecordForm";
@@ -23,7 +24,7 @@ describe("useRecordForm", () => {
 
   describe("初期状態", () => {
     it("isOpen=falseのとき、デフォルトの初期値を持つ", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: false, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: false, styles: mockStyles }));
 
       expect(result.current.formData.records).toHaveLength(1);
       expect(result.current.formData.records[0]!.styleId).toBe("style-1");
@@ -35,7 +36,7 @@ describe("useRecordForm", () => {
 
     it("initialDateを渡すと、記録日が設定される", () => {
       const initialDate = new Date("2024-06-15");
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, initialDate, styles: mockStyles }),
       );
 
@@ -43,7 +44,7 @@ describe("useRecordForm", () => {
     });
 
     it("stylesが空の場合、styleIdは空文字になる", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: [] }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: [] }));
 
       expect(result.current.formData.records[0]!.styleId).toBe("");
     });
@@ -51,7 +52,7 @@ describe("useRecordForm", () => {
 
   describe("addRecord", () => {
     it("新しいレコードを追加する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       expect(result.current.formData.records).toHaveLength(1);
 
@@ -66,7 +67,7 @@ describe("useRecordForm", () => {
     });
 
     it("複数のレコードを追加できる", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       act(() => {
         result.current.addRecord();
@@ -80,7 +81,7 @@ describe("useRecordForm", () => {
 
   describe("removeRecord", () => {
     it("指定したIDのレコードを削除する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       act(() => {
         result.current.addRecord();
@@ -99,7 +100,7 @@ describe("useRecordForm", () => {
     });
 
     it("最後の1つのレコードは削除できない", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -113,7 +114,7 @@ describe("useRecordForm", () => {
 
   describe("updateRecord", () => {
     it("レコードのプロパティを更新する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -132,7 +133,7 @@ describe("useRecordForm", () => {
     });
 
     it("タイムを更新すると、種目の距離と同じ距離のsplit-timeが自動追加される", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -148,7 +149,7 @@ describe("useRecordForm", () => {
     });
 
     it("存在しないレコードIDの場合は何も変更しない", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const originalRecords = result.current.formData.records;
 
@@ -162,7 +163,7 @@ describe("useRecordForm", () => {
 
   describe("addSplitTime", () => {
     it("空のsplit-timeを追加する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -176,7 +177,7 @@ describe("useRecordForm", () => {
     });
 
     it("複数のsplit-timeを追加できる", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -193,7 +194,7 @@ describe("useRecordForm", () => {
   describe("addSplitTimesEvery25m", () => {
     it("25m刻みでsplit-timeを追加する", () => {
       // isPremium: true にして Free 制限を外す
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
       );
 
@@ -211,7 +212,7 @@ describe("useRecordForm", () => {
 
     it("すでに存在する距離はスキップする", () => {
       // isPremium: true にして Free 制限を外す
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
       );
 
@@ -240,7 +241,7 @@ describe("useRecordForm", () => {
 
   describe("updateSplitTime", () => {
     it("split-timeを更新する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -258,7 +259,7 @@ describe("useRecordForm", () => {
     });
 
     it("種目の距離と同じ距離のsplit-timeを更新すると、タイムも同期される", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -278,7 +279,7 @@ describe("useRecordForm", () => {
 
   describe("removeSplitTime", () => {
     it("指定したインデックスのsplit-timeを削除する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -303,7 +304,7 @@ describe("useRecordForm", () => {
 
   describe("sanitizeFormData", () => {
     it("uiKeyを除去したフォームデータを返す", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      const { result } = renderHookWithI18n(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
       const recordId = result.current.formData.records[0]!.id;
 
@@ -325,7 +326,7 @@ describe("useRecordForm", () => {
 
   describe("hasUnsavedChanges", () => {
     it("フォームに変更があるとtrueになる", async () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -350,7 +351,7 @@ describe("useRecordForm", () => {
     });
 
     it("resetUnsavedChangesでfalseにリセットできる", async () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -390,7 +391,7 @@ describe("useRecordForm", () => {
         note: "テストメモ",
       };
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, editData, styles: mockStyles }),
       );
 
@@ -431,7 +432,7 @@ describe("useRecordForm", () => {
         note: "全体メモ",
       };
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, editData, styles: mockStyles }),
       );
 
@@ -445,7 +446,7 @@ describe("useRecordForm", () => {
 
   describe("コールバックの安定性", () => {
     it("addRecordは再レンダリングしても同じ参照を保つ", () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -455,7 +456,7 @@ describe("useRecordForm", () => {
     });
 
     it("removeRecordは再レンダリングしても同じ参照を保つ", () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -465,7 +466,7 @@ describe("useRecordForm", () => {
     });
 
     it("addSplitTimeは再レンダリングしても同じ参照を保つ", () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -475,7 +476,7 @@ describe("useRecordForm", () => {
     });
 
     it("removeSplitTimeは再レンダリングしても同じ参照を保つ", () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 
@@ -485,7 +486,7 @@ describe("useRecordForm", () => {
     });
 
     it("resetUnsavedChangesは再レンダリングしても同じ参照を保つ", () => {
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = renderHookWithI18n(() =>
         useRecordForm({ isOpen: true, styles: mockStyles }),
       );
 

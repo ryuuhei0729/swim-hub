@@ -567,7 +567,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
                               onClick={() => handleTimeEditStart(key, timeVal)}
                               tabIndex={0}
                               role="button"
-                              aria-label={`${swimmer.no}番 ${i + 1}本目のタイムを編集`}
+                              aria-label={t("ocr.results.editTimeAria", { no: swimmer.no, n: i + 1 })}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();

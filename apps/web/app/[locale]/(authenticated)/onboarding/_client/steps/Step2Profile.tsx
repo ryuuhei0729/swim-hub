@@ -160,7 +160,7 @@ export default function Step2Profile({
         )}
         {isNameEmailFormat && !errors.name && (
           <p id="name-email-hint" className="mt-1 text-sm text-amber-600">
-            メールアドレス形式が入力されています。お名前を入力してください（このステップはスキップできません）
+            {t("emailNameHint")}
           </p>
         )}
       </div>

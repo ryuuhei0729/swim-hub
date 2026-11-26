@@ -26,7 +26,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
       <h3 className="text-lg font-medium text-gray-900 mb-4">
         {t("dataPreview.title")}
         <span className="ml-2 text-sm font-normal text-gray-500">
-          ({parsedData.type === "practice" ? t("dataPreview.practiceType") : t("dataPreview.competitionType")}データ)
+          ({t("dataPreview.typeData", { type: parsedData.type === "practice" ? t("dataPreview.practiceType") : t("dataPreview.competitionType") })})
         </span>
       </h3>
 
@@ -43,7 +43,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                 <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
                   {errors.slice(0, 20).map((err, index) => (
                     <li key={index}>
-                      {err.sheet}シート {err.row}行目: {err.message}
+                      {t("dataPreview.errorLocation", { sheet: err.sheet, row: err.row })}: {err.message}
                     </li>
                   ))}
                   {errors.length > 20 && (

@@ -34,6 +34,7 @@ export const RecentAttendance = React.memo(
     attendances,
   }: RecentAttendanceProps) => {
     const t = useTranslations("teams");
+    const tDashboard = useTranslations("dashboard");
     const [selectedTab, setSelectedTab] = useState<"current" | "next">("current");
 
     const filteredEvents = useMemo(() => {
@@ -142,7 +143,7 @@ export const RecentAttendance = React.memo(
                               : "bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent"
                           }`}
                         >
-                          出席
+                          {t("attendanceStatus.present")}
                         </button>
                         <button
                           onClick={() => onStatusChange(event.id, "absent")}
@@ -152,7 +153,7 @@ export const RecentAttendance = React.memo(
                               : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
                           }`}
                         >
-                          欠席
+                          {t("attendanceStatus.absent")}
                         </button>
                         <button
                           onClick={() => onStatusChange(event.id, "other")}
@@ -162,7 +163,7 @@ export const RecentAttendance = React.memo(
                               : "bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent"
                           }`}
                         >
-                          その他
+                          {tDashboard("attendance.other")}
                         </button>
                         <input
                           type="text"

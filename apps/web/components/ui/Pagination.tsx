@@ -81,10 +81,10 @@ export default function Pagination({
       <div className="text-sm text-gray-600">
         {totalItems > 0 ? (
           <>
-            {startItem}〜{endItem}件 / 全{totalItems}件
+            {t("pagination.summary", { start: startItem, end: endItem, total: totalItems })}
           </>
         ) : (
-          "0件"
+          t("listToolbar.itemCount", { count: 0 })
         )}
       </div>
 

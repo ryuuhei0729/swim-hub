@@ -1,9 +1,11 @@
 "use client";
 
 import { forwardRef } from "react";
+import { useTranslations } from "next-intl";
 import { MapPinIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import type { PracticeShareData } from "./types";
-import { formatTime, formatCircle, getStyleNameJp, getTagTextColor } from "./utils";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
+import { formatTime, formatCircle, getTagTextColor } from "./utils";
 
 interface PracticeShareCardProps {
   data: PracticeShareData;
@@ -16,6 +18,19 @@ interface PracticeShareCardProps {
  */
 export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardProps>(
   function PracticeShareCard({ data, className = "" }, ref) {
+    const t = useTranslations("practice");
+    const tStyles = useTranslations("practice.styles");
+    const tRelay = useTranslations("teams.ranking.relay.kind");
+
+    // リレー略称 (MR/FR) は SwimStyle とは別語彙なので完全一致で先に解決する。
+    // 後段の toStyleCode() は practice_logs.style (自由記述列) の legacy な小文字行を救済する。
+    const getStyleLabel = (shortName: string): string => {
+      if (shortName === "MR") return tRelay("medley");
+      if (shortName === "FR") return tRelay("free");
+      const code = toStyleCode(shortName);
+      return code ? tStyles(code) : shortName;
+    };
+
     return (
       <div ref={ref} className={`relative w-[480px] overflow-hidden bg-white ${className}`}>
         {/* コンテンツ */}
@@ -58,10 +73,18 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                   <div className="mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-800 font-semibold">
-                        {item.distance}m × {item.repCount}本
-                        {item.setCount > 1 ? ` × ${item.setCount}セット` : ""}
+                        {item.setCount > 1
+                          ? t("page.distanceFormat", {
+                              distance: item.distance,
+                              reps: item.repCount,
+                              sets: item.setCount,
+                            })
+                          : t("page.distanceFormatNoSets", {
+                              distance: item.distance,
+                              reps: item.repCount,
+                            })}
                       </span>
-                      <span className="text-green-700 text-sm">{getStyleNameJp(item.style)}</span>
+                      <span className="text-green-700 text-sm">{getStyleLabel(item.style)}</span>
                       <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-xs">
                         {item.category}
                       </span>
@@ -89,7 +112,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                     <div className="mt-3">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-1 h-4 bg-green-500 rounded-full"></div>
-                        <p className="text-sm font-medium text-green-700">タイム</p>
+                        <p className="text-sm font-medium text-green-700">{t("modal.time")}</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-green-300 overflow-x-auto">
                         <table className="w-full text-sm">
@@ -101,7 +124,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                                   key={setIndex + 1}
                                   className="text-center py-2 px-2 font-medium text-green-800"
                                 >
-                                  {setIndex + 1}セット目
+                                  {t("modal.setLabel", { n: setIndex + 1 })}
                                 </th>
                               ))}
                             </tr>
@@ -112,7 +135,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                               return (
                                 <tr key={repNumber} className="border-b border-green-100">
                                   <td className="py-2 px-2 font-medium text-gray-700">
-                                    {repNumber}本目
+                                    {t("modal.repLabel", { n: repNumber })}
                                   </td>
                                   {Array.from({ length: item.setCount }, (_, setIndex) => {
                                     const setNumber = setIndex + 1;
@@ -132,7 +155,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                             })}
                             {/* セット平均行 */}
                             <tr className="border-b border-green-100 bg-green-50">
-                              <td className="py-2 px-2 font-medium text-green-800">セット平均</td>
+                              <td className="py-2 px-2 font-medium text-green-800">{t("modal.setAverage")}</td>
                               {Array.from({ length: item.setCount }, (_, setIndex) => {
                                 const setNumber = setIndex + 1;
                                 const setTimes = allTimes.filter(
@@ -153,7 +176,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                             </tr>
                             {/* 全体平均行 */}
                             <tr className="border-t-2 border-green-300 bg-blue-50">
-                              <td className="py-2 px-2 font-medium text-blue-800">全体平均</td>
+                              <td className="py-2 px-2 font-medium text-blue-800">{t("modal.overallAverage")}</td>
                               <td className="py-2 px-2 text-center" colSpan={item.setCount}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
@@ -170,7 +193,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                             </tr>
                             {/* 全体最速行 */}
                             <tr className="bg-blue-50">
-                              <td className="py-2 px-2 font-medium text-blue-800">全体最速</td>
+                              <td className="py-2 px-2 font-medium text-blue-800">{t("modal.overallFastest")}</td>
                               <td className="py-2 px-2 text-center" colSpan={item.setCount}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
@@ -193,7 +216,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                   {/* メモ */}
                   {item.note && (
                     <div className="mt-3 rounded-lg p-3 border border-slate-200 bg-white">
-                      <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                      <div className="text-xs font-medium text-gray-500 mb-1">{t("modal.memo")}</div>
                       <div className="text-sm text-gray-700">{item.note}</div>
                     </div>
                   )}

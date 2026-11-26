@@ -329,7 +329,7 @@ export default function DatePicker({
             </button>
 
             <span className="text-sm font-semibold text-gray-900">
-              {format(currentMonth, "yyyy年 M月", { locale: ja })}
+              {t("yearMonth", { year: currentMonth.getFullYear(), month: currentMonth.getMonth() + 1 })}
             </span>
 
             <button
@@ -405,14 +405,14 @@ export default function DatePicker({
               onClick={handleToday}
               className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
-              今日
+              {t("datePicker.today")}
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
               className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             >
-              閉じる
+              {t("datePicker.close")}
             </button>
           </div>
         </div>
