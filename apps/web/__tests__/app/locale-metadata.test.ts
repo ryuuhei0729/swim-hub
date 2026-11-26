@@ -2,7 +2,7 @@
  * Phase 1-B: LP メタデータ生成テスト
  *
  * Sprint Contract 検証観点:
- *   [V-20] ja ロケールで title が "SwimHub - 水泳選手のための記録管理システム" を含む
+ *   [V-20] ja ロケールで title が "SwimHub（スイムハブ）- 水泳選手のための記録管理システム" を含む
  *   [V-21] en ロケールで title が "SwimHub - Swim records & training platform" を含む
  *   [V-22] alternates.languages に "ja" / "en" / "x-default" の3つが含まれる
  *   [V-23] canonical が "/{locale}" 形式 (例: "/ja" または "/en")
