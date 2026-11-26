@@ -157,7 +157,9 @@ export const config = {
      * - 静的アセット (画像・フォント・json)
      *   除外し忘れると next-intl がロケールを付けてリダイレクトし 404 になる
      *   (public/manifest.json と public/fonts/dseg/*.woff2 が実際に 404 していた)
+     * - robots.txt / sitemap.xml (app/robots.ts・app/sitemap.ts。ロケールを付けない)
+     *   除外しないと /ja/robots.txt に飛ばされて 404 になる (2026-05 から 11 月まで実際にそうなっていた)
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|api(?:/|$)|guide(?:\\.html|/)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|woff|woff2)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|api(?:/|$)|guide(?:\\.html|/)|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|woff|woff2)$).*)",
   ],
 };
