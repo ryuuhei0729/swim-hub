@@ -74,7 +74,8 @@ const MenuRow: React.FC<{ row: LastPracticeRow }> = ({ row }) => {
     <View style={styles.row}>
       <View style={styles.rowHead}>
         <Text style={[styles.category, tone]}>{t(`practice.categories.${row.category}`)}</Text>
-        <Text style={styles.menu} numberOfLines={1}>
+        {/* 大きな文字サイズでは1行に入りきらないので、2行まで折り返す */}
+        <Text style={styles.menu} numberOfLines={2}>
           {styleName} {formatLastPracticeMenu(row)}
           {row.circle ? <Text style={styles.circle}>{`  ${formatCircle(row.circle)}`}</Text> : null}
         </Text>

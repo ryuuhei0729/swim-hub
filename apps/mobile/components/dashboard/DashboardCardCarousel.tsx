@@ -118,7 +118,9 @@ const CarouselPager: React.FC<{ cards: React.ReactElement[]; initialIndex: numbe
             accessibilityRole="button"
             accessibilityLabel={t("dashboard.cardCarousel.goTo", { index: i + 1 })}
             accessibilityState={{ selected: i === index }}
-            hitSlop={10}
+            // 見た目は小さい点のまま、押せる範囲を広げる (ドットの間は padding で埋める)
+            style={styles.dotButton}
+            hitSlop={{ top: 11, bottom: 11 }}
           >
             <View style={[styles.dot, i === index && styles.dotActive]} />
           </Pressable>
@@ -133,7 +135,8 @@ const styles = StyleSheet.create({
     ...cardSurface,
     marginHorizontal: 16,
     marginTop: 12,
-    minHeight: 120,
+    // 次の大会 (エントリー2種目) のカードとほぼ同じ高さ。出たときに下の内容がずれにくい
+    minHeight: 160,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -143,8 +146,11 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 5,
-    marginTop: 8,
+    marginTop: 1,
+  },
+  dotButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 5,
   },
   dot: {
     width: 6,
