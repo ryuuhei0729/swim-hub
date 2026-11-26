@@ -4745,8 +4745,8 @@
       "upgradeText": "升级到 Premium",
       "imageUpload": "添加图片为 Premium 会员专属功能",
       "videoUpload": "添加视频为 Premium 会员专属功能",
-      "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记",
-      "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记"
+      "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记。",
+      "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记。"
     },
     "itemTabs": {
       "removeConfirmTitle": "确定要删除{label}吗？",

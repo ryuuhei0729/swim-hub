@@ -53,6 +53,7 @@ export default function TeamTimeInputModal({
 }: TeamTimeInputModalProps) {
   const t = useTranslations("teams.timeInputModal");
   const tTeams = useTranslations("teams");
+  const tPractice = useTranslations("practice");
   const tCommon = useTranslations("common");
   const [teamTimes, setTeamTimes] = useState<TeamTimeEntry[]>([]);
   // メンバーごとのクイック入力コンテキスト
@@ -265,7 +266,7 @@ export default function TeamTimeInputModal({
                         key={i}
                         className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        {tTeams("record.groupNumber", { n: i + 1 })}
+                        {tPractice("modal.repLabel", { n: i + 1 })}
                       </th>
                     ))}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">

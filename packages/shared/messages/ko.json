@@ -301,8 +301,8 @@
       "share": "공유",
       "competitionTitle": "기록 공유",
       "practiceTitle": "연습 메뉴 공유",
-      "competitionShareText": "【SwimHub】\n대회 기록을 공유했습니다!\n\n수영 기록 관리 앱 'SwimHub'로 기록을 관리하세요!\nhttps://swim-hub.app",
-      "practiceShareText": "【SwimHub】\n연습 기록을 공유했습니다!\n\n수영 기록 관리 앱 'SwimHub'로 연습을 기록하세요!\nhttps://swim-hub.app",
+      "competitionShareText": "【SwimHub】\n대회 기록을 공유했습니다!\n\n수영 기록 관리 앱 ‘SwimHub’로 기록을 관리하세요!\nhttps://swim-hub.app",
+      "practiceShareText": "【SwimHub】\n연습 기록을 공유했습니다!\n\n수영 기록 관리 앱 ‘SwimHub’로 연습을 기록하세요!\nhttps://swim-hub.app",
       "splitHeader": "스플릿"
     },
     "discardTitle": "입력 내용이 저장되지 않았습니다",
@@ -1063,7 +1063,7 @@
       "entrySubmitFailed": "엔트리 등록에 실패했습니다",
       "competitionCreatedButImageFailed": "대회는 생성되었지만 이미지 업로드에 실패했습니다",
       "unknownStyle": "알 수 없음",
-      "styleAlreadyEntered": "종목 '{name}'은(는) 이미 엔트리되었습니다",
+      "styleAlreadyEntered": "종목 ‘{name}’은(는) 이미 엔트리되었습니다",
       "fetchCompetitionInfoFailed": "대회 정보를 불러오지 못했습니다",
       "competitionSaveBlockedUnresolved": "대회 정보를 확인할 수 없어 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.",
       "competitionSaveBlockedDateInvalid": "날짜 정합성을 확인할 수 없어 저장을 중단했습니다. 시작일과 종료일을 확인한 후 다시 시도해 주세요.",
@@ -1250,7 +1250,7 @@
       "timeInputTitle": "기록 입력",
       "timeInputNext": "다음",
       "timeInputDone": "완료",
-      "timeInputHelpBody": "1번째 기록은 숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해서 입력합니다.\n예: '1.23.4'→ 1:23.4, '2.00.00'→ 2:00.00, '31-2'→ 31.2, '1분12초3'→ 1:12.3.\n\n2번째 기록부터는 직전 기록의 십의 자리가 자동으로 입력됩니다. 이어서 '일의 자리', '소수 첫째 자리' 숫자 2개만 연속으로 입력하면 기록이 완성됩니다.\n예: 직전 기록이 '31.2'였다면 '3'이 자동 입력된 상태에서 '2', '1'을 입력하면 '32.1'이 됩니다.\n십의 자리가 다르면 백스페이스로 지우고 다시 입력하면 됩니다.",
+      "timeInputHelpBody": "1번째 기록은 숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해서 입력합니다.\n예: ‘1.23.4’→ 1:23.4, ‘2.00.00’→ 2:00.00, ‘31-2’→ 31.2, ‘1분12초3’→ 1:12.3.\n\n2번째 기록부터는 직전 기록의 십의 자리가 자동으로 입력됩니다. 이어서 ‘일의 자리’, ‘소수 첫째 자리’ 숫자 2개만 연속으로 입력하면 기록이 완성됩니다.\n예: 직전 기록이 ‘31.2’였다면 ‘3’이 자동 입력된 상태에서 ‘2’, ‘1’을 입력하면 ‘32.1’이 됩니다.\n십의 자리가 다르면 백스페이스로 지우고 다시 입력하면 됩니다.",
       "timeInputSubtitle": "{setCount}세트 × {repCount}번의 기록을 입력해 주세요",
       "setNumberLabel": "세트 {setNumber}",
       "setAverageDetail": "평균: {avg} ({count}번)",
@@ -1462,7 +1462,7 @@
       "startButton": "SwimHub 시작하기",
       "backButton": "뒤로",
       "practiceTitle": "연습 기록하기",
-      "practiceDescription": "대시보드의 '연습 기록'에서 매일의 트레이닝을 기록하세요. 세트·거리·타임을 상세하게 관리할 수 있습니다.",
+      "practiceDescription": "대시보드의 ‘연습 기록’에서 매일의 트레이닝을 기록하세요. 세트·거리·타임을 상세하게 관리할 수 있습니다.",
       "competitionTitle": "대회 기록 관리하기",
       "competitionDescription": "대회별로 엔트리와 결과를 기록하세요. 베스트 타임 추이를 그래프로 확인할 수 있습니다.",
       "teamTitle": "팀에 참여하기",
@@ -1779,7 +1779,7 @@
       "continueToRecord": "이어서 대회 기록 작성",
       "selectStyleRequired": "종목을 선택해 주세요",
       "addAtLeastOne": "엔트리를 하나 이상 추가해 주세요",
-      "duplicateStyle": "종목 '{styleName}'은(는) 이미 엔트리되어 있습니다",
+      "duplicateStyle": "종목 ‘{styleName}’은(는) 이미 엔트리되어 있습니다",
       "timeFormatInvalid": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 83.45)",
       "stylesFetchFailed": "종목을 불러오지 못했습니다",
       "entryNotFound": "엔트리를 찾을 수 없습니다",
@@ -2148,7 +2148,7 @@
       "closeMenuAriaLabel": "메뉴 닫기",
       "deleteConfirm": {
         "title": "템플릿 삭제",
-        "message": "'{name}'을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+        "message": "‘{name}’을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
         "confirmLabel": "삭제"
       },
       "deleteFailed": "템플릿을 삭제하지 못했습니다"
@@ -2649,7 +2649,7 @@
         "title": "그룹 관리",
         "subtitle": "멤버를 카테고리별로 그룹화할 수 있습니다",
         "emptyTitle": "아직 그룹이 없습니다",
-        "emptyHint": "'추가'에서 카테고리와 그룹을 만들어 보세요",
+        "emptyHint": "‘추가’에서 카테고리와 그룹을 만들어 보세요",
         "memberCount": "{count}명의 멤버",
         "membersEmpty": "등록된 멤버가 없습니다",
         "groupCount": "({count}개 그룹)",
@@ -2714,8 +2714,8 @@
       "groupDeleteFailed": "그룹 삭제에 실패했습니다",
       "groupDuplicateError": "같은 카테고리에 동일한 이름의 그룹이 이미 존재합니다",
       "groupCreateFailedSimple": "생성 실패",
-      "groupAlreadyExists": "'{name}'은(는) 이미 존재합니다",
-      "groupCreateError": "'{name}': {message}",
+      "groupAlreadyExists": "‘{name}’은(는) 이미 존재합니다",
+      "groupCreateError": "‘{name}’: {message}",
       "groupMemberFetchFailed": "멤버 정보를 불러오지 못했습니다",
       "groupMemberAssignFailed": "멤버 배정에 실패했습니다",
       "memberListTitle": "멤버",
@@ -2759,7 +2759,7 @@
       "memberRemoveLoading": "삭제 중...",
       "memberRemoveButton": "팀에서 삭제",
       "memberDetailTitle": "멤버 상세",
-      "memberRoleChangeMessage": "{name}님의 권한을 '{role}'(으)로 변경하시겠습니까?",
+      "memberRoleChangeMessage": "{name}님의 권한을 ‘{role}’(으)로 변경하시겠습니까?",
       "memberRemoveMessage": "{name}님을 팀에서 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
       "bestTimeSection": "Best Time",
       "youBadge": "나",
@@ -2773,7 +2773,7 @@
       "groupDisplayLabel": "그룹 표시:",
       "groupAddAria": "그룹 추가",
       "groupConfirmTitle": "확인",
-      "groupDeleteConfirmMessage": "'{name}'을(를) 삭제하시겠습니까?\n그룹에 배정된 멤버 정보도 삭제됩니다.",
+      "groupDeleteConfirmMessage": "‘{name}’을(를) 삭제하시겠습니까?\n그룹에 배정된 멤버 정보도 삭제됩니다.",
       "groupAddTitle": "그룹 추가",
       "groupEditTitle": "그룹 편집",
       "groupCategoryPlaceholder": "예: 학년, 거리, S1",
@@ -2963,11 +2963,11 @@
         "unansweredCount": "미응답 {count}건",
         "allAnswered": "모두 응답 완료",
         "savedToast": "출결을 저장했습니다",
-        "statusChangedToast": "{count}건을 '{status}'(으)로 변경했습니다",
+        "statusChangedToast": "{count}건을 ‘{status}’(으)로 변경했습니다",
         "closedTag": "마감",
         "empty": "예정된 연습·대회가 없습니다",
         "rowAria": "{date} {title}의 전체 출결 보기",
-        "answerAria": "{title}에 '{status}'(으)로 응답",
+        "answerAria": "{title}에 ‘{status}’(으)로 응답",
         "statusPillAria": "{title}의 접수 상태 변경 (현재: {status})",
         "selectAria": "{title} 선택",
         "adminHint": "오른쪽 접수 상태를 눌러 변경할 수 있습니다",
@@ -3069,7 +3069,7 @@
       "segmentSwimmer": "선수",
       "segmentNonSwimmer": "비선수",
       "infoAriaLabel": "비선수 설정 안내",
-      "infoText": "'비선수'로 설정하면 멤버 탭의 베스트 타임 목록에서 하단의 '비선수'로 접히고, 대회 엔트리 및 연습 기록 입력 대상자에 표시되지 않습니다. 출결 확인에는 계속 표시됩니다.",
+      "infoText": "‘비선수’로 설정하면 멤버 탭의 베스트 타임 목록에서 하단의 ‘비선수’로 접히고, 대회 엔트리 및 연습 기록 입력 대상자에 표시되지 않습니다. 출결 확인에는 계속 표시됩니다.",
       "sectionToggle": "비선수 ({count})",
       "updateFailed": "비선수 설정 업데이트에 실패했습니다",
       "confirmTitle": "선수 설정 변경 확인",
@@ -3304,7 +3304,7 @@
       },
       "roleChange": {
         "title": "권한 변경 확인",
-        "message": "{name}님의 권한을 '{role}'(으)로 변경하시겠습니까?",
+        "message": "{name}님의 권한을 ‘{role}’(으)로 변경하시겠습니까?",
         "roleAdmin": "관리자",
         "roleUser": "사용자",
         "cancel": "취소",
@@ -3594,7 +3594,7 @@
       "createFailed": "팀 연습 기록 생성에 실패했습니다",
       "dateLabel": "연습일",
       "titleLabel": "연습 제목",
-      "titlePlaceholder": "예: 기초 연습, 스프린트 연습 (비워두면 '팀 연습'으로 표시됩니다)",
+      "titlePlaceholder": "예: 기초 연습, 스프린트 연습 (비워두면 ‘팀 연습’으로 표시됩니다)",
       "placeLabel": "연습 장소",
       "placePlaceholder": "예: 시립 수영장, 학교 수영장",
       "noteLabel": "메모",
@@ -3616,7 +3616,7 @@
       "updateFailed": "팀 대회 수정에 실패했습니다",
       "deleteFailed": "팀 대회 삭제에 실패했습니다",
       "competitionNameLabel": "대회명",
-      "competitionNamePlaceholder": "예: 도 대회 (비워두면 '대회'로 표시됩니다)",
+      "competitionNamePlaceholder": "예: 도 대회 (비워두면 ‘대회’로 표시됩니다)",
       "startDateLabel": "시작일",
       "endDateLabel": "종료일",
       "endDateHelperText": "여러 날일 경우",
@@ -3698,7 +3698,7 @@
       "statusChangeFailed": "상태 변경에 실패했습니다"
     },
     "attendanceList": {
-      "outsidePeriod": "현재 출결 제출 기간이 아닙니다. 관리자가 제출 기간을 '제출 접수 중'으로 변경할 때까지 기다려 주세요.",
+      "outsidePeriod": "현재 출결 제출 기간이 아닙니다. 관리자가 제출 기간을 ‘제출 접수 중’으로 변경할 때까지 기다려 주세요.",
       "statsPresent": "출석",
       "statsAbsent": "결석",
       "statsOther": "기타",
@@ -3774,13 +3774,13 @@
       "dangerZoneTitle": "위험한 작업",
       "leaveTeam": "팀 탈퇴",
       "leaveConfirmTitle": "팀에서 탈퇴하시겠습니까?",
-      "leaveConfirmMessage": "'{name}'에서 탈퇴합니다. 팀의 연습, 대회, 출결이 더 이상 표시되지 않습니다.",
+      "leaveConfirmMessage": "‘{name}’에서 탈퇴합니다. 팀의 연습, 대회, 출결이 더 이상 표시되지 않습니다.",
       "leaveFailed": "팀 탈퇴에 실패했습니다",
       "leaving": "탈퇴 중...",
       "lastAdminCannotLeave": "마지막 관리자이므로 탈퇴할 수 없습니다. 먼저 다른 멤버를 관리자로 변경해 주세요.",
       "deleteTeam": "팀 삭제",
       "deleteConfirmTitle": "팀을 삭제하시겠습니까?",
-      "deleteConfirmMessage": "'{name}'을(를) 삭제합니다. 대회, 엔트리, 공지, 멤버 정보는 되돌릴 수 없습니다. 연습 기록과 경기 기록은 개인 기록으로 남지만 대회명은 더 이상 표시되지 않습니다.",
+      "deleteConfirmMessage": "‘{name}’을(를) 삭제합니다. 대회, 엔트리, 공지, 멤버 정보는 되돌릴 수 없습니다. 연습 기록과 경기 기록은 개인 기록으로 남지만 대회명은 더 이상 표시되지 않습니다.",
       "deleteFailed": "팀 삭제에 실패했습니다",
       "deleting": "삭제 중...",
       "deleteErrors": {
@@ -3971,11 +3971,11 @@
       "description": "멤버를 카테고리별로 그룹으로 나눌 수 있습니다",
       "addButton": "그룹 추가",
       "emptyTitle": "아직 그룹이 없습니다",
-      "emptyDescription": "'그룹 추가'에서 카테고리와 그룹을 만들어 보세요",
+      "emptyDescription": "‘그룹 추가’에서 카테고리와 그룹을 만들어 보세요",
       "memberCount": "{count}명",
       "deleteConfirm": {
         "title": "그룹 삭제",
-        "message": "'{name}'을(를) 삭제하시겠습니까? 그룹에 할당된 멤버 정보도 삭제됩니다.",
+        "message": "‘{name}’을(를) 삭제하시겠습니까? 그룹에 할당된 멤버 정보도 삭제됩니다.",
         "confirmButton": "삭제",
         "cancelButton": "취소"
       },
@@ -3984,7 +3984,7 @@
         "createFailed": "그룹 생성에 실패했습니다",
         "createFailedGeneric": "생성 실패",
         "duplicateName": "같은 카테고리에 동일한 이름의 그룹이 이미 존재합니다",
-        "duplicateNameSpecific": "'{name}'은(는) 이미 존재합니다",
+        "duplicateNameSpecific": "‘{name}’은(는) 이미 존재합니다",
         "updateFailed": "그룹 업데이트에 실패했습니다",
         "deleteFailed": "그룹 삭제에 실패했습니다",
         "fetchMembersFailed": "멤버 정보를 불러오지 못했습니다",
@@ -4171,7 +4171,7 @@
       "morePeopleCount": "+{count}명",
       "overwriteConfirm": {
         "title": "기존 메뉴 처리",
-        "message": "이미 입력된 메뉴가 있습니다. 덮어쓰시겠습니까? '추가'를 누르면 기존 메뉴 뒤에 추가됩니다.",
+        "message": "이미 입력된 메뉴가 있습니다. 덮어쓰시겠습니까? ‘추가’를 누르면 기존 메뉴 뒤에 추가됩니다.",
         "confirmLabel": "덮어쓰기",
         "cancelLabel": "취소",
         "tertiaryLabel": "추가"
@@ -4745,8 +4745,8 @@
       "upgradeText": "Premium으로 업그레이드",
       "imageUpload": "이미지 첨부는 Premium 회원 전용입니다",
       "videoUpload": "동영상 첨부는 Premium 회원 전용입니다",
-      "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로",
-      "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로"
+      "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로 등록할 수 있습니다",
+      "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로 등록할 수 있습니다"
     },
     "itemTabs": {
       "removeConfirmTitle": "{label}을(를) 삭제하시겠습니까?",
@@ -4779,11 +4779,11 @@
     },
     "tochu": {
       "title": "도쿄 중학 포인트",
-      "note": "'도쿄 중학 포인트'는 도쿄도 중학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 선수권대회 참가 기준 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+      "note": "‘도쿄 중학 포인트’는 도쿄도 중학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 선수권대회 참가 기준 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
     },
     "toko": {
       "title": "도쿄 고교 포인트",
-      "note": "'도쿄 고교 포인트'는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+      "note": "‘도쿄 고교 포인트’는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
     }
   },
   "account": {

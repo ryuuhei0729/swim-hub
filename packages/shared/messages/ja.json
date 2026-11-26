@@ -4745,8 +4745,8 @@
       "upgradeText": "Premium にアップグレード",
       "imageUpload": "画像の添付は Premium 会員限定です",
       "videoUpload": "動画の添付は Premium 会員限定です",
-      "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に",
-      "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に"
+      "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に登録できます",
+      "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に登録できます"
     },
     "itemTabs": {
       "removeConfirmTitle": "{label}を削除しますか？",

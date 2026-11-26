@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import {
   format,
   parseISO,
@@ -76,6 +77,7 @@ export default function DatePicker({
   "data-testid": dataTestId,
 }: DatePickerProps) {
   const t = useTranslations("common");
+  const locale = useLocale() as SupportedLocale;
   const resolvedPlaceholder = placeholder ?? t("datePicker.placeholder");
   const weekdays = t.raw("datePicker.weekdays") as string[];
   const [isOpen, setIsOpen] = useState(false);
@@ -329,7 +331,7 @@ export default function DatePicker({
             </button>
 
             <span className="text-sm font-semibold text-gray-900">
-              {t("yearMonth", { year: currentMonth.getFullYear(), month: currentMonth.getMonth() + 1 })}
+              {formatDate(currentMonth, "yearMonth", locale)}
             </span>
 
             <button
