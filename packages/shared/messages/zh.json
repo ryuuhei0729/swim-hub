@@ -1102,6 +1102,16 @@
       "placeWithPool": "{place}（{pool}）",
       "openGoal": "查看目标 {time} 详情"
     },
+    "lastPractice": {
+      "titleWithDate": "上次训练（{date}）",
+      "average": "平均 {time}",
+      "openDay": "查看上次训练（{date}）的详情"
+    },
+    "cardCarousel": {
+      "previous": "上一张",
+      "next": "下一张",
+      "goTo": "显示第{index}张"
+    },
     "bestTimes": {
       "loadError": "无法加载最佳成绩"
     }

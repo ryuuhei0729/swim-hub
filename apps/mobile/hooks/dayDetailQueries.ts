@@ -17,6 +17,7 @@
 // してある (関係ない日の詳細まで無効化すると、保存のたびにキャッシュの効果が無くなる)。
 
 import type { QueryClient } from "@tanstack/react-query";
+import { dashboardKeys } from "@apps/shared/hooks/queries/keys";
 
 export const dayDetailKeys = {
   all: ["dayDetail"] as const,
@@ -62,7 +63,7 @@ export interface CalendarChangeScope {
 
 /**
  * 練習・大会・記録・エントリーを保存したあとに呼ぶ。
- * カレンダーの一覧を取り直し、書き換えた対象の日別詳細を無効化する。
+ * カレンダーの一覧とホームのカード (dashboard) を取り直し、書き換えた対象の日別詳細を無効化する。
  *
  * scope を渡すと、その練習 / 大会の詳細だけを無効化する。渡さなければ全部を無効化する
  * (一括登録など対象を絞れない場合。安全側)。
@@ -77,8 +78,12 @@ export function invalidateCalendarAfterSave(
   if (competitionId) detailKeys.push(dayDetailKeys.competitionScope(competitionId));
   if (detailKeys.length === 0) detailKeys.push(dayDetailKeys.all);
 
+  // ホームの「次の大会」「前回の練習」のカードも保存した内容で取り直す
+  // (ホームはスタックに残ったままで、戻っても自動では取り直されないため)
   return Promise.all(
-    [["calendar"], ...detailKeys].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    [["calendar"], dashboardKeys.all, ...detailKeys].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }),
+    ),
   ).then(() => undefined);
 }
 

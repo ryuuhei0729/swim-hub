@@ -193,6 +193,10 @@ export const dashboardKeys = {
     [...dashboardKeys.all, "nextCompetition", userId, today] as const,
   unrecordedCompetitions: (userId: string, today: string) =>
     [...dashboardKeys.all, "unrecordedCompetitions", userId, today] as const,
+  lastPractice: (userId: string, today: string) =>
+    [...dashboardKeys.all, "lastPractice", userId, today] as const,
+  practiceSoon: (userId: string, today: string) =>
+    [...dashboardKeys.all, "practiceSoon", userId, today] as const,
 } as const;
 
 /**

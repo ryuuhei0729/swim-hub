@@ -1099,6 +1099,16 @@
       "placeWithPool": "{place} ({pool})",
       "openGoal": "View goal {time}"
     },
+    "lastPractice": {
+      "titleWithDate": "Last practice ({date})",
+      "average": "Avg {time}",
+      "openDay": "View last practice ({date})"
+    },
+    "cardCarousel": {
+      "previous": "Previous card",
+      "next": "Next card",
+      "goTo": "Show card {index}"
+    },
     "bestTimes": {
       "loadError": "Couldn't load best times"
     }

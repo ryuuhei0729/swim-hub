@@ -1102,6 +1102,16 @@
       "placeWithPool": "{place} ({pool})",
       "openGoal": "Ziel {time} anzeigen"
     },
+    "lastPractice": {
+      "titleWithDate": "Letztes Training ({date})",
+      "average": "Ø {time}",
+      "openDay": "Letztes Training ({date}) ansehen"
+    },
+    "cardCarousel": {
+      "previous": "Vorherige Karte",
+      "next": "Nächste Karte",
+      "goTo": "Karte {index} anzeigen"
+    },
     "bestTimes": {
       "loadError": "Bestzeiten konnten nicht geladen werden"
     }

@@ -126,6 +126,15 @@ vi.mock("../FormModals", () => ({ FormModals: () => null }));
 vi.mock("../../_components/DashboardNoticesSection", () => ({ __esModule: true, default: () => null }));
 vi.mock("../../_components/NextCompetitionCard", () => ({ __esModule: true, default: () => null }));
 vi.mock("../../_components/DashboardBestTimesCard", () => ({ __esModule: true, default: () => null }));
+vi.mock("../../_components/LastPracticeCard", () => ({ __esModule: true, default: () => null }));
+vi.mock("../../_components/DashboardCardCarousel", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock("@apps/shared/hooks/queries/dashboard", () => ({
+  useLastPracticeQuery: () => ({ data: null }),
+  useDashboardInitialCard: () => ({ ready: true, initialIndex: 0 }),
+}));
 vi.mock("@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal", () => ({
   __esModule: true,
   default: () => null,

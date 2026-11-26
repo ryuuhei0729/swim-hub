@@ -44,6 +44,12 @@ import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { DashboardNoticesSection } from "@/components/dashboard/DashboardNoticesSection";
 import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
+import { LastPracticeCard } from "@/components/dashboard/LastPracticeCard";
+import { DashboardCardCarousel } from "@/components/dashboard/DashboardCardCarousel";
+import {
+  useDashboardInitialCard,
+  useLastPracticeQuery,
+} from "@apps/shared/hooks/queries/dashboard";
 import { DashboardBestTimesSection } from "@/components/dashboard/DashboardBestTimesSection";
 import {
   BottomDockHost,
@@ -99,6 +105,15 @@ export const DashboardScreen: React.FC = () => {
   const { teams = [], refetch: refetchTeams } = useTeamsQuery(supabase, {
     enableRealtime: false,
   });
+
+  // 前回の練習 (次の大会と並べるカード)。無ければカードを出さない。
+  // 並びは「次の大会 → 前回の練習」で固定し、今日・明日に練習があれば前回の練習を見せた状態で開く
+  // (大会が今日・明日なら次の大会)。どちらを見せるか決まるまでは前回の練習を並べない
+  const lastPracticeQuery = useLastPracticeQuery(supabase, user?.id);
+  const lastPractice = lastPracticeQuery.data;
+  const initialCard = useDashboardInitialCard(supabase, user?.id);
+  const cardsReady =
+    initialCard.ready && (lastPracticeQuery.data !== undefined || lastPracticeQuery.isError);
 
   // カレンダーデータ取得
   const {
@@ -320,6 +335,12 @@ export const DashboardScreen: React.FC = () => {
     handleDateClick(day);
   };
 
+  // 詳細モーダルで削除したあと、カレンダーに加えて次の大会・前回の練習のカードも取り直す
+  const refetchAfterDayChange = useCallback(() => {
+    void refetch();
+    void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+  }, [refetch, queryClient]);
+
   // DayDetailModal の編集/削除/追加ハンドラ（練習履歴/大会記録履歴タブと共通）
   const {
     isDeleting,
@@ -338,7 +359,7 @@ export const DashboardScreen: React.FC = () => {
     handleAddEntry,
     handleEditCompetition,
     handleDeleteCompetition,
-  } = useDayDetailHandlers(supabase, refetch);
+  } = useDayDetailHandlers(supabase, refetchAfterDayChange);
 
   // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
   if (isError && error && !hasCachedEntries) {
@@ -401,10 +422,24 @@ export const DashboardScreen: React.FC = () => {
             onRetry={() => refetch()}
           />
           <DashboardNoticesSection teams={teams} />
-          <NextCompetitionCard
-            hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
-            onOpenDay={handleOpenCompetitionDay}
-          />
+          {/* 次の大会と前回の練習を横に並べ、スワイプで切り替える。前回の練習が無ければ次の大会だけ。
+              最初に見せるカードは useDashboardInitialCard が選ぶ */}
+          <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
+            <NextCompetitionCard
+              key="next-competition"
+              hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
+              onOpenDay={handleOpenCompetitionDay}
+              style={styles.carouselCard}
+            />
+            {lastPractice && (
+              <LastPracticeCard
+                key="last-practice"
+                practice={lastPractice}
+                onOpenDay={handleOpenCompetitionDay}
+                style={styles.carouselCard}
+              />
+            )}
+          </DashboardCardCarousel>
           <View style={styles.calendar}>
             <CalendarView
               currentDate={currentDate}
@@ -564,6 +599,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  carouselCard: {
+    flex: 1,
   },
   calendar: {
     marginTop: 12,

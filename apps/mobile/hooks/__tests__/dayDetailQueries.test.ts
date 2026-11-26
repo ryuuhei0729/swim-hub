@@ -12,6 +12,7 @@ import {
   invalidateCalendarAfterSave,
   invalidateDayDetailsAfterDelete,
 } from "../dayDetailQueries";
+import { dashboardKeys } from "@apps/shared/hooks/queries/keys";
 
 const CALENDAR_KEY = ["calendar", "2026-11-01", "2026-11-30"];
 const PRACTICE_A = dayDetailKeys.practice("practice-a");
@@ -49,6 +50,16 @@ function invalidatedKeys(queryClient: QueryClient): unknown[] {
 }
 
 describe("invalidateCalendarAfterSave", () => {
+  it("ホームのカード (次の大会・前回の練習) も取り直す", async () => {
+    const queryClient = createSeededClient();
+    const lastPracticeKey = dashboardKeys.lastPractice("user-1", "2026-11-26");
+    queryClient.setQueryData(lastPracticeKey, "cached");
+
+    await invalidateCalendarAfterSave(queryClient, { practiceId: "practice-a" });
+
+    expect(queryClient.getQueryState(lastPracticeKey)?.isInvalidated).toBe(true);
+  });
+
   it("練習を保存したら、一覧とその練習の詳細 (本体・メニュー) だけを無効化する", async () => {
     const queryClient = createSeededClient();
 

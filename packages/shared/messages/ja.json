@@ -1102,6 +1102,16 @@
       "placeWithPool": "{place}（{pool}）",
       "openGoal": "目標 {time} の詳細を見る"
     },
+    "lastPractice": {
+      "titleWithDate": "前回の練習（{date}）",
+      "average": "平均 {time}",
+      "openDay": "前回の練習（{date}）の詳細を見る"
+    },
+    "cardCarousel": {
+      "previous": "前のカード",
+      "next": "次のカード",
+      "goTo": "{index}枚目を表示"
+    },
     "bestTimes": {
       "loadError": "ベストタイムを読み込めませんでした"
     }

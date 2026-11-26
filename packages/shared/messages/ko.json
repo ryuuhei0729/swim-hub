@@ -1102,6 +1102,16 @@
       "placeWithPool": "{place} ({pool})",
       "openGoal": "목표 {time} 상세 보기"
     },
+    "lastPractice": {
+      "titleWithDate": "지난 연습 ({date})",
+      "average": "평균 {time}",
+      "openDay": "지난 연습 ({date}) 상세 보기"
+    },
+    "cardCarousel": {
+      "previous": "이전 카드",
+      "next": "다음 카드",
+      "goTo": "{index}번째 카드 보기"
+    },
     "bestTimes": {
       "loadError": "베스트 타임을 불러오지 못했습니다"
     }
