@@ -100,7 +100,7 @@ describe("RecordFeedbackArrivalPopup", () => {
         onOpenRecord={vi.fn()}
       />,
     );
-    fireEvent.click(document.querySelector('[accessibilitylabel="アニメーションをスキップ"]')!);
+    fireEvent.click(document.querySelector('[testid="record-feedback-arrival-animation"]')!);
     expect(screen.getByText("コーチ山田さんからフィードバックが届きました")).toBeTruthy();
   });
 

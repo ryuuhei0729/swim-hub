@@ -348,7 +348,6 @@ export const RecordCard: React.FC<{
               {record.styleName}
               {record.isRelaying && <Text style={styles.recordRelayBadge}> R</Text>}
             </Text>
-            {isTeamRecord && <RecordFeedbackRecordBadge recordId={record.id} />}
           </View>
           <View style={styles.recordInfoRow}>
             <Text style={styles.recordInfoLabel}>{t("dashboard.dayDetail.recordTimeLabel")}</Text>
@@ -361,6 +360,12 @@ export const RecordCard: React.FC<{
               )}
             </View>
           </View>
+          {/* FB 件数。右上のシェア・編集・削除ボタン (絶対配置) と重ならないよう、種目の行ではなく独立した行に置く */}
+          {isTeamRecord && (
+            <View style={styles.recordInfoRow}>
+              <RecordFeedbackRecordBadge recordId={record.id} />
+            </View>
+          )}
         </View>
       </View>
 

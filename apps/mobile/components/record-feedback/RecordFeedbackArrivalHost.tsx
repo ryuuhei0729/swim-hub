@@ -60,7 +60,8 @@ export const RecordFeedbackArrivalHost: React.FC<RecordFeedbackArrivalHostProps>
     queryKey: styleKeys.list(),
     queryFn: () => new StyleAPI(supabase).getStyles(),
     staleTime: 24 * 60 * 60 * 1000,
-    enabled: popupItems !== null,
+    // アニメーション中に取得を終えておき、一覧の表示時点で種目名が出るようにする
+    enabled: (unreadQuery.data?.length ?? 0) > 0,
   });
   const stylesById = useMemo(
     () => new Map<number, StyleLike>((stylesQuery.data ?? []).map((s) => [s.id, s])),

@@ -14,7 +14,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { CenterModal } from "@/components/ui/CenterModal";
 import { useCenterModalMaxHeight } from "@/components/goals/useCenterModalMaxHeight";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName, type StyleLike } from "@/utils/styleName";
@@ -41,7 +40,8 @@ const LetterArrivalAnimation: React.FC<{ onSkip: () => void }> = ({ onSkip }) =>
   const glow = useSharedValue(0);
 
   useEffect(() => {
-    translateY.set(withSpring(0, { damping: 9, stiffness: 110 }));
+    // 下に跳ね返ると下の文言に重なるため、行き過ぎ (overshoot) はさせない
+    translateY.set(withSpring(0, { damping: 12, stiffness: 120, overshootClamping: true }));
     rotate.set(
       withSequence(
         withTiming(8, { duration: 450, easing: Easing.out(Easing.quad) }),
@@ -65,14 +65,14 @@ const LetterArrivalAnimation: React.FC<{ onSkip: () => void }> = ({ onSkip }) =>
   }));
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onSkip}>
-      <Pressable
-        testID="record-feedback-arrival-animation"
-        style={styles.animationOverlay}
-        onPress={onSkip}
-        accessibilityRole="button"
-        accessibilityLabel={t("recordFeedbackMobile.arrival.skipAnimation")}
-      >
+    <Pressable
+      testID="record-feedback-arrival-animation"
+      style={styles.animationOverlay}
+      onPress={onSkip}
+      accessibilityRole="button"
+      accessibilityLabel={t("recordFeedbackMobile.arrival.animationText")}
+      accessibilityHint={t("recordFeedbackMobile.arrival.skipAnimation")}
+    >
         <Animated.View style={[styles.envelopeWrap, envelopeStyle]}>
           <Animated.View style={[styles.glow, glowStyle]} />
           <Animated.View style={[styles.letter, letterStyle]}>
@@ -83,9 +83,8 @@ const LetterArrivalAnimation: React.FC<{ onSkip: () => void }> = ({ onSkip }) =>
             <Feather name="mail" size={64} color="#7C3AED" />
           </View>
         </Animated.View>
-        <Text style={styles.animationText}>{t("recordFeedbackMobile.arrival.animationText")}</Text>
-      </Pressable>
-    </Modal>
+      <Text style={styles.animationText}>{t("recordFeedbackMobile.arrival.animationText")}</Text>
+    </Pressable>
   );
 };
 
@@ -111,67 +110,101 @@ export const RecordFeedbackArrivalPopup: React.FC<RecordFeedbackArrivalPopupProp
     return () => clearTimeout(timer);
   }, [phase]);
 
-  if (phase === "animation") {
-    return <LetterArrivalAnimation onSkip={() => setPhase("list")} />;
-  }
+  const skipAnimation = () => setPhase("list");
 
+  // アニメーションと一覧は同じ Modal の中で切り替える。iOS では Modal を閉じる途中に
+  // 別の Modal を出すと表示されないことがあり、タップでアニメーションを飛ばしたときに
+  // 一覧が出ない不具合になっていた (Agent testers で検出)。
   return (
-    <CenterModal
+    <Modal
       visible
-      onClose={onClose}
-      closeAccessibilityLabel={t("recordFeedbackMobile.arrival.close")}
-      contentStyle={{ maxHeight }}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={phase === "animation" ? skipAnimation : onClose}
     >
-      <View style={styles.titleRow} testID="record-feedback-arrival-list">
-        <Feather name="mail" size={20} color="#7C3AED" />
-        <Text style={styles.title}>{t("recordFeedbackMobile.arrival.title")}</Text>
-      </View>
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        {feedbacks.map((feedback) => {
-          const authorName = feedback.author_name ?? t("recordFeedbackMobile.deletedUser");
-          const style = stylesById.get(feedback.style_id);
-          const styleName = style ? localizedStyleName(style, t) : "";
-          const competitionTitle =
-            feedback.competition_title ||
-            (feedback.competition_id
-              ? t("recordMobile.fallbackTitle")
-              : `(${t("competition.client.bulkInputLabel")})`);
-          const recordLine = [competitionTitle, styleName, formatTime(feedback.time)]
-            .filter(Boolean)
-            .join(" · ");
-          return (
-            <View key={feedback.id} style={styles.item} testID={`record-feedback-arrival-item-${feedback.id}`}>
-              <Text style={styles.itemTitle}>
-                {t("recordFeedbackMobile.arrival.from", { name: authorName })}
-              </Text>
-              <Text style={styles.itemRecord} numberOfLines={2}>
-                {recordLine}
-                {feedback.is_relaying && <Text style={styles.relayMark}> R</Text>}
-              </Text>
-              <Pressable
-                testID={`record-feedback-arrival-open-${feedback.id}`}
-                style={styles.openButton}
-                onPress={() => onOpenRecord(feedback)}
-                accessibilityRole="button"
-                accessibilityLabel={`${t("recordFeedbackMobile.arrival.openRecord")} ${recordLine}`}
-              >
-                <Text style={styles.openButtonText}>{t("recordFeedbackMobile.arrival.openRecord")}</Text>
-                <Feather name="chevron-right" size={16} color="#FFFFFF" />
-              </Pressable>
+      {phase === "animation" ? (
+        <LetterArrivalAnimation onSkip={skipAnimation} />
+      ) : (
+        <View style={styles.listOverlay}>
+          {/* 背面タップで閉じる (閉じるボタンと同じ扱い。既読にはしない) */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t("recordFeedbackMobile.arrival.close")}
+          />
+          <View style={[styles.card, { maxHeight }]}>
+            <Pressable
+              testID="record-feedback-arrival-close-icon"
+              style={styles.closeIconButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t("recordFeedbackMobile.arrival.close")}
+            >
+              <View style={styles.closeIconCircle}>
+                <Feather name="x" size={18} color="#6B7280" />
+              </View>
+            </Pressable>
+            <View style={styles.titleRow} testID="record-feedback-arrival-list">
+              <Feather name="mail" size={20} color="#7C3AED" />
+              <Text style={styles.title}>{t("recordFeedbackMobile.arrival.title")}</Text>
             </View>
-          );
-        })}
-      </ScrollView>
-      <Pressable
-        testID="record-feedback-arrival-close"
-        style={styles.closeButton}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t("recordFeedbackMobile.arrival.close")}
-      >
-        <Text style={styles.closeButtonText}>{t("recordFeedbackMobile.arrival.close")}</Text>
-      </Pressable>
-    </CenterModal>
+            <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+              {feedbacks.map((feedback) => {
+                const authorName = feedback.author_name ?? t("recordFeedbackMobile.deletedUser");
+                const style = stylesById.get(feedback.style_id);
+                const styleName = style ? localizedStyleName(style, t) : "";
+                const competitionTitle =
+                  feedback.competition_title ||
+                  (feedback.competition_id
+                    ? t("recordMobile.fallbackTitle")
+                    : `(${t("competition.client.bulkInputLabel")})`);
+                const recordLine = [competitionTitle, styleName, formatTime(feedback.time)]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <View
+                    key={feedback.id}
+                    style={styles.item}
+                    testID={`record-feedback-arrival-item-${feedback.id}`}
+                  >
+                    <Text style={styles.itemTitle}>
+                      {t("recordFeedbackMobile.arrival.from", { name: authorName })}
+                    </Text>
+                    <Text style={styles.itemRecord} numberOfLines={2}>
+                      {recordLine}
+                      {feedback.is_relaying && <Text style={styles.relayMark}> R</Text>}
+                    </Text>
+                    <Pressable
+                      testID={`record-feedback-arrival-open-${feedback.id}`}
+                      style={styles.openButton}
+                      onPress={() => onOpenRecord(feedback)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t("recordFeedbackMobile.arrival.openRecord")} ${recordLine}`}
+                    >
+                      <Text style={styles.openButtonText}>
+                        {t("recordFeedbackMobile.arrival.openRecord")}
+                      </Text>
+                      <Feather name="chevron-right" size={16} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <Pressable
+              testID="record-feedback-arrival-close"
+              style={styles.closeButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t("recordFeedbackMobile.arrival.close")}
+            >
+              <Text style={styles.closeButtonText}>{t("recordFeedbackMobile.arrival.close")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+    </Modal>
   );
 };
 
@@ -181,7 +214,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(17, 24, 39, 0.55)",
-    gap: 24,
+    gap: 40,
+    paddingHorizontal: 24,
   },
   envelopeWrap: {
     width: 140,
@@ -226,13 +260,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
+  },
+  listOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 400,
+    padding: 20,
+    paddingTop: 20,
+  },
+  // タップ領域は 44pt を確保し、見た目は 32pt の丸にする
+  closeIconButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  closeIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
-    paddingRight: 28,
+    paddingRight: 40,
+    minHeight: 32,
   },
   title: {
     fontSize: 17,
@@ -272,8 +342,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#7C3AED",
   },
@@ -285,6 +356,8 @@ const styles = StyleSheet.create({
   closeButton: {
     marginTop: 14,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
     paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: "#F3F4F6",
