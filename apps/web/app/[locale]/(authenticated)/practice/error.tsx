@@ -46,20 +46,20 @@ export default function PracticeError({ error, reset }: ErrorProps) {
               onClick={reset}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              再試行
+              {t("retry")}
             </button>
             <button
               onClick={() => (window.location.href = "/practice")}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              ページを再読み込み
+              {t("reload")}
             </button>
           </div>
 
           {/* ヘルプ情報 */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。
+              {t("helpText")}
             </p>
           </div>
         </div>

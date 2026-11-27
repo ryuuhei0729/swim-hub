@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -14,6 +15,7 @@ import { useEventAttendanceQuery } from "@/hooks/queries/teamAttendanceQueries";
  * 閉じたあとも最後のイベントのキーを保持する (閉じる途中で表示が空にならないように)。
  */
 export function useAttendanceModal(supabase: SupabaseClient, teamId: string) {
+  const t = useTranslations("teams.attendanceStatusHook");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<TeamEvent | null>(null);
 
@@ -40,7 +42,7 @@ export function useAttendanceModal(supabase: SupabaseClient, teamId: string) {
     attendanceData,
     teamMembers,
     loading,
-    error: error ? toUserFacingMessage(error, "出欠情報の取得に失敗しました") : null,
+    error: error ? toUserFacingMessage(error, t("loadError")) : null,
     openModal,
     closeModal,
   };

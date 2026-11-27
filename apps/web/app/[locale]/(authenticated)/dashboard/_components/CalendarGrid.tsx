@@ -264,7 +264,7 @@ export default function CalendarGrid({
                     })}
                     {dayEntries.length > 2 && (
                       <div className="text-[10px] text-gray-500 px-0.5 sm:px-1">
-                        +{dayEntries.length - 2}件
+                        {tCalendarGrid("moreItems", { count: dayEntries.length - 2 })}
                       </div>
                     )}
                   </div>

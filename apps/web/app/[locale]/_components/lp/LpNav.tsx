@@ -14,6 +14,9 @@ interface LpNavProps {
     pricing: string;
     signup: string;
     login: string;
+    mainNavAria: string;
+    mobileNavAria: string;
+    openMenuAria: string;
   };
 }
 
@@ -74,7 +77,7 @@ export default function LpNav({ t }: LpNavProps) {
       </a>
 
       {/* センターナビ (960px超のみ表示) */}
-      <nav aria-label="メインナビゲーション" className="lp-nav-links">
+      <nav aria-label={t.mainNavAria} className="lp-nav-links">
         <div style={{ display: "flex", gap: 36 }}>
           {navLinks.map((link) => (
             <a
@@ -172,7 +175,7 @@ export default function LpNav({ t }: LpNavProps) {
         <button
           id="nav-burger"
           className="lp-nav-burger"
-          aria-label="メニューを開く"
+          aria-label={t.openMenuAria}
           aria-expanded={menuOpen}
           onClick={toggleMenu}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMenu(); } }}
@@ -231,7 +234,7 @@ export default function LpNav({ t }: LpNavProps) {
         <nav
           id="nav-menu"
           className="lp-nav-menu"
-          aria-label="モバイルナビゲーション"
+          aria-label={t.mobileNavAria}
           style={{
             display: "flex",
             flexDirection: "column",

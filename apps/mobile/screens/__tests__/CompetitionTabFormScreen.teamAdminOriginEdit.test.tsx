@@ -856,7 +856,7 @@ describe("CompetitionTabFormScreen — [High-1(b)] 権限喪失後の保存を�
     // そのまま比較できない。placeholder で引いて value を直接見る。
     await waitFor(() => {
       const input = screen.getByPlaceholderText(
-        "例: 全国大会, 対抗戦, タイムトライアル",
+        "例: 全国大会、対抗戦、タイムトライアル",
       ) as HTMLInputElement;
       expect(input.value).toBe("  前後に空白のある大会名  ");
     });

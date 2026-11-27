@@ -246,7 +246,7 @@ describe("WaPointsCompareModal", () => {
       <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
     );
 
-    expect(screen.getByText("ベストタイム読込中...")).toBeTruthy();
+    expect(screen.getByText("ベストタイムを読み込み中...")).toBeTruthy();
     // ローディング中はランキング行も空状態メッセージも出ない
     expect(screen.queryByText("読込中太郎")).toBeNull();
     expect(screen.queryByText("比較できる記録がありません")).toBeNull();

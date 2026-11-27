@@ -116,7 +116,7 @@ describe("RecordClient — 非泳者回帰テスト (R4)", () => {
   it("[V-11-01] 「メンバーを選択」モーダルの候補一覧には泳者のみが表示される", () => {
     renderRecordClient([]);
 
-    fireEvent.click(screen.getByRole("button", { name: "メンバーを選択" }));
+    fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
 
     // [チップ化スプリント] 候補一覧は選択チップ (button, aria-pressed) として描画される。
     // 「非泳者B」がチップとして存在しないことを直接確認する (Issue #49 の回帰防止そのもの)

@@ -20,9 +20,9 @@ interface LpFeaturesProps {
   t: {
     introLabel: string;
     introH2: string;
-    f1: { label: string; title: string; desc: string; items: string[] };
-    f2: { label: string; title: string; desc: string; items: string[] };
-    f3: { label: string; title: string; desc: string; items: string[] };
+    f1: { label: string; title: string; desc: string; items: string[]; imgAlt: string; caption: string };
+    f2: { label: string; title: string; desc: string; items: string[]; imgAlt: string; caption: string };
+    f3: { label: string; title: string; desc: string; items: string[]; imgAlt: string; caption: string };
   };
 }
 
@@ -287,8 +287,8 @@ export default function LpFeatures({ t }: LpFeaturesProps) {
       desc: t.f1.desc,
       items: t.f1.items,
       imgSrc: "/screenshots/lp-practice.png",
-      imgAlt: "練習記録画面のスクリーンショット",
-      imgCaption: "Practice — 練習記録",
+      imgAlt: t.f1.imgAlt,
+      imgCaption: t.f1.caption,
       ghostWord: "Practice",
       flip: false,
       activeIndicator: 0,
@@ -302,8 +302,8 @@ export default function LpFeatures({ t }: LpFeaturesProps) {
       desc: t.f2.desc,
       items: t.f2.items,
       imgSrc: "/screenshots/lp-competition.png",
-      imgAlt: "大会記録画面のスクリーンショット",
-      imgCaption: "Competition — 大会記録",
+      imgAlt: t.f2.imgAlt,
+      imgCaption: t.f2.caption,
       ghostWord: "Race",
       flip: true,
       activeIndicator: 1,
@@ -317,8 +317,8 @@ export default function LpFeatures({ t }: LpFeaturesProps) {
       desc: t.f3.desc,
       items: t.f3.items,
       imgSrc: "/screenshots/lp-proxy.png",
-      imgAlt: "チーム管理・代理入力画面のスクリーンショット",
-      imgCaption: "Team — 代理入力",
+      imgAlt: t.f3.imgAlt,
+      imgCaption: t.f3.caption,
       ghostWord: "Team",
       flip: false,
       activeIndicator: 2,

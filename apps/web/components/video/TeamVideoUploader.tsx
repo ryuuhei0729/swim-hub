@@ -26,6 +26,9 @@ export default function TeamVideoUploader({
   disabled = false,
 }: TeamVideoUploaderProps) {
   const tPremium = useTranslations("forms.premium");
+  const tCommon = useTranslations("common");
+  const tUploader = useTranslations("common.videoUploader");
+  const tRecord = useTranslations("teams.record");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -58,12 +61,12 @@ export default function TeamVideoUploader({
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 space-y-4">
         <h3 className="text-lg font-medium text-gray-900">
-          {targetUserName} の動画を選択
+          {tUploader("selectForUser", { name: targetUserName })}
         </h3>
         {isPremium ? (
           <>
             <p className="text-sm text-gray-500">
-              動画ファイルを選択して編集・プレビューできます
+              {tUploader("selectDescription")}
             </p>
             <div className="flex gap-3">
               <button
@@ -71,7 +74,7 @@ export default function TeamVideoUploader({
                 onClick={onCancel}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               >
-                キャンセル
+                {tCommon("cancel")}
               </button>
               <button
                 type="button"
@@ -80,7 +83,7 @@ export default function TeamVideoUploader({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 <VideoCameraIcon className="h-4 w-4" />
-                動画を選択
+                {tRecord("videoSelect")}
               </button>
             </div>
             <input
@@ -100,7 +103,7 @@ export default function TeamVideoUploader({
                 onClick={onCancel}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               >
-                キャンセル
+                {tCommon("cancel")}
               </button>
             </div>
           </>

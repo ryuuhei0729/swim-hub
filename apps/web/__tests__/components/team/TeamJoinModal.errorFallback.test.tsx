@@ -54,7 +54,7 @@ describe("TeamJoinModal — 参加失敗時のエラー表示 — 情報露出�
       await fillAndSubmit(user);
 
       const errorEl = await screen.findByTestId("team-join-error");
-      expect(errorEl).toHaveTextContent("チームの参加に失敗しました");
+      expect(errorEl).toHaveTextContent("チームへの参加に失敗しました");
       expect(errorEl).not.toHaveTextContent("row-level security policy");
       expect(screen.queryByText(/row-level security policy/)).not.toBeInTheDocument();
     },

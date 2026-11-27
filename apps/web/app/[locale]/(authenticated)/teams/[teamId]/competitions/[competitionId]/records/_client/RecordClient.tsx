@@ -2100,10 +2100,10 @@ export default function RecordClient({
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <UserGroupIcon className="h-4 w-4 mr-2" />
-                      メンバーを選択
+                      {t("record.selectMemberButton")}
                     </button>
                     <span className="text-sm text-gray-600">
-                      {entry.memberRecords.length}名選択中
+                      {t("record.selectedMemberCount", { n: entry.memberRecords.length })}
                     </span>
                   </div>
                   {entry.memberRecords.length > 0 && (
@@ -2205,7 +2205,7 @@ export default function RecordClient({
                     <div className="flex flex-wrap gap-4 mb-3">
                       <div className="min-w-[160px]">
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          合計タイム
+                          {t("record.totalTime")}
                         </label>
                         <input
                           type="text"
@@ -2272,7 +2272,7 @@ export default function RecordClient({
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
-                          追加(25mごと)
+                          {tRecordLog("splitAdd25m")}
                         </Button>
                         <Button
                           type="button"
@@ -2286,7 +2286,7 @@ export default function RecordClient({
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
-                          追加(50mごと)
+                          {tRecordLog("splitAdd50m")}
                         </Button>
                         <Button
                           type="button"
@@ -2300,7 +2300,7 @@ export default function RecordClient({
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
-                          追加
+                          {tCommon("add")}
                         </Button>
                       </div>
                     </div>
@@ -2467,7 +2467,7 @@ export default function RecordClient({
                           <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">
-                                タイム
+                                {t("record.timeLabel")}
                               </label>
                               <input
                                 type="text"
@@ -2493,7 +2493,7 @@ export default function RecordClient({
                                 以前の非表示は歴史的な不整合であり、意図的な仕様ではない。 */}
                             <div className="w-36">
                               <label className="block text-xs font-medium text-gray-600 mb-1">
-                                リアクションタイム
+                                {tRecordLog("reactionTimeLabelFull")}
                               </label>
                               <input
                                 type="number"
@@ -2530,14 +2530,14 @@ export default function RecordClient({
                               }
                               className="rounded border-gray-300"
                             />
-                            リレー
+                            {t("record.relay")}
                           </label>
                         </div>
 
                         {/* メモ */}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
-                            メモ
+                            {t("record.memoLabel")}
                           </label>
                           <input
                             type="text"
@@ -2557,7 +2557,7 @@ export default function RecordClient({
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-xs font-medium text-gray-600">
-                            スプリットタイム
+                            {t("record.splitTimeLabel")}
                             {!isPremium && (
                               <span className="ml-2 text-xs text-orange-600">
                                 {t("record.freePlanLimitNotice")}
@@ -2578,7 +2578,7 @@ export default function RecordClient({
                               }
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
-                              追加(25mごと)
+                              {tRecordLog("splitAdd25m")}
                             </Button>
                             <Button
                               type="button"
@@ -2593,7 +2593,7 @@ export default function RecordClient({
                               }
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
-                              追加(50mごと)
+                              {tRecordLog("splitAdd50m")}
                             </Button>
                             <Button
                               type="button"
@@ -2761,13 +2761,13 @@ export default function RecordClient({
             className="w-full"
           >
             <PlusIcon className="h-4 w-4 mr-2" />
-            種目を追加
+            {t("record.addEventButton")}
           </Button>
 
           {/* 送信ボタン */}
           <div className="flex justify-end gap-3 pt-6">
             <Button type="button" onClick={handleBack} variant="secondary">
-              キャンセル
+              {t("record.cancelButton")}
             </Button>
             <Button
               type="submit"
