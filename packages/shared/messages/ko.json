@@ -300,6 +300,8 @@
     "discard": "나가기",
     "listToolbar": {
       "itemCount": "{count}건",
+      "itemCount_one": "{count}건",
+      "itemCount_other": "{count}건",
       "sortButton": "정렬",
       "filterButton": "필터"
     },

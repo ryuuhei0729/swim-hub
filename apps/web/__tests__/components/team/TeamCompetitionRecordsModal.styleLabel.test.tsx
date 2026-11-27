@@ -92,7 +92,7 @@ describe("TeamCompetitionRecordsModal — 種目名のロケール対応", () =>
 
     expect(await screen.findByRole("heading", { name: "50m Freestyle" })).toBeInTheDocument();
     expect(screen.queryByText("50m自由形")).not.toBeInTheDocument();
-    expect(screen.getByText("(1 items)")).toBeInTheDocument();
+    expect(screen.getByText("(1 item)")).toBeInTheDocument();
   });
 
   it("日本語では従来どおり「50m自由形」「(1件)」と出す", async () => {

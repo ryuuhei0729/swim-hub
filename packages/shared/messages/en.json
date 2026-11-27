@@ -296,7 +296,9 @@
     "discardMessage": "You have unsaved changes. Close anyway?",
     "discard": "Discard",
     "listToolbar": {
-      "itemCount": "{count} items",
+      "itemCount": "{count, plural, one {{count} item} other {{count} items}}",
+      "itemCount_one": "{count} item",
+      "itemCount_other": "{count} items",
       "sortButton": "Sort",
       "filterButton": "Filter"
     },

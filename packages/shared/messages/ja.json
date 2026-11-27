@@ -300,6 +300,8 @@
     "discard": "破棄",
     "listToolbar": {
       "itemCount": "{count}件",
+      "itemCount_one": "{count}件",
+      "itemCount_other": "{count}件",
       "sortButton": "並べ替え",
       "filterButton": "絞り込み"
     },

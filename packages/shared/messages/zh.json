@@ -300,6 +300,8 @@
     "discard": "放弃",
     "listToolbar": {
       "itemCount": "{count}条",
+      "itemCount_one": "{count}条",
+      "itemCount_other": "{count}条",
       "sortButton": "排序",
       "filterButton": "筛选"
     },

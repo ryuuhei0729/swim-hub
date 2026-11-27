@@ -299,7 +299,9 @@
     "discardMessage": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
     "discard": "Verwerfen",
     "listToolbar": {
-      "itemCount": "{count} Einträge",
+      "itemCount": "{count, plural, one {{count} Eintrag} other {{count} Einträge}}",
+      "itemCount_one": "{count} Eintrag",
+      "itemCount_other": "{count} Einträge",
       "sortButton": "Sortieren",
       "filterButton": "Filtern"
     },
