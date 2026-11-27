@@ -163,6 +163,7 @@
     },
     "upload": {
       "imageLabel": "Bild",
+      "imageCount": "{current} / {max}",
       "imageOnlyError": "Bitte wählen Sie eine Bilddatei aus",
       "imageSizeError": "Das Bild muss kleiner als {maxMb} MB sein",
       "imageLoadFailed": "Bild konnte nicht geladen werden",
@@ -1128,6 +1129,16 @@
       "titleWithDate": "Nächster Wettkampf ({date})",
       "placeWithPool": "{place} ({pool})",
       "openGoal": "Ziel {time} anzeigen"
+    },
+    "lastPractice": {
+      "titleWithDate": "Letztes Training ({date})",
+      "average": "Ø {time}",
+      "openDay": "Letztes Training ({date}) ansehen"
+    },
+    "cardCarousel": {
+      "previous": "Vorherige Karte",
+      "next": "Nächste Karte",
+      "goTo": "Karte {index} anzeigen"
     },
     "bestTimes": {
       "loadError": "Bestzeiten konnten nicht geladen werden"

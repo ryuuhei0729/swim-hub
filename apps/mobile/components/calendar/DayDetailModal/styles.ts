@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
   },
-  safeAreaContainer: {
+  cardContainer: {
     width: "100%",
     maxWidth: 500,
   },
@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     width: "100%",
-    maxHeight: "90%",
+    // maxHeight は画面とセーフエリアから px で計算し、DayDetailModal 側で渡す。
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -50,6 +50,12 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  // 本文の枠。中身の実測高さを DayDetailModal 側でアニメーションさせて与える。
+  // flexShrink:1 がないと、カードの maxHeight を超えた分が縮まずに溢れる。
+  bodyFrame: {
+    flexShrink: 1,
+    overflow: "hidden",
+  },
   body: {
     flexGrow: 0,
     flexShrink: 1,
@@ -57,9 +63,10 @@ export const styles = StyleSheet.create({
   bodyContent: {
     paddingBottom: 20,
   },
+  // 下側は bodyContent の paddingBottom(20) が足されるので、上もそれに合わせて 20 にする。
   emptyContainer: {
-    padding: 16,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
   emptyTextMain: {
     fontSize: 16,
@@ -101,10 +108,10 @@ export const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#374151",
   },
+  // 下側は bodyContent の paddingBottom(20) が足されるので、上下がほぼそろうようにする。
   entriesContainer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 16,
     gap: 12,
   },
   addRecordSection: {

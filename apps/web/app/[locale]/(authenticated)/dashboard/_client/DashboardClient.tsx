@@ -6,6 +6,12 @@ import { useAuth } from "@/contexts";
 import CalendarContainer, { type OpenDayRequest } from "../_components/CalendarContainer";
 import DashboardNoticesSection from "../_components/DashboardNoticesSection";
 import NextCompetitionCard from "../_components/NextCompetitionCard";
+import LastPracticeCard from "../_components/LastPracticeCard";
+import DashboardCardCarousel from "../_components/DashboardCardCarousel";
+import {
+  useDashboardInitialCard,
+  useLastPracticeQuery,
+} from "@apps/shared/hooks/queries/dashboard";
 import DashboardBestTimesCard from "../_components/DashboardBestTimesCard";
 import RecordFeedbackArrivalPopup from "@/components/record-feedback/RecordFeedbackArrivalPopup";
 import FocusPointsCard from "@/components/focus-points/FocusPointsCard";
@@ -81,6 +87,17 @@ export default function DashboardClient({
   } | null>(null);
   // 次の大会のカードから、その日の詳細をカレンダーに開かせる (seq を進めると同じ日でも開き直す)
   const [openDayRequest, setOpenDayRequest] = useState<OpenDayRequest | null>(null);
+  /** 次の大会・前回の練習のカードから、その日の詳細を開く */
+  const openDay = (date: string) =>
+    setOpenDayRequest((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }));
+  // 前回の練習 (次の大会と並べるカード)。無ければカードを出さない。
+  // 並びは「次の大会 → 前回の練習」で固定し、今日・明日に練習があれば前回の練習を見せた状態で開く
+  // (大会が今日・明日なら次の大会)。どちらを見せるか決まるまでは前回の練習を並べない
+  const lastPracticeQuery = useLastPracticeQuery(supabase, user?.id);
+  const lastPractice = lastPracticeQuery.data;
+  const initialCard = useDashboardInitialCard(supabase, user?.id);
+  const cardsReady =
+    initialCard.ready && (lastPracticeQuery.data !== undefined || lastPracticeQuery.isError);
 
   // Zustandストア
   const { calendarRefreshKey, refreshCalendar } = useUIStore();
@@ -400,13 +417,20 @@ export default function DashboardClient({
             フォーカスポイントは次の大会の下 (ベストタイム表の方が縦に長く空いていた所) に置く */}
         <div className="grid grid-cols-1 gap-1.5 lg:gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:items-start">
           <div className="flex min-w-0 flex-col gap-1.5 lg:gap-4">
-            <NextCompetitionCard
-              hasTeams={teams.length > 0}
-              openEntryLogForm={openEntryLogForm}
-              onAddCompetition={() => onAddItem(new Date(), "record")}
-              onSetGoal={setGoalCreateTarget}
-              onOpenDay={(date) => setOpenDayRequest((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }))}
-            />
+            {/* 次の大会と前回の練習を横に並べて切り替える。前回の練習が無ければ次の大会だけ */}
+            <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
+              <NextCompetitionCard
+                key="next-competition"
+                hasTeams={teams.length > 0}
+                openEntryLogForm={openEntryLogForm}
+                onAddCompetition={() => onAddItem(new Date(), "record")}
+                onSetGoal={setGoalCreateTarget}
+                onOpenDay={openDay}
+              />
+              {lastPractice && (
+                <LastPracticeCard key="last-practice" practice={lastPractice} onOpenDay={openDay} />
+              )}
+            </DashboardCardCarousel>
             <FocusPointsCard />
           </div>
           <DashboardBestTimesCard />

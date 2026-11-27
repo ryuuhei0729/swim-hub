@@ -163,6 +163,7 @@
     },
     "upload": {
       "imageLabel": "图片",
+      "imageCount": "{current} / {max} 张",
       "imageOnlyError": "请选择图片文件",
       "imageSizeError": "图片大小请控制在 {maxMb}MB 以内",
       "imageLoadFailed": "图片加载失败",
@@ -1128,6 +1129,16 @@
       "titleWithDate": "下一场比赛（{date}）",
       "placeWithPool": "{place}（{pool}）",
       "openGoal": "查看目标 {time} 详情"
+    },
+    "lastPractice": {
+      "titleWithDate": "上次训练（{date}）",
+      "average": "平均 {time}",
+      "openDay": "查看上次训练（{date}）的详情"
+    },
+    "cardCarousel": {
+      "previous": "上一张",
+      "next": "下一张",
+      "goTo": "显示第{index}张"
     },
     "bestTimes": {
       "loadError": "无法加载最佳成绩"

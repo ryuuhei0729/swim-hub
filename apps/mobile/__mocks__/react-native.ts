@@ -104,6 +104,9 @@ export const ScrollView = ({
 }: { children?: React.ReactNode } & Record<string, unknown>) =>
   React.createElement("div", { ...props, style: { overflow: "auto" } }, children);
 
+// 画面サイズ。jsdom にはレイアウトが無いので、代表的な端末の値を固定で返す。
+export const useWindowDimensions = () => ({ width: 390, height: 844, scale: 3, fontScale: 1 });
+
 // KeyboardAvoidingView API
 // behavior/keyboardVerticalOffset は DOM に反映しても意味を持たないため、
 // Switch の data-value と同じ流儀で data 属性として素通しし、テストから検証できるようにする。

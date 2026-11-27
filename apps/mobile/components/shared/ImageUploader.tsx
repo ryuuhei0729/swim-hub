@@ -318,7 +318,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       <View style={styles.header}>
         <Text style={styles.label}>{resolvedLabel}</Text>
         <Text style={styles.count}>
-          {currentImageCount} / {maxImages}枚
+          {t("common.upload.imageCount", { current: currentImageCount, max: maxImages })}
         </Text>
       </View>
 

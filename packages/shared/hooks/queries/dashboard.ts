@@ -2,7 +2,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { addDays, format, subDays } from "date-fns";
 import { dashboardKeys } from "./keys";
 import {
   pickNextCompetition,
@@ -10,6 +10,11 @@ import {
   type NextCompetitionEntry,
   type NextCompetitionGoal,
 } from "../../utils/dashboardNextCompetition";
+import {
+  DASHBOARD_CARDS,
+  pickInitialDashboardCard,
+  type LastPractice,
+} from "../../utils/dashboardLastPractice";
 
 export interface DashboardStats {
   practiceCount: number;
@@ -141,6 +146,110 @@ export function useNextCompetitionQuery(supabase: SupabaseClient, userId: string
     enabled: !!userId,
     staleTime: 60 * 1000,
   });
+}
+
+const LAST_PRACTICE_SELECT = `
+  id, date, title, place,
+  practice_logs!inner (
+    id, style, swim_category, distance, rep_count, set_count, circle, created_at,
+    practice_times (set_number, rep_number, time)
+  )
+`;
+
+/**
+ * ダッシュボードの「前回の練習」。今日までの練習のうち、自分のメニューが1つ以上ある最新のもの。
+ * 同じ日に複数あれば後から登録した方。無ければ null。
+ * チーム練習は管理者が1件だけ作り、メンバーはそこへ自分のメニューを足すので、練習の作成者
+ * (practices.user_id) ではなくメニューの記録者 (practice_logs.user_id) で絞る。
+ * 埋め込むメニューも自分のものだけになる。
+ */
+export function useLastPracticeQuery(supabase: SupabaseClient, userId: string | undefined) {
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  return useQuery<LastPractice | null>({
+    queryKey: dashboardKeys.lastPractice(userId ?? "", today),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practices")
+        .select(LAST_PRACTICE_SELECT)
+        .eq("practice_logs.user_id", userId!)
+        .lte("date", today)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return ((data ?? [])[0] as LastPractice | undefined) ?? null;
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * 今日・明日に練習の予定があるか。ダッシュボードで最初に「前回の練習」を見せるかの判定に使う。
+ * 見える練習 (自分の個人練習・所属チームの練習・自分のメニューがある練習) を数え、
+ * 欠席と回答したチーム練習は除く。
+ */
+export function usePracticeSoonQuery(supabase: SupabaseClient, userId: string | undefined) {
+  const now = new Date();
+  const today = format(now, "yyyy-MM-dd");
+  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
+
+  return useQuery<boolean>({
+    queryKey: dashboardKeys.practiceSoon(userId ?? "", today),
+    queryFn: async () => {
+      const { data: practices, error } = await supabase
+        .from("practices")
+        .select("id, team_id")
+        // 自分の個人練習とチーム練習だけを数える (RLS で見える範囲が広がっても他人の個人練習を拾わない)
+        .or(`team_id.not.is.null,user_id.eq.${userId}`)
+        .gte("date", today)
+        .lte("date", tomorrow);
+      if (error) throw error;
+
+      const rows = (practices ?? []) as Array<{ id: string; team_id: string | null }>;
+      if (rows.some((p) => p.team_id === null)) return true;
+      if (rows.length === 0) return false;
+
+      const { data: absences, error: absencesError } = await supabase
+        .from("team_attendance")
+        .select("practice_id")
+        .eq("user_id", userId!)
+        .eq("status", "absent")
+        .in(
+          "practice_id",
+          rows.map((p) => p.id),
+        );
+      if (absencesError) throw absencesError;
+
+      const absent = new Set(
+        ((absences ?? []) as Array<{ practice_id: string | null }>).map((a) => a.practice_id),
+      );
+      return rows.some((p) => !absent.has(p.id));
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * ダッシュボードで横に並べるカード (次の大会・前回の練習) のうち、開いたときに見せるカードの位置。
+ * 選び方は pickInitialDashboardCard を参照。次の大会と今日・明日の練習の予定がそろうまでは
+ * ready = false (その間に開くと、あとから表示が勝手に切り替わってしまうため)。
+ * 取得に失敗した方は「無い」として扱う。
+ */
+export function useDashboardInitialCard(supabase: SupabaseClient, userId: string | undefined) {
+  const nextCompetition = useNextCompetitionQuery(supabase, userId);
+  const practiceSoon = usePracticeSoonQuery(supabase, userId);
+  const ready =
+    (nextCompetition.data !== undefined || nextCompetition.isError) &&
+    (practiceSoon.data !== undefined || practiceSoon.isError);
+  const card = pickInitialDashboardCard({
+    nextCompetitionDate: nextCompetition.data?.competition.date ?? null,
+    hasPracticeSoon: practiceSoon.data ?? false,
+    tomorrow: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+  });
+  return { ready, initialIndex: DASHBOARD_CARDS.indexOf(card) };
 }
 
 export interface UnrecordedCompetition {

@@ -14,6 +14,11 @@ interface ChipScrollRowProps {
   className?: string;
   role?: React.AriaRole;
   "data-testid"?: string;
+  /**
+   * sm 以上で折り返すか (既定 true)。false なら画面幅によらず1行の横スクロールにする
+   * (ダッシュボードの前回の練習のタイム列など、行の高さを固定したい所で使う)
+   */
+  wrapFromSm?: boolean;
 }
 
 /**
@@ -38,6 +43,7 @@ export function ChipScrollRow({
   className,
   role,
   "data-testid": dataTestId,
+  wrapFromSm = true,
 }: ChipScrollRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showFade, setShowFade] = useState(false);
@@ -89,7 +95,7 @@ export function ChipScrollRow({
           // 自動で 0 になり冗長。sm 以上は sm:overflow-x-visible で visible に戻り
           // min-width:auto が content ベースに復帰するため、ここで 0 に固定する
           "min-w-0 flex-1 flex overflow-x-auto scrollbar-hide py-1 -my-1 [&>*]:shrink-0",
-          "sm:flex-wrap sm:overflow-x-visible sm:py-0 sm:my-0 sm:[&>*]:shrink",
+          wrapFromSm && "sm:flex-wrap sm:overflow-x-visible sm:py-0 sm:my-0 sm:[&>*]:shrink",
           className,
         )}
         // 不変条件: この style に入れる値は scrollWidth / clientWidth / scrollLeft を

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts";
+import { useFittedModalHeight } from "@/hooks/useFittedModalHeight";
+import { lockBodyScroll } from "@/utils/scrollLock";
 import {
   type DayDetailModalProps,
   type CalendarItem,
@@ -53,6 +55,7 @@ export default function DayDetailModal({
 }: DayDetailModalProps) {
   const { supabase, user } = useAuth();
   const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const [isFetchingRecordCount, setIsFetchingRecordCount] = useState(false);
@@ -172,6 +175,16 @@ export default function DayDetailModal({
     return result;
   }, [practiceLogItems]);
 
+  // 開いている間は背面のページをスクロールさせない。
+  useEffect(() => {
+    if (!isOpen) return;
+    return lockBodyScroll();
+  }, [isOpen]);
+
+  // カードの高さを中身に合わせ、画面に収まらない分だけ本文をスクロールさせる。
+  const { containerRef, cardRef, headerRef, contentRef, footerRef, fitted, animate } =
+    useFittedModalHeight(isOpen);
+
   if (!isOpen) return null;
 
   // エントリーの分類
@@ -185,6 +198,8 @@ export default function DayDetailModal({
   const hasPracticeContent = practiceItems.length > 0 || practiceLogItems.length > 0;
   const hasRecordContent =
     competitionItems.length > 0 || entryItems.length > 0 || recordItems.length > 0;
+
+  const isEmpty = entries.length === 0;
 
   const detailTestId = hasPracticeContent
     ? "practice-detail-modal"
@@ -321,312 +336,200 @@ export default function DayDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid={detailTestId}>
-      <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="fixed inset-0 z-50" data-testid={detailTestId}>
+      {/* fixed inset-0 は「いま見えている画面」の大きさになるので、SP でアドレスバーが
+          出入りしても中央と上限がずれない (min-h-screen = 100vh だとずれる)。 */}
+      <div ref={containerRef} className="flex h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose} />
 
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-2xl">
-          {/* ヘッダー */}
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {format(date, "M月d日(E)", { locale: ja })}
-              </h3>
-              <button
-                onClick={onClose}
-                className="close-button text-gray-400 hover:text-gray-600 transition-colors"
-                data-testid="modal-close-button"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
+        {/* カード: 高さは中身なり、上限は画面 − 余白。超えた分は本文だけがスクロールする。
+            max-h-full は採寸できない環境向けのフォールバック。 */}
+        <div
+          ref={cardRef}
+          className={`relative flex max-h-full w-full flex-col overflow-hidden bg-white rounded-lg shadow-2xl border-2 border-gray-300 motion-reduce:transition-none ${
+            animate ? "transition-[height] duration-200 ease-out" : ""
+          } ${isEmpty ? "max-w-md" : "max-w-2xl"}`}
+          style={fitted ? { height: fitted.height } : undefined}
+        >
+          {/* ヘッダー (固定) */}
+          <div
+            ref={headerRef}
+            className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4"
+          >
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              {format(date, "M月d日(E)", { locale: ja })}
+            </h3>
+            <button
+              onClick={onClose}
+              className="close-button text-gray-400 hover:text-gray-600 transition-colors"
+              data-testid="modal-close-button"
+              aria-label={tCommon("aria.close")}
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
 
-            {/* 空の状態 */}
-            {entries.length === 0 && (
-              <div className="text-center py-8">
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => onAddItem?.(date, "record")}
-                    onMouseEnter={() => setIsRecordButtonHovered(true)}
-                    onMouseLeave={() => setIsRecordButtonHovered(false)}
-                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
-                    style={recordButtonHoverStyle}
-                    data-testid="add-record-button"
-                  >
-                    <TrophyIcon
-                      className={`h-8 w-8 mb-2 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
-                      style={isCompetitionColorDefault ? undefined : { color: personalCompetitionColor }}
-                    />
-                    {t("dayDetail.addRecord")}
-                  </button>
-                  <button
-                    onClick={() => onAddItem?.(date, "practice")}
-                    onMouseEnter={() => setIsPracticeButtonHovered(true)}
-                    onMouseLeave={() => setIsPracticeButtonHovered(false)}
-                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap"
-                    style={practiceButtonHoverStyle}
-                    data-testid="add-practice-button"
-                  >
-                    <ClipboardDocumentListIcon
-                      className={`h-8 w-8 mb-2 ${isPracticeColorDefault ? "text-green-500" : ""}`}
-                      style={isPracticeColorDefault ? undefined : { color: personalPracticeColor }}
-                    />
-                    {t("dayDetail.addPractice")}
-                  </button>
+          {/* 本文 (ここだけスクロール)。高さの伸縮アニメーション中にスクロールバーが
+              一瞬出るのを防ぐため、上限に達しているときだけスクロール可能にする。 */}
+          <div
+            className={`min-h-0 flex-1 overscroll-contain ${
+              !fitted || fitted.capped ? "overflow-y-auto" : "overflow-hidden"
+            }`}
+          >
+            <div ref={contentRef} className="space-y-6 px-4 py-4 sm:px-6">
+              {/* 空の状態 */}
+              {isEmpty && (
+                <div className="text-center">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => onAddItem?.(date, "record")}
+                      onMouseEnter={() => setIsRecordButtonHovered(true)}
+                      onMouseLeave={() => setIsRecordButtonHovered(false)}
+                      className="flex-1 flex flex-col items-center justify-center px-4 py-8 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
+                      style={recordButtonHoverStyle}
+                      data-testid="add-record-button"
+                    >
+                      <TrophyIcon
+                        className={`h-8 w-8 mb-2 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
+                        style={isCompetitionColorDefault ? undefined : { color: personalCompetitionColor }}
+                      />
+                      {t("dayDetail.addRecord")}
+                    </button>
+                    <button
+                      onClick={() => onAddItem?.(date, "practice")}
+                      onMouseEnter={() => setIsPracticeButtonHovered(true)}
+                      onMouseLeave={() => setIsPracticeButtonHovered(false)}
+                      className="flex-1 flex flex-col items-center justify-center px-4 py-8 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap"
+                      style={practiceButtonHoverStyle}
+                      data-testid="add-practice-button"
+                    >
+                      <ClipboardDocumentListIcon
+                        className={`h-8 w-8 mb-2 ${isPracticeColorDefault ? "text-green-500" : ""}`}
+                        style={isPracticeColorDefault ? undefined : { color: personalPracticeColor }}
+                      />
+                      {t("dayDetail.addPractice")}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* 練習セクション */}
-            {hasPracticeContent && (
-              <div className="mb-6">
-                <div className="space-y-3">
-                  {practiceItems.map((item) => (
-                    <PracticeDetails
-                      key={item.id}
-                      practiceId={item.id}
-                      place={item.place}
-                      isTeamPractice={item.type === "team_practice"}
-                      teamId={item.metadata?.team_id}
-                      teamName={
-                        isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team)
-                          ? item.metadata.team.name
-                          : undefined
-                      }
-                      onEdit={() => onEditItem?.(item)}
-                      onDelete={() => setShowDeleteConfirm({ id: item.id, type: item.type })}
-                      onAddPracticeLog={onAddPracticeLog}
-                      onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
-                      onEditPracticeLog={onEditPracticeLog}
-                      onDeletePracticeLog={onDeletePracticeLog}
-                      onShowAttendance={
-                        item.type === "team_practice" && item.metadata?.team_id
-                          ? () => handleShowAttendance(item.id, "practice", item.metadata!.team_id!)
-                          : undefined
-                      }
-                      color={getItemColor(item)}
-                    />
-                  ))}
-
-                  {uniquePracticeLogItems.map((item) => {
-                    // getPracticeIdFromItem で null を保証済みなので map 内で再チェック不要
-                    const practiceId = getPracticeIdFromItem(item) as string;
-                    const practiceLogUpdateKey = practiceLogUpdateKeyMap.get(practiceId) ?? practiceId;
-
-                    return (
+              {/* 練習セクション */}
+              {hasPracticeContent && (
+                <div>
+                  <div className="space-y-3">
+                    {practiceItems.map((item) => (
                       <PracticeDetails
                         key={item.id}
-                        practiceId={practiceId}
+                        practiceId={item.id}
                         place={item.place}
-                        practiceLogUpdateKey={practiceLogUpdateKey}
-                        isTeamPractice={
-                          isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false
-                        }
-                        teamId={
-                          isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined
-                        }
+                        isTeamPractice={item.type === "team_practice"}
+                        teamId={item.metadata?.team_id}
                         teamName={
                           isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team)
                             ? item.metadata.team.name
                             : undefined
                         }
-                        onEdit={(images) => {
-                          const practiceData = {
-                            id: practiceId,
-                            type: "practice" as const,
-                            date: item.date || "",
-                            title: item.title || t("practice.defaultTitle"),
-                            place: item.place || "",
-                            note: item.note || undefined,
-                            metadata: isPracticeMetadata(item.metadata)
-                              ? item.metadata.practice || {}
-                              : {},
-                            editData: { images },
-                          };
-                          onEditItem?.(practiceData);
-                        }}
-                        onDelete={() =>
-                          setShowDeleteConfirm({ id: practiceId, type: "practice" as const })
-                        }
+                        onEdit={() => onEditItem?.(item)}
+                        onDelete={() => setShowDeleteConfirm({ id: item.id, type: item.type })}
                         onAddPracticeLog={onAddPracticeLog}
                         onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
                         onEditPracticeLog={onEditPracticeLog}
                         onDeletePracticeLog={onDeletePracticeLog}
                         onShowAttendance={
-                          isPracticeMetadata(item.metadata) && item.metadata.team_id
-                            ? () =>
-                                handleShowAttendance(practiceId, "practice", item.metadata.team_id!)
+                          item.type === "team_practice" && item.metadata?.team_id
+                            ? () => handleShowAttendance(item.id, "practice", item.metadata!.team_id!)
                             : undefined
                         }
                         color={getItemColor(item)}
                       />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                    ))}
 
-            {/* 大会セクション */}
-            {hasRecordContent && (
-              <div className="mb-6">
-                <div className="space-y-3">
-                  {competitionItems.map((item) => (
-                    <CompetitionDetails
-                      key={item.id}
-                      competitionId={item.id}
-                      competitionName={item.title || t("competition.defaultName")}
-                      place={item.place}
-                      poolType={item.metadata?.competition?.pool_type}
-                      note={item.note}
-                      isTeamCompetition={item.type === "team_competition"}
-                      teamId={item.metadata?.team_id}
-                      teamName={
-                        isCompetitionMetadata(item.metadata) && isTeamInfo(item.metadata.team)
-                          ? item.metadata.team.name
-                          : undefined
-                      }
-                      onEdit={() => {
-                        onEditItem?.(item);
-                        onClose();
-                      }}
-                      onDelete={() =>
-                        openCompetitionDeleteConfirm(
-                          item.id,
-                          item.type as "competition" | "team_competition",
-                          item.type === "team_competition",
-                        )
-                      }
-                      onAddRecord={onAddRecord}
-                      onEditRecord={onEditRecord}
-                      onDeleteRecord={onDeleteRecord}
-                      onClose={onClose}
-                      onShowAttendance={
-                        item.type === "team_competition" && item.metadata?.team_id
-                          ? () =>
-                              handleShowAttendance(item.id, "competition", item.metadata!.team_id!)
-                          : undefined
-                      }
-                      color={getItemColor(item)}
-                    />
-                  ))}
-
-                  {entryItems
-                    .filter((item) => item.metadata?.competition?.id)
-                    .map((item) => {
-                      const competitionId = item.metadata?.competition?.id;
-                      if (!competitionId) return null;
+                    {uniquePracticeLogItems.map((item) => {
+                      // getPracticeIdFromItem で null を保証済みなので map 内で再チェック不要
+                      const practiceId = getPracticeIdFromItem(item) as string;
+                      const practiceLogUpdateKey = practiceLogUpdateKeyMap.get(practiceId) ?? practiceId;
 
                       return (
-                        <CompetitionWithEntry
+                        <PracticeDetails
                           key={item.id}
-                          entryId={item.id}
-                          competitionId={competitionId}
-                          competitionName={item.metadata?.competition?.title || t("competition.defaultName")}
+                          practiceId={practiceId}
                           place={item.place}
-                          note={item.note}
-                          styleId={item.metadata?.style?.id}
-                          styleName={item.metadata?.style?.name_jp || ""}
-                          entryTime={item.metadata?.entry_time}
-                          isTeamCompetition={!!item.metadata?.team_id}
-                          deletedEntryIds={deletedEntryIds}
-                          onAddRecord={onAddRecord}
-                          onEditCompetition={(images) => {
-                            const competitionData = {
-                              id: competitionId,
-                              type: "competition" as const,
+                          practiceLogUpdateKey={practiceLogUpdateKey}
+                          isTeamPractice={
+                            isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false
+                          }
+                          teamId={
+                            isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined
+                          }
+                          teamName={
+                            isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team)
+                              ? item.metadata.team.name
+                              : undefined
+                          }
+                          onEdit={(images) => {
+                            const practiceData = {
+                              id: practiceId,
+                              type: "practice" as const,
                               date: item.date || "",
-                              title: item.metadata?.competition?.title || "",
+                              title: item.title || t("practice.defaultTitle"),
                               place: item.place || "",
                               note: item.note || undefined,
-                              metadata: {
-                                competition: {
-                                  id: competitionId,
-                                  title: item.metadata?.competition?.title || "",
-                                  date: item.metadata?.competition?.date || item.date,
-                                  end_date: item.metadata?.competition?.end_date || null,
-                                  place: item.place || "",
-                                  // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
-                                  // jsonb_build_object('competition', to_jsonb(c.*), ...) で competitions
-                                  // 行全体をそのまま埋め込むため、実データには pool_type (DB上NOT NULL)
-                                  // が必ず入っている。JSON型保証が無いための防御的フォールバック。
-                                  pool_type: item.metadata?.competition?.pool_type || 0,
-                                },
-                              },
+                              metadata: isPracticeMetadata(item.metadata)
+                                ? item.metadata.practice || {}
+                                : {},
                               editData: { images },
                             };
-                            onEditItem?.(competitionData);
+                            onEditItem?.(practiceData);
                           }}
-                          onDeleteCompetition={() =>
-                            openCompetitionDeleteConfirm(
-                              competitionId,
-                              "competition",
-                              !!item.metadata?.team_id,
-                            )
+                          onDelete={() =>
+                            setShowDeleteConfirm({ id: practiceId, type: "practice" as const })
                           }
-                          onEditEntry={() => handleEditEntry(item, competitionId)}
-                          onDeleteEntry={(entryId) => {
-                            if (!entryId) return;
-                            setShowDeleteConfirm({ id: entryId, type: "entry", competitionId });
-                          }}
-                          onClose={onClose}
+                          onAddPracticeLog={onAddPracticeLog}
+                          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
+                          onEditPracticeLog={onEditPracticeLog}
+                          onDeletePracticeLog={onDeletePracticeLog}
+                          onShowAttendance={
+                            isPracticeMetadata(item.metadata) && item.metadata.team_id
+                              ? () =>
+                                  handleShowAttendance(practiceId, "practice", item.metadata.team_id!)
+                              : undefined
+                          }
                           color={getItemColor(item)}
                         />
                       );
                     })}
+                  </div>
+                </div>
+              )}
 
-                  {recordItems.map((record) => {
-                    const compId = record.metadata?.competition?.id || record.id;
-                    // metadata は calendar_view の JSONB 列で未型付けだが、'record' 型行は
-                    // SELECT ... jsonb_build_object(..., 'pool_type', c.pool_type, ...) FROM competitions c
-                    // WHERE EXISTS (records...) で c が必須の FROM 元になるため、実データには
-                    // pool_type (DB上NOT NULL) が必ず入っている。JSON型保証が無いための防御的フォールバック。
-                    const poolType = record.metadata?.pool_type || 0;
-
-                    return (
+              {/* 大会セクション */}
+              {hasRecordContent && (
+                <div>
+                  <div className="space-y-3">
+                    {competitionItems.map((item) => (
                       <CompetitionDetails
-                        key={compId}
-                        competitionId={compId}
-                        competitionName={record.title || t("competition.defaultName")}
-                        place={record.place}
-                        poolType={poolType}
-                        note={record.note || undefined}
-                        records={[record]}
-                        isTeamCompetition={record.metadata?.competition?.team_id != null}
-                        teamId={record.metadata?.competition?.team_id}
+                        key={item.id}
+                        competitionId={item.id}
+                        competitionName={item.title || t("competition.defaultName")}
+                        place={item.place}
+                        poolType={item.metadata?.competition?.pool_type}
+                        note={item.note}
+                        isTeamCompetition={item.type === "team_competition"}
+                        teamId={item.metadata?.team_id}
                         teamName={
-                          record.metadata?.competition?.team_id &&
-                          isRecordMetadata(record.metadata) &&
-                          isTeamInfo(record.metadata.team)
-                            ? record.metadata.team.name
+                          isCompetitionMetadata(item.metadata) && isTeamInfo(item.metadata.team)
+                            ? item.metadata.team.name
                             : undefined
                         }
-                        onEdit={(images) => {
-                          const competitionData = {
-                            id: compId,
-                            type: "competition" as const,
-                            date: record.date || "",
-                            title: record.title || "",
-                            place: record.place || "",
-                            note: record.note || undefined,
-                            metadata: {
-                              competition: {
-                                id: compId,
-                                title: record.title || "",
-                                date: record.metadata?.competition?.date || record.date,
-                                end_date: record.metadata?.competition?.end_date || null,
-                                place: record.place || "",
-                                pool_type: poolType,
-                              },
-                            },
-                            editData: { images },
-                          };
-                          onEditItem?.(competitionData);
+                        onEdit={() => {
+                          onEditItem?.(item);
+                          onClose();
                         }}
                         onDelete={() =>
                           openCompetitionDeleteConfirm(
-                            compId,
-                            "competition",
-                            record.metadata?.competition?.team_id != null,
+                            item.id,
+                            item.type as "competition" | "team_competition",
+                            item.type === "team_competition",
                           )
                         }
                         onAddRecord={onAddRecord}
@@ -634,38 +537,175 @@ export default function DayDetailModal({
                         onDeleteRecord={onDeleteRecord}
                         onClose={onClose}
                         onShowAttendance={
-                          record.metadata?.competition?.team_id
+                          item.type === "team_competition" && item.metadata?.team_id
                             ? () =>
-                                handleShowAttendance(
-                                  compId,
-                                  "competition",
-                                  record.metadata!.competition!.team_id!,
-                                )
+                                handleShowAttendance(item.id, "competition", item.metadata!.team_id!)
                             : undefined
                         }
-                        color={getItemColor(record)}
+                        color={getItemColor(item)}
                       />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                    ))}
 
-            {/* 記録追加ボタン */}
-            {entries.length > 0 && (
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">{t("dayDetail.addSection")}</h4>
+                    {entryItems
+                      .filter((item) => item.metadata?.competition?.id)
+                      .map((item) => {
+                        const competitionId = item.metadata?.competition?.id;
+                        if (!competitionId) return null;
+
+                        return (
+                          <CompetitionWithEntry
+                            key={item.id}
+                            entryId={item.id}
+                            competitionId={competitionId}
+                            competitionName={item.metadata?.competition?.title || t("competition.defaultName")}
+                            place={item.place}
+                            note={item.note}
+                            styleId={item.metadata?.style?.id}
+                            styleName={item.metadata?.style?.name_jp || ""}
+                            entryTime={item.metadata?.entry_time}
+                            isTeamCompetition={!!item.metadata?.team_id}
+                            deletedEntryIds={deletedEntryIds}
+                            onAddRecord={onAddRecord}
+                            onEditCompetition={(images) => {
+                              const competitionData = {
+                                id: competitionId,
+                                type: "competition" as const,
+                                date: item.date || "",
+                                title: item.metadata?.competition?.title || "",
+                                place: item.place || "",
+                                note: item.note || undefined,
+                                metadata: {
+                                  competition: {
+                                    id: competitionId,
+                                    title: item.metadata?.competition?.title || "",
+                                    date: item.metadata?.competition?.date || item.date,
+                                    end_date: item.metadata?.competition?.end_date || null,
+                                    place: item.place || "",
+                                    // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
+                                    // jsonb_build_object('competition', to_jsonb(c.*), ...) で competitions
+                                    // 行全体をそのまま埋め込むため、実データには pool_type (DB上NOT NULL)
+                                    // が必ず入っている。JSON型保証が無いための防御的フォールバック。
+                                    pool_type: item.metadata?.competition?.pool_type || 0,
+                                  },
+                                },
+                                editData: { images },
+                              };
+                              onEditItem?.(competitionData);
+                            }}
+                            onDeleteCompetition={() =>
+                              openCompetitionDeleteConfirm(
+                                competitionId,
+                                "competition",
+                                !!item.metadata?.team_id,
+                              )
+                            }
+                            onEditEntry={() => handleEditEntry(item, competitionId)}
+                            onDeleteEntry={(entryId) => {
+                              if (!entryId) return;
+                              setShowDeleteConfirm({ id: entryId, type: "entry", competitionId });
+                            }}
+                            onClose={onClose}
+                            color={getItemColor(item)}
+                          />
+                        );
+                      })}
+
+                    {recordItems.map((record) => {
+                      const compId = record.metadata?.competition?.id || record.id;
+                      // metadata は calendar_view の JSONB 列で未型付けだが、'record' 型行は
+                      // SELECT ... jsonb_build_object(..., 'pool_type', c.pool_type, ...) FROM competitions c
+                      // WHERE EXISTS (records...) で c が必須の FROM 元になるため、実データには
+                      // pool_type (DB上NOT NULL) が必ず入っている。JSON型保証が無いための防御的フォールバック。
+                      const poolType = record.metadata?.pool_type || 0;
+
+                      return (
+                        <CompetitionDetails
+                          key={compId}
+                          competitionId={compId}
+                          competitionName={record.title || t("competition.defaultName")}
+                          place={record.place}
+                          poolType={poolType}
+                          note={record.note || undefined}
+                          records={[record]}
+                          isTeamCompetition={record.metadata?.competition?.team_id != null}
+                          teamId={record.metadata?.competition?.team_id}
+                          teamName={
+                            record.metadata?.competition?.team_id &&
+                            isRecordMetadata(record.metadata) &&
+                            isTeamInfo(record.metadata.team)
+                              ? record.metadata.team.name
+                              : undefined
+                          }
+                          onEdit={(images) => {
+                            const competitionData = {
+                              id: compId,
+                              type: "competition" as const,
+                              date: record.date || "",
+                              title: record.title || "",
+                              place: record.place || "",
+                              note: record.note || undefined,
+                              metadata: {
+                                competition: {
+                                  id: compId,
+                                  title: record.title || "",
+                                  date: record.metadata?.competition?.date || record.date,
+                                  end_date: record.metadata?.competition?.end_date || null,
+                                  place: record.place || "",
+                                  pool_type: poolType,
+                                },
+                              },
+                              editData: { images },
+                            };
+                            onEditItem?.(competitionData);
+                          }}
+                          onDelete={() =>
+                            openCompetitionDeleteConfirm(
+                              compId,
+                              "competition",
+                              record.metadata?.competition?.team_id != null,
+                            )
+                          }
+                          onAddRecord={onAddRecord}
+                          onEditRecord={onEditRecord}
+                          onDeleteRecord={onDeleteRecord}
+                          onClose={onClose}
+                          onShowAttendance={
+                            record.metadata?.competition?.team_id
+                              ? () =>
+                                  handleShowAttendance(
+                                    compId,
+                                    "competition",
+                                    record.metadata!.competition!.team_id!,
+                                  )
+                              : undefined
+                          }
+                          color={getItemColor(record)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* フッター (固定): 記録が多い日でも、スクロールせずに追加できる。
+              ref を付けるラッパーは常に描画し、中身だけを出し分ける。 */}
+          <div ref={footerRef} className="shrink-0">
+            {!isEmpty && (
+              <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6">
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => onAddItem?.(date, "record")}
                     onMouseEnter={() => setIsRecordButtonHovered(true)}
                     onMouseLeave={() => setIsRecordButtonHovered(false)}
-                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex items-center justify-center whitespace-nowrap px-2 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={recordButtonHoverStyle}
                     data-testid="add-record-button"
                   >
                     <TrophyIcon
-                      className={`h-5 w-5 mr-2 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
+                      className={`h-5 w-5 mr-1.5 sm:mr-2 shrink-0 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
                       style={isCompetitionColorDefault ? undefined : { color: personalCompetitionColor }}
                     />
                     {t("dayDetail.addRecord")}
@@ -674,12 +714,12 @@ export default function DayDetailModal({
                     onClick={() => onAddItem?.(date, "practice")}
                     onMouseEnter={() => setIsPracticeButtonHovered(true)}
                     onMouseLeave={() => setIsPracticeButtonHovered(false)}
-                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex items-center justify-center whitespace-nowrap px-2 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                     style={practiceButtonHoverStyle}
                     data-testid="add-practice-button"
                   >
                     <ClipboardDocumentListIcon
-                      className={`h-5 w-5 mr-2 ${isPracticeColorDefault ? "text-green-500" : ""}`}
+                      className={`h-5 w-5 mr-1.5 sm:mr-2 shrink-0 ${isPracticeColorDefault ? "text-green-500" : ""}`}
                       style={isPracticeColorDefault ? undefined : { color: personalPracticeColor }}
                     />
                     {t("dayDetail.addPractice")}
@@ -687,17 +727,6 @@ export default function DayDetailModal({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* フッター */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onClose}
-            >
-              {t("dayDetail.close")}
-            </button>
           </div>
         </div>
       </div>

@@ -46,8 +46,13 @@ import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { DashboardNoticesSection } from "@/components/dashboard/DashboardNoticesSection";
 import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
-import { DashboardTopCarousel } from "@/components/dashboard/DashboardTopCarousel";
+import { LastPracticeCard } from "@/components/dashboard/LastPracticeCard";
+import { DashboardCardCarousel } from "@/components/dashboard/DashboardCardCarousel";
 import { FocusPointCard } from "@/components/focusPoints/FocusPointCard";
+import {
+  useDashboardInitialCard,
+  useLastPracticeQuery,
+} from "@apps/shared/hooks/queries/dashboard";
 import { DashboardBestTimesSection } from "@/components/dashboard/DashboardBestTimesSection";
 import {
   BottomDockHost,
@@ -104,6 +109,15 @@ export const DashboardScreen: React.FC = () => {
   const { teams = [], refetch: refetchTeams } = useTeamsQuery(supabase, {
     enableRealtime: false,
   });
+
+  // 前回の練習 (次の大会と並べるカード)。無ければカードを出さない。
+  // 並びは「次の大会 → 前回の練習」で固定し、今日・明日に練習があれば前回の練習を見せた状態で開く
+  // (大会が今日・明日なら次の大会)。どちらを見せるか決まるまでは前回の練習を並べない
+  const lastPracticeQuery = useLastPracticeQuery(supabase, user?.id);
+  const lastPractice = lastPracticeQuery.data;
+  const initialCard = useDashboardInitialCard(supabase, user?.id);
+  const cardsReady =
+    initialCard.ready && (lastPracticeQuery.data !== undefined || lastPracticeQuery.isError);
 
   // カレンダーデータ取得
   const {
@@ -329,6 +343,12 @@ export const DashboardScreen: React.FC = () => {
     handleDateClick(day);
   };
 
+  // 詳細モーダルで削除したあと、カレンダーに加えて次の大会・前回の練習のカードも取り直す
+  const refetchAfterDayChange = useCallback(() => {
+    void refetch();
+    void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+  }, [refetch, queryClient]);
+
   // DayDetailModal の編集/削除/追加ハンドラ（練習履歴/大会記録履歴タブと共通）
   const {
     isDeleting,
@@ -347,7 +367,7 @@ export const DashboardScreen: React.FC = () => {
     handleAddEntry,
     handleEditCompetition,
     handleDeleteCompetition,
-  } = useDayDetailHandlers(supabase, refetch);
+  } = useDayDetailHandlers(supabase, refetchAfterDayChange);
 
   // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
   if (isError && error && !hasCachedEntries) {
@@ -410,27 +430,28 @@ export const DashboardScreen: React.FC = () => {
             onRetry={() => refetch()}
           />
           <DashboardNoticesSection teams={teams} />
-          {/* 次の大会とフォーカスポイントは横スワイプのカルーセルで並べる */}
-          <DashboardTopCarousel
-            pages={[
-              {
-                key: "next-competition",
-                label: t("dashboard.nextCompetition.title"),
-                node: (
-                  <NextCompetitionCard
-                    hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
-                    onOpenDay={handleOpenCompetitionDay}
-                    style={styles.carouselCard}
-                  />
-                ),
-              },
-              {
-                key: "focus-points",
-                label: t("focusPoints.title"),
-                node: <FocusPointCard style={styles.carouselCard} />,
-              },
-            ]}
-          />
+          {/* 次の大会・前回の練習・フォーカスポイントを横に並べ、スワイプで切り替える。
+              前回の練習が無ければ出さない。最初に見せるカードは useDashboardInitialCard が選ぶ */}
+          <DashboardCardCarousel
+            initialIndex={lastPractice ? initialCard.initialIndex : 0}
+            ready={cardsReady}
+          >
+            <NextCompetitionCard
+              key="next-competition"
+              hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
+              onOpenDay={handleOpenCompetitionDay}
+              style={styles.carouselCard}
+            />
+            {lastPractice && (
+              <LastPracticeCard
+                key="last-practice"
+                practice={lastPractice}
+                onOpenDay={handleOpenCompetitionDay}
+                style={styles.carouselCard}
+              />
+            )}
+            <FocusPointCard key="focus-points" style={[styles.carouselCard, styles.focusPointCard]} />
+          </DashboardCardCarousel>
           <View style={styles.calendar}>
             <CalendarView
               currentDate={currentDate}
@@ -596,11 +617,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
-  // カルーセルの中のカード: 外側の余白はカルーセルが持ち、高さは並んだカードの高い方に揃える
   carouselCard: {
     flex: 1,
-    marginHorizontal: 0,
-    marginTop: 0,
+  },
+  // FocusPointCard は外側の余白を持たないので、カルーセルの他のカードと同じ余白をここで付ける
+  focusPointCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
   },
   calendar: {
     marginTop: 12,

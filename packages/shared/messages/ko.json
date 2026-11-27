@@ -163,6 +163,7 @@
     },
     "upload": {
       "imageLabel": "이미지",
+      "imageCount": "{current} / {max}장",
       "imageOnlyError": "이미지 파일을 선택해 주세요",
       "imageSizeError": "이미지 크기는 {maxMb}MB 이하로 해 주세요",
       "imageLoadFailed": "이미지를 불러오지 못했습니다",
@@ -1128,6 +1129,16 @@
       "titleWithDate": "다음 대회 ({date})",
       "placeWithPool": "{place} ({pool})",
       "openGoal": "목표 {time} 상세 보기"
+    },
+    "lastPractice": {
+      "titleWithDate": "지난 연습 ({date})",
+      "average": "평균 {time}",
+      "openDay": "지난 연습 ({date}) 상세 보기"
+    },
+    "cardCarousel": {
+      "previous": "이전 카드",
+      "next": "다음 카드",
+      "goTo": "{index}번째 카드 보기"
     },
     "bestTimes": {
       "loadError": "베스트 타임을 불러오지 못했습니다"

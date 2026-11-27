@@ -53,6 +53,9 @@ export const ChipScrollRow: React.FC<ChipScrollRowProps> = ({
   const [scrollX, setScrollX] = useState(0);
 
   const showRightFade = shouldShowRightFade({ containerWidth, contentWidth, scrollX });
+  // 収まっている間はスクロールさせない。外側が横スワイプ (ホームのカードの切り替えなど) のとき、
+  // 動かない行が指を受け取ってしまい、外側を動かせなくなるため (Android で確認)
+  const isScrollable = contentWidth > containerWidth + 1;
 
   return (
     <View
@@ -61,6 +64,7 @@ export const ChipScrollRow: React.FC<ChipScrollRowProps> = ({
     >
       <ScrollView
         horizontal
+        scrollEnabled={isScrollable}
         showsHorizontalScrollIndicator={false}
         style={style}
         contentContainerStyle={[styles.chipRow, contentContainerStyle]}

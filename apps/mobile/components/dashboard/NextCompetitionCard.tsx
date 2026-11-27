@@ -34,7 +34,7 @@ interface NextCompetitionCardProps {
   hasTeams: boolean;
   /** カード上部 (見出し・大会名・日数) を押したとき、その大会日の詳細を開く */
   onOpenDay: (date: string) => void;
-  /** カードの外側の余白などを置き場所から上書きする (ホームのカルーセルでは余白を外す) */
+  /** カルーセルで高さを揃えるときに { flex: 1 } を渡す */
   style?: StyleProp<ViewStyle>;
 }
 
@@ -44,11 +44,7 @@ interface NextCompetitionCardProps {
  * entries のときは種目ごとにベストと目標までの差を出す。目標が無い種目は「＋ 目標」に置き換え、
  * 押すとその大会・種目を選んだ状態で目標フォームを開く。
  */
-export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({
-  hasTeams,
-  onOpenDay,
-  style,
-}) => {
+export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTeams, onOpenDay, style }) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();

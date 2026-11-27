@@ -160,6 +160,7 @@
     },
     "upload": {
       "imageLabel": "Image",
+      "imageCount": "{current} / {max}",
       "imageOnlyError": "Please select an image file",
       "imageSizeError": "Image must be smaller than {maxMb}MB",
       "imageLoadFailed": "Failed to load image",
@@ -1125,6 +1126,16 @@
       "titleWithDate": "Next competition ({date})",
       "placeWithPool": "{place} ({pool})",
       "openGoal": "View goal {time}"
+    },
+    "lastPractice": {
+      "titleWithDate": "Last practice ({date})",
+      "average": "Avg {time}",
+      "openDay": "View last practice ({date})"
+    },
+    "cardCarousel": {
+      "previous": "Previous card",
+      "next": "Next card",
+      "goTo": "Show card {index}"
     },
     "bestTimes": {
       "loadError": "Couldn't load best times"
