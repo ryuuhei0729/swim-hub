@@ -140,6 +140,10 @@ vi.mock("@/hooks/useDayDetailHandlers", () => ({
 // DayDetailModal 配下 (バレル export 経由で eager import される) には
 // expo-image-picker に依存する ImageUploader が含まれる。既存のテスト
 // (RecordFormScreen.standalone.test.tsx 等) と同じ方針でスタブする。
+// カルーセルは jsdom の ScrollView (div) で scrollTo が無く動かないので、カードをそのまま並べる
+vi.mock("@/components/dashboard/DashboardCardCarousel", () => ({
+  DashboardCardCarousel: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock("@/components/shared/ImageUploader", () => ({
   ImageUploader: () => null,
 }));
