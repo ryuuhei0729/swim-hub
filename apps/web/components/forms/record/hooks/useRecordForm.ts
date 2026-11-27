@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { format, isValid } from "date-fns";
+import { useTranslations } from "next-intl";
 import type {
   RecordFormData,
   RecordSet,
@@ -61,6 +62,7 @@ export const useRecordForm = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const tPremium = useTranslations("forms.premium");
   const [splitTimeLimitError, setSplitTimeLimitError] = useState<string | null>(null);
   const isInitialChangeRef = useRef(true);
 
@@ -280,7 +282,9 @@ export const useRecordForm = ({
         const billableCount = countBillableSplitTimes(record);
         const validation = validateSplitTimeLimit(billableCount + 1, false);
         if (!validation.valid) {
-          setSplitTimeLimitError(validation.error || null);
+          setSplitTimeLimitError(
+            tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD }),
+          );
           return prev;
         }
         setSplitTimeLimitError(null);
@@ -299,7 +303,7 @@ export const useRecordForm = ({
         ),
       };
     });
-  }, [isPremium, countBillableSplitTimes]);
+  }, [isPremium, countBillableSplitTimes, tPremium]);
 
   const addSplitTimesEvery25m = useCallback(
     (recordId: string) => {
@@ -340,7 +344,7 @@ export const useRecordForm = ({
           const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
           if (maxNewBillable <= 0 && newBillable.length > 0) {
             setSplitTimeLimitError(
-              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+              tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD }),
             );
             // 最終タイムだけなら追加OK
             newSplitTimes = newSplitTimes.filter(
@@ -360,7 +364,7 @@ export const useRecordForm = ({
               return false;
             });
             setSplitTimeLimitError(
-              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+              tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD }),
             );
           } else {
             setSplitTimeLimitError(null);
@@ -375,7 +379,7 @@ export const useRecordForm = ({
         };
       });
     },
-    [styles, isPremium, countBillableSplitTimes],
+    [styles, isPremium, countBillableSplitTimes, tPremium],
   );
 
   const addSplitTimesEvery50m = useCallback(
@@ -416,7 +420,7 @@ export const useRecordForm = ({
           const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
           if (maxNewBillable <= 0 && newBillable.length > 0) {
             setSplitTimeLimitError(
-              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+              tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD }),
             );
             newSplitTimes = newSplitTimes.filter(
               (st) => typeof st.distance === "number" && st.distance === raceDistance,
@@ -434,7 +438,7 @@ export const useRecordForm = ({
               return false;
             });
             setSplitTimeLimitError(
-              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+              tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD }),
             );
           } else {
             setSplitTimeLimitError(null);
@@ -449,7 +453,7 @@ export const useRecordForm = ({
         };
       });
     },
-    [styles, isPremium, countBillableSplitTimes],
+    [styles, isPremium, countBillableSplitTimes, tPremium],
   );
 
   const updateSplitTime = useCallback(

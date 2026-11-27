@@ -14,6 +14,7 @@ interface TemplateDownloadProps {
 
 export function TemplateDownload({ loading, onLoadingChange, onError }: TemplateDownloadProps) {
   const t = useTranslations("teamsAdmin");
+  const tCalendar = useTranslations("dashboard.calendarView");
   const [selectedPracticeYear, setSelectedPracticeYear] = useState<number>(
     new Date().getFullYear(),
   );
@@ -64,9 +65,9 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
               onChange={(e) => setSelectedPracticeYear(Number(e.target.value))}
               className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
             >
-              <option value={2025}>2025年</option>
-              <option value={2026}>2026年</option>
-              <option value={2027}>2027年</option>
+              <option value={2025}>{tCalendar("yearUnit", { year: 2025 })}</option>
+              <option value={2026}>{tCalendar("yearUnit", { year: 2026 })}</option>
+              <option value={2027}>{tCalendar("yearUnit", { year: 2027 })}</option>
             </select>
             <button
               onClick={handleDownloadPracticeTemplate}
@@ -92,9 +93,9 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
               onChange={(e) => setSelectedCompetitionYear(Number(e.target.value))}
               className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             >
-              <option value={2025}>2025年</option>
-              <option value={2026}>2026年</option>
-              <option value={2027}>2027年</option>
+              <option value={2025}>{tCalendar("yearUnit", { year: 2025 })}</option>
+              <option value={2026}>{tCalendar("yearUnit", { year: 2026 })}</option>
+              <option value={2027}>{tCalendar("yearUnit", { year: 2027 })}</option>
             </select>
             <button
               onClick={handleDownloadCompetitionTemplate}

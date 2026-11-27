@@ -40,7 +40,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
             </span>
             {member.user_id === currentUserId && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                あなた
+                {t("you")}
               </span>
             )}
             {member.role === "admin" && <StarIcon className="h-4 w-4 text-yellow-500" />}
@@ -53,7 +53,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
             {member.users?.birthday &&
               isValid(parseISO(member.users.birthday)) && (
                 <p>
-                  生年月日:{" "}
+                  {t("birthdayLabel")}{" "}
                   {format(parseISO(member.users.birthday), "yyyy年MM月dd日", { locale: ja })}
                 </p>
               )}
@@ -64,7 +64,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
             <h4 className="text-sm font-semibold text-gray-900 mb-3">{t("bioTitle")}</h4>
             <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
               {member.users?.bio ||
-                `${member.users?.name || "Unknown User"}の自己紹介文です。まだ自己紹介が設定されていません。`}
+                t("noBio", { name: member.users?.name || "Unknown User" })}
             </p>
           </div>
         </div>

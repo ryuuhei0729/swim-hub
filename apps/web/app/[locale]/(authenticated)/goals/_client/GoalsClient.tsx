@@ -12,6 +12,7 @@ import GoalList from "../_components/GoalList";
 import GoalDetail from "../_components/GoalDetail";
 import GoalCreateModal from "../_components/GoalCreateModal";
 import GoalEditModal from "../_components/GoalEditModal";
+import FocusPointsCard from "@/components/focus-points/FocusPointsCard";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
 interface GoalsClientProps {
@@ -145,6 +146,10 @@ export default function GoalsClient({
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("page.title")}</h1>
         <p className="text-sm sm:text-base text-gray-600">{t("page.description")}</p>
       </div>
+
+      {/* フォーカスポイント (数字で測らない泳ぎの意識ポイント)。ダッシュボードと同じカードで、
+          こちらは身についたものの一覧も出す */}
+      <FocusPointsCard showMastered />
 
       {/* メインコンテンツ: リスト+詳細レイアウト */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">

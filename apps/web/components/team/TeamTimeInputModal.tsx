@@ -52,6 +52,9 @@ export default function TeamTimeInputModal({
   initialTimes,
 }: TeamTimeInputModalProps) {
   const t = useTranslations("teams.timeInputModal");
+  const tTeams = useTranslations("teams");
+  const tPractice = useTranslations("practice");
+  const tCommon = useTranslations("common");
   const [teamTimes, setTeamTimes] = useState<TeamTimeEntry[]>([]);
   // メンバーごとのクイック入力コンテキスト
   const [memberContexts, setMemberContexts] = useState<Record<string, QuickTimeContext>>({});
@@ -242,7 +245,7 @@ export default function TeamTimeInputModal({
               </button>
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              {setCount}セット × {repCount}本 = {setCount * repCount}本のタイムを入力してください
+              {t("description", { sets: setCount, reps: repCount, total: setCount * repCount })}
             </p>
           </div>
 
@@ -256,18 +259,18 @@ export default function TeamTimeInputModal({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      メンバー
+                      {tTeams("membersTimeTable.col.name")}
                     </th>
                     {Array.from({ length: setCount * repCount }, (_, i) => (
                       <th
                         key={i}
                         className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        {i + 1}本目
+                        {tPractice("modal.repLabel", { n: i + 1 })}
                       </th>
                     ))}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      平均
+                      {tTeams("timeInputModal.average")}
                     </th>
                   </tr>
                 </thead>
@@ -333,7 +336,7 @@ export default function TeamTimeInputModal({
               className="w-full sm:w-auto sm:ml-3"
               data-testid="team-time-input-save-button"
             >
-              保存
+              {tCommon("save")}
             </Button>
             <Button
               type="button"
@@ -342,7 +345,7 @@ export default function TeamTimeInputModal({
               className="mt-3 w-full sm:mt-0 sm:w-auto"
               data-testid="team-time-input-cancel-button"
             >
-              キャンセル
+              {tCommon("cancel")}
             </Button>
           </div>
         </div>

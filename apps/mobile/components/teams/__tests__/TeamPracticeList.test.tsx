@@ -669,7 +669,7 @@ describe("TeamPracticeList", () => {
 
     const NEW_ADD_LOG: Record<string, string> = {
       ja: "記録追加",
-      en: "Add Record",
+      en: "Add record",
       de: "Ergebnis hinzufügen",
       ko: "기록 추가",
       zh: "添加成绩",

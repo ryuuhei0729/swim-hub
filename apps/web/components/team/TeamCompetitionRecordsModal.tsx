@@ -576,7 +576,7 @@ export default function TeamCompetitionRecordsModal({
                         <div className="w-1 h-5 bg-blue-500 rounded-full" />
                         <h4 className="text-base font-semibold text-blue-800">{t("relay")}</h4>
                         <span className="text-sm text-blue-600">
-                          ({sortedRelayRecords.length}件)
+                          ({tRelay("resultCount", { count: sortedRelayRecords.length })})
                         </span>
                       </div>
 

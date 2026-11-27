@@ -60,6 +60,8 @@ vi.mock("@/screens/PaywallScreen", () => ({ PaywallScreen: () => null }));
 vi.mock("@/screens/GoalDetailScreen", () => ({ GoalDetailScreen: () => null }));
 vi.mock("@/screens/GoalFormScreen", () => ({ GoalFormScreen: () => null }));
 vi.mock("@/screens/MilestoneFormScreen", () => ({ MilestoneFormScreen: () => null }));
+// フォーカスポイントの追加・編集画面 (ホームと目標タブのカードから開く)
+vi.mock("@/screens/FocusPointFormScreen", () => ({ FocusPointFormScreen: () => null }));
 vi.mock("../TabNavigator", () => ({ TabNavigator: () => null }));
 
 interface CapturedScreenProps {
@@ -123,6 +125,19 @@ describe("MainStack — 登録された画面", () => {
     const options = screen?.options as { title?: string };
     expect(typeof options.title).toBe("string");
     expect(options.title).toBe("目標詳細");
+  });
+
+  it("[focus-points] FocusPointForm が1つ登録され、focusPointId の有無で追加・編集のタイトルを切り替える", () => {
+    const registered = stackMocks.screens.filter((s) => s.name === "FocusPointForm");
+    expect(registered).toHaveLength(1);
+    const options = registered[0]!.options as (a: {
+      route: { params?: Record<string, unknown> };
+    }) => { title?: string };
+    expect(options({ route: { params: undefined } }).title).toBe("フォーカスポイントを追加");
+    expect(options({ route: { params: {} } }).title).toBe("フォーカスポイントを追加");
+    expect(options({ route: { params: { focusPointId: "f1" } } }).title).toBe(
+      "フォーカスポイントを編集",
+    );
   });
 
   it("[goals-D3] GoalForm / MilestoneForm のタイトルは params の goalId / milestoneId で作成・編集を切り替える", () => {

@@ -23,7 +23,7 @@
         "competitionInfo": "比赛信息",
         "entryRegister": "报名登记",
         "teamDetail": "团队详情",
-        "bulkBestTime": "批量录入最好成绩",
+        "bulkBestTime": "批量录入最佳成绩",
         "goalDetail": "目标详情",
         "teamSettings": "团队设置",
         "teamAnnouncements": "公告",
@@ -49,9 +49,9 @@
       "游泳运动员",
       "大师组泳者"
     ],
-    "planFree": "免费方案",
-    "planPremiumMonthly": "Premium 方案（月付）",
-    "planPremiumYearly": "Premium 方案（年付）"
+    "planFree": "免费套餐",
+    "planPremiumMonthly": "Premium 套餐（月付）",
+    "planPremiumYearly": "Premium 套餐（年付）"
   },
   "common": {
     "appName": "SwimHub",
@@ -140,14 +140,21 @@
     },
     "pagination": {
       "prev": "上一页",
-      "next": "下一页"
+      "next": "下一页",
+      "summary": "第 {start}–{end} 条，共 {total} 条"
     },
     "errorBoundary": {
       "title": "发生错误",
       "unknownError": "未知错误",
       "retry": "重试",
       "reload": "重新加载页面",
-      "helpText": "如果问题仍未解决，请尝试重新加载页面或联系客服。"
+      "helpText": "如果问题仍未解决，请尝试重新加载页面或联系客服。",
+      "appDescriptionLine1": "很抱歉，发生了意外错误。",
+      "appDescriptionLine2": "请重新加载页面，或稍后再试。",
+      "devDetails": "错误详情（开发模式）",
+      "backToDashboard": "返回仪表盘",
+      "supportHint": "如果问题仍然存在，请联系<link>客服</link>。",
+      "supportHintWithCode": "如果问题仍然存在，请提供错误代码 <chip>{code}</chip> 并联系<link>客服</link>。"
     },
     "video": {
       "loading": "视频加载中...",
@@ -199,7 +206,7 @@
       "videoTapToPlay": "点击播放",
       "videoReplace": "替换",
       "cameraPermissionDenied": "未允许访问相机。请在“设置”应用中开启权限。",
-      "mediaPermissionDenied": "未允许访问照片库。请在“设置”应用中开启权限。"
+      "mediaPermissionDenied": "未允许访问相册。请在“设置”应用中开启权限。"
     },
     "datePicker": {
       "placeholder": "选择日期",
@@ -261,7 +268,9 @@
       "cancelPending": "取消",
       "deleteVideo": "删除视频",
       "addVideo": "添加视频",
-      "deleteVideoAriaLabel": "删除视频"
+      "deleteVideoAriaLabel": "删除视频",
+      "selectForUser": "选择 {name} 的视频",
+      "selectDescription": "选择视频文件后即可编辑和预览"
     },
     "videoPlayer": {
       "loading": "视频加载中...",
@@ -292,8 +301,9 @@
       "share": "分享",
       "competitionTitle": "分享成绩",
       "practiceTitle": "分享训练菜单",
-      "competitionShareText": "【Swimhub】\n我分享了比赛记录！\n\n用游泳记录管理应用「SwimHub」来管理你的成绩吧！\nhttps://swim-hub.app",
-      "practiceShareText": "【Swimhub】\n我分享了训练记录！\n\n用游泳记录管理应用「SwimHub」来记录你的训练吧！\nhttps://swim-hub.app"
+      "competitionShareText": "【SwimHub】\n我分享了比赛记录！\n\n用游泳记录管理应用“SwimHub”来管理你的成绩吧！\nhttps://swim-hub.app",
+      "practiceShareText": "【SwimHub】\n我分享了训练记录！\n\n用游泳记录管理应用“SwimHub”来记录你的训练吧！\nhttps://swim-hub.app",
+      "splitHeader": "分段"
     },
     "discardTitle": "输入内容尚未保存",
     "discardMessage": "输入内容尚未保存。仍要关闭吗？",
@@ -323,7 +333,7 @@
     "practice": "训练记录",
     "competition": "比赛记录",
     "proxy": "代录入",
-    "pricing": "价格方案",
+    "pricing": "套餐价格",
     "signup": "免费注册",
     "login": "登录",
     "logout": "退出登录",
@@ -357,9 +367,9 @@
       "feature1Item3": "支持按标签筛选",
       "feature2Title": "记录比赛成绩",
       "feature2Badge": "功能 2",
-      "feature2Desc": "记录项目、成绩、长池/短池、分段成绩等。最好成绩表也会随记录自动更新，短池/长池、有无接力交接都会体现在数据中。",
-      "feature2Item1": "根据分段成绩自动计算每趟",
-      "feature2Item2": "最好成绩表自动更新",
+      "feature2Desc": "记录项目、成绩、长池/短池、分段成绩等。最佳成绩表也会随记录自动更新，短池/长池、有无接力交接都会体现在数据中。",
+      "feature2Item1": "根据分段成绩自动计算每段用时",
+      "feature2Item2": "最佳成绩表自动更新",
       "feature2Item3": "还可管理比赛报名",
       "feature3Title": "教练或管理员可代为录入记录",
       "feature3Badge": "功能 3",
@@ -379,12 +389,12 @@
     },
     "pricing": {
       "title": "价格表",
-      "subtitle": "简洁的两种方案。可先免费开始使用。",
-      "viewDetail": "查看价格方案详情"
+      "subtitle": "两种简单套餐。可先免费开始使用。",
+      "viewDetail": "查看套餐价格详情"
     },
     "cta": {
       "title": "立即开始记录",
-      "subtitle": "免费创建账号，即刻上手使用。",
+      "subtitle": "免费创建账户，即刻上手使用。",
       "body": "即使没有加入团队也没关系。可以先以个人身份开始，之后再添加团队功能。"
     },
     "family": {
@@ -398,7 +408,7 @@
     },
     "footer": {
       "tagline": "为竞技游泳运动员打造的成绩管理平台",
-      "terms": "用户协议",
+      "terms": "使用条款",
       "privacy": "隐私政策",
       "about": "关于我们"
     },
@@ -412,15 +422,18 @@
       "nav": {
         "practice": "训练记录",
         "competition": "比赛记录",
-        "proxy": "代理输入",
-        "pricing": "价格方案"
+        "proxy": "代录入",
+        "pricing": "套餐价格",
+        "mainNavAria": "主导航",
+        "mobileNavAria": "移动端导航",
+        "openMenuAria": "打开菜单"
       },
       "hero": {
         "ghostText": "SWIMHUB",
         "h1Line1": "无论个人还是团队，",
         "h1Line2": "游泳记录管理",
         "h1Line3": "一站搞定。",
-        "lead": "训练记录、比赛成绩、代理输入、报名管理，全部集中管理。手机或浏览器，随时开始。",
+        "lead": "训练记录、比赛记录、代录入，到报名收集，全部统一管理。手机和浏览器都能即刻开始。",
         "badge": "手机轻松管理团队",
         "cta": {
           "signup": "免费注册",
@@ -434,7 +447,9 @@
         "deviceCaption": "SwimHub App ◆ PC & Mobile",
         "h1Line3Blue": "一站搞定",
         "h1Line3Suffix": "。",
-        "downloadOn": "下载于"
+        "downloadOn": "下载于",
+        "altPc": "SwimHub 仪表盘界面（电脑端）",
+        "altMobile": "SwimHub 仪表盘界面（手机端）"
       },
       "marquee": {
         "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
@@ -442,33 +457,36 @@
       "features": {
         "f1": {
           "label": "Practice Log",
-          "title": "管理训练记录与时间",
-          "desc": "记录划臂周期、次数、组数和时间，积累训练历史。轻松制定下次训练目标。",
+          "title": "管理训练记录与成绩",
+          "desc": "记录出发间隔、趟数、组数和成绩，持续积累。让你更容易制定下次训练目标，比如多游一趟、把间隔缩短 5 秒、提高平均成绩等。",
           "items": [
-            "记录划臂周期、次数和组数",
-            "自动计算平均时间",
+            "记录出发间隔、趟数与组数",
+            "自动计算平均成绩",
             "按标签筛选"
-          ]
+          ],
+          "caption": "Practice — 训练记录"
         },
         "f2": {
           "label": "Race Result",
           "title": "记录比赛成绩",
-          "desc": "记录项目、时间、泳池长度及分段时间。最佳成绩表自动更新，短池/长池及接力均可记录。",
+          "desc": "记录项目、成绩、长池/短池、分段成绩等。最佳成绩表也会随记录自动更新，短池/长池、有无接力交接都会体现在数据中。",
           "items": [
-            "从中间时间自动计算分段",
+            "根据分段成绩自动计算每段用时",
             "自动更新最佳成绩表",
             "可管理比赛报名"
-          ]
+          ],
+          "caption": "Competition — 比赛记录"
         },
         "f3": {
           "label": "Team / Coach",
-          "title": "教练或管理员可代为输入记录",
+          "title": "教练或管理员可代为录入记录",
           "desc": "训练和比赛记录不仅限于运动员本人，教练或管理员可批量录入。记录始终与个人绑定，即使离队后也持续积累。",
           "items": [
             "教练/管理员可批量录入",
             "记录与个人绑定",
             "终身使用的应用"
-          ]
+          ],
+          "caption": "Team — 代理录入"
         },
         "introLabel": "Features",
         "introH2": "将记录转化为资产的三大功能"
@@ -476,14 +494,15 @@
       "scanner": {
         "label": "推荐功能 — Scanner",
         "h2": "用AI解析手写训练记录。",
-        "desc1": "训练结束后输入记录很麻烦？使用SwimHub Scanner，只需用手机拍摄手写练习表，AI即可自动读取并数字化。",
-        "desc2": "支持教练发放的练习表或自己的笔记，大幅减少手动输入工作量。",
-        "cta": "试用 SwimHub Scanner"
+        "desc1": "训练结束后输入记录很麻烦？使用SwimHub Scanner，只需用手机拍摄手写训练表，AI即可自动读取并数字化。",
+        "desc2": "支持教练发放的训练表或自己的笔记，大幅减少手动输入工作量。",
+        "cta": "试用 SwimHub Scanner",
+        "caption": "Scanner — 手写识别"
       },
       "pricing": {
         "label": "Pricing",
-        "h2": "价格方案",
-        "lead": "两个简单方案。免费开始。",
+        "h2": "套餐价格",
+        "lead": "两种简单套餐。免费开始。",
         "detailLink": "查看价格详情",
         "free": {
           "name": "Free",
@@ -491,8 +510,8 @@
           "note": "永久免费",
           "items": [
             "训练记录与比赛记录",
-            "分段时间：每次最多3个",
-            "训练时间：每日志最多18个",
+            "分段计时：每条记录最多 3 个",
+            "训练用时：每条训练日志最多 18 个",
             "图片上传（不含视频）"
           ],
           "cta": "免费开始"
@@ -501,11 +520,11 @@
           "name": "Premium",
           "price": "¥500",
           "badge": "7天免费试用",
-          "annualNote": "年付方案：¥5,000/年（节省2个月费用）",
+          "annualNote": "年付套餐：¥5,000/年（节省2个月费用）",
           "items": [
             "所有功能无限制",
-            "分段时间：无限制",
-            "训练时间：无限制",
+            "分段计时：无限制",
+            "训练用时：无限制",
             "图片和视频上传",
             "含7天免费试用"
           ],
@@ -519,7 +538,7 @@
         "timer": {
           "name": "SwimHub Timer",
           "tagline": "在视频上叠加计时",
-          "desc": "在游泳视频上叠加秒表播放，适合动作分析和圈速确认。",
+          "desc": "在游泳视频上叠加秒表播放，适合动作分析和分段确认。",
           "cta": "立即试用 →"
         },
         "scanner": {
@@ -537,7 +556,8 @@
       "footer": {
         "tagline": "专为竞技游泳运动员打造的记录管理平台",
         "copyright": "© 2025 SwimHub. All rights reserved.",
-        "slogan": "Records for Life"
+        "slogan": "Records for Life",
+        "navAria": "页脚导航"
       },
       "stopwatch": {
         "ariaLabel": "页面停留计时器"
@@ -714,16 +734,16 @@
     },
     "backToLogin": "返回登录页面",
     "crossLink": {
-      "noAccountPrompt": "还没有账号？",
+      "noAccountPrompt": "还没有账户？",
       "signupLink": "注册",
-      "haveAccountPrompt": "已有账号？",
+      "haveAccountPrompt": "已有账户？",
       "loginLink": "登录"
     },
     "logoutConfirmMessage": "确定要退出登录吗？",
     "redirecting": "跳转中...",
     "legal": {
       "agreePrefix": "继续即表示您同意我们的",
-      "termsOfService": "服务条款",
+      "termsOfService": "使用条款",
       "conjunction": "和",
       "privacyPolicy": "隐私政策",
       "agreeSuffix": "。"
@@ -746,10 +766,10 @@
     }
   },
   "pricing": {
-    "metaTitle": "价格方案 | SwimHub",
-    "metaDesc": "查看 SwimHub 的价格方案。免费方案即可使用基本功能。Premium 方案月付 ¥500、年付 ¥5,000，全部功能无限使用，并附 7 天免费试用。",
-    "ogDescription": "SwimHub 价格方案。免费起步，使用 Premium 解锁全部功能。月付 ¥500 / 年付 ¥5,000。",
-    "title": "价格方案",
+    "metaTitle": "套餐价格 | SwimHub",
+    "metaDesc": "查看 SwimHub 的套餐价格。免费套餐即可使用基本功能。Premium 套餐月付 ¥500、年付 ¥5,000，全部功能无限使用，并附 7 天免费试用。",
+    "ogDescription": "SwimHub 套餐价格。免费起步，使用 Premium 解锁全部功能。月付 ¥500 / 年付 ¥5,000。",
+    "title": "套餐价格",
     "subtitle": "先免费起步，按需升级到 Premium。7 天免费试用，体验全部功能。",
     "monthSuffix": "/月",
     "freePlan": {
@@ -759,7 +779,7 @@
       "feature2": "最佳成绩表",
       "feature3": "团队功能与目标管理",
       "feature4": "分段计时：每条记录最多 3 个",
-      "feature5": "练习用时：每条训练日志最多 18 个",
+      "feature5": "训练用时：每条训练日志最多 18 个",
       "feature6": "图片上传",
       "exclude1": "视频上传"
     },
@@ -771,7 +791,7 @@
       "startButton": "开始免费试用",
       "feature1": "全部功能无限使用",
       "feature2": "分段计时：无限",
-      "feature3": "练习用时：无限",
+      "feature3": "训练用时：无限",
       "feature4": "图片与视频上传",
       "feature5": "附 7 天免费试用"
     },
@@ -780,7 +800,7 @@
       "free": "Free",
       "premium": "Premium",
       "rowSplitTime": "分段计时",
-      "rowPracticeTime": "练习用时",
+      "rowPracticeTime": "训练用时",
       "rowImageUpload": "图片上传",
       "rowVideoUpload": "视频上传",
       "rowAiAnalysis": "AI 训练菜单分析",
@@ -799,7 +819,7 @@
       "rowTeam": "团队功能",
       "rowGoals": "目标管理",
       "rowSplitTime": "分段计时",
-      "rowPracticeTime": "练习用时",
+      "rowPracticeTime": "训练用时",
       "rowImageUpload": "图片上传",
       "rowVideoUpload": "视频上传",
       "rowScanner": "SwimHub Scanner 联动",
@@ -814,10 +834,10 @@
       "a1": "不会。7 天免费试用期间完全不收费。只要在试用结束前取消，便不会产生任何费用。",
       "q2": "年付与月付有什么区别？",
       "a2": "年付为 ¥5,000/年，相比月付（¥500/月 = ¥6,000/年）可节省两个月（¥1,000）。",
-      "q3": "之后可以更改方案吗？",
-      "a3": "可以。您随时都能升级或降级，并可在设置页面管理您的方案。",
+      "q3": "之后可以更改套餐吗？",
+      "a3": "可以。您随时都能升级或降级，并可在设置页面管理您的套餐。",
       "q4": "也可以使用 SwimHub Scanner 和 SwimHub Timer 吗？",
-      "a4": "可以。订阅 SwimHub Premium 方案后，SwimHub Scanner 与 SwimHub Timer 的付费功能也将通过统一订阅一并提供。"
+      "a4": "可以。订阅 SwimHub Premium 套餐后，SwimHub Scanner 与 SwimHub Timer 的付费功能也将通过统一订阅一并提供。"
     },
     "cta": {
       "title": "立即免费开始",
@@ -902,13 +922,13 @@
     "calendar": {
       "title": "日历",
       "today": "今天",
-      "prevMonth": "上一月",
-      "nextMonth": "下一月"
+      "prevMonth": "上个月",
+      "nextMonth": "下个月"
     },
     "announcements": {
       "title": "的通知",
       "adminRole": "管理员",
-      "unansweredAttendance": "有尚未回复出勤的活动。（{count}条）",
+      "unansweredAttendance": "有尚未回复出勤的活动（{count}个）",
       "unsubmittedEntry": "{name}（{date}）的报名尚未提交。"
     },
     "dayDetail": {
@@ -937,9 +957,9 @@
       "entryDeleteConfirmMessage": "确定删除该报名吗？\n此操作无法撤销。",
       "entryDeleteFailed": "删除失败",
       "deleteFailed": "删除失败",
-      "fieldStyle": "项目:",
-      "fieldEntryTime": "报名成绩:",
-      "fieldMemo": "备注:",
+      "fieldStyle": "项目：",
+      "fieldEntryTime": "报名成绩：",
+      "fieldMemo": "备注：",
       "addCompetitionRecord": "添加比赛记录",
       "recordStyleLabel": "项目",
       "recordTimeLabel": "成绩",
@@ -953,10 +973,10 @@
       "message": "确定要删除吗？",
       "confirm": "删除",
       "cancel": "取消",
-      "competitionRecordsWarning": "该大会关联的 {count} 条记录也将被删除。"
+      "competitionRecordsWarning": "该比赛关联的 {count} 条记录也将被删除。"
     },
     "calendarView": {
-      "title": "训练・记录日历",
+      "title": "训练与记录日历",
       "loadFailed": "数据加载失败",
       "noData": "无法获取日历数据。请检查网络连接后重试。",
       "refreshPage": "刷新页面",
@@ -970,7 +990,12 @@
       "addRecord": "添加记录",
       "moreItems": "+{count}条",
       "teamDefault": "团队",
-      "competitionDefault": "比赛"
+      "competitionDefault": "比赛",
+      "practiceDefault": "训练",
+      "teamPracticeDefault": "团队训练",
+      "practiceLogTitle": "{distance}m × {reps}",
+      "practiceLogTitleWithSets": "{distance}m × {reps} × {sets}组",
+      "moreItemsShort": "+{count}条"
     },
     "attendance": {
       "title": "出勤情况",
@@ -985,7 +1010,7 @@
       "statusCol": "状态",
       "noteCol": "备注",
       "unknownUser": "未知",
-      "changeButton": "更改出勤",
+      "changeButton": "更改出勤状态",
       "closeButton": "关闭"
     },
     "competition": {
@@ -1004,10 +1029,10 @@
     "entry": {
       "loading": "正在加载...",
       "notFound": "未找到报名信息",
-      "styleLabel": "项目:",
-      "entryLabel": "报名:",
-      "entryTimeLabel": "报名成绩:",
-      "memoLabel": "备注:",
+      "styleLabel": "项目：",
+      "entryLabel": "报名：",
+      "entryTimeLabel": "报名成绩：",
+      "memoLabel": "备注：",
       "entered": "已报名",
       "enteredNoRecord": "已报名（尚未登记记录）",
       "editCompetition": "编辑比赛",
@@ -1032,7 +1057,7 @@
     },
     "error": {
       "title": "发生错误",
-      "description": "加载仪表板时发生问题。",
+      "description": "加载仪表盘时发生问题。",
       "unknown": "未知错误"
     },
     "handlers": {
@@ -1045,7 +1070,7 @@
       "entrySubmitFailed": "报名提交失败",
       "competitionCreatedButImageFailed": "比赛已创建，但图片上传失败",
       "unknownStyle": "未知",
-      "styleAlreadyEntered": "项目「{name}」已报名",
+      "styleAlreadyEntered": "项目“{name}”已报名",
       "fetchCompetitionInfoFailed": "获取比赛信息失败",
       "competitionSaveBlockedUnresolved": "无法确认比赛信息，已中止保存。请稍后重试。",
       "competitionSaveBlockedDateInvalid": "无法确认日期的一致性，已中止保存。请检查开始日期和结束日期后重试。",
@@ -1057,7 +1082,7 @@
     },
     "notices": {
       "title": "通知",
-      "unansweredAttendance": "有未回复的出勤　{count}项",
+      "unansweredAttendance": "出勤未回复　{count}项",
       "todoCount": "待办 {count}",
       "teamTitle": "{teamName}的公告",
       "showAll": "显示全部（{count}）",
@@ -1120,12 +1145,12 @@
     "client": {
       "saveFailedWithVideo": "训练记录已保存，但视频上传失败。请从详情页面重新添加。",
       "saveFailed": "保存训练记录失败",
-      "saveError": "错误: {message}",
+      "saveError": "错误：{message}",
       "deleteConfirm": "确定删除该训练记录吗？",
       "deleteFailed": "删除失败",
       "practiceTitle": "训练",
       "viewDetailAriaLabel": "查看训练详情",
-      "viewDetailAriaLabelWithInfo": "查看练习详情({date} {place} {style})",
+      "viewDetailAriaLabelWithInfo": "查看训练详情({date} {place} {style})",
       "menuCount": "{count} 个菜单"
     },
     "modal": {
@@ -1146,26 +1171,27 @@
       "noPracticeMenus": "暂无训练菜单"
     },
     "page": {
-      "description": "记录并分析每日训练内容。可在仪表板日历中添加新的训练记录。",
+      "description": "记录并分析每日训练内容。可在仪表盘日历中添加新的训练记录。",
       "filterByTag": "按标签筛选",
       "clearFilter": "清除",
       "filteringWith": "正在按{n}个标签筛选",
       "emptyTitle": "暂无训练记录",
-      "emptyDesc": "可在仪表板日历中添加训练记录。",
-      "goToDashboard": "前往仪表板",
+      "emptyDesc": "可在仪表盘日历中添加训练记录。",
+      "goToDashboard": "前往仪表盘",
       "colPlace": "地点",
       "colStyle": "项目",
       "colTags": "标签",
-      "avgTimeLabel": "平均成绩:",
+      "avgTimeLabel": "平均成绩：",
       "share": "分享",
       "edit": "编辑",
       "delete": "删除",
       "deleting": "正在删除...",
       "distanceFormat": "{distance}m × {reps}趟 × {sets}组",
       "noMatchTitle": "没有符合条件的记录",
-      "noMatchDesc": "没有符合所选条件的练习记录。",
+      "noMatchDesc": "没有符合所选条件的训练记录。",
       "sortOptionDateDesc": "日期(从新到旧)",
-      "sortOptionDateAsc": "日期(从旧到新)"
+      "sortOptionDateAsc": "日期(从旧到新)",
+      "distanceFormatNoSets": "{distance}m × {reps}趟"
     },
     "details": {
       "badge": "训练记录",
@@ -1197,7 +1223,7 @@
       "IM": "IM"
     },
     "categories": {
-      "Swim": "游",
+      "Swim": "配合游",
       "Pull": "划手",
       "Kick": "打腿"
     },
@@ -1231,13 +1257,13 @@
       "timeInputTitle": "成绩录入",
       "timeInputNext": "下一个",
       "timeInputDone": "完成",
-      "timeInputHelpBody": "第1项请用非数字字符（. - : 等）分隔数字输入。\n例如：「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。\n\n从第2项开始，会自动填入上一项的十位数。只需连续输入「个位」「小数第1位」两个数字即可完成。\n例如：上一项是「31.2」时会自动填入「3」，接着输入「2」「1」就会变成「32.1」。\n十位数不对时可用退格键删除重新输入。",
+      "timeInputHelpBody": "第1趟请用非数字字符（. - : 等）分隔数字输入。\n例如：“1.23.4”→ 1:23.4、“2.00.00”→ 2:00.00、“31-2”→ 31.2、“1分12秒3”→ 1:12.3。\n\n从第2趟开始，会自动填入上一趟的十位数。只需连续输入“个位”“小数第1位”两个数字即可完成。\n例如：上一趟是“31.2”时会自动填入“3”，接着输入“2”“1”就会变成“32.1”。\n十位数不对时可用退格键删除重新输入。",
       "timeInputSubtitle": "请录入{setCount}组 × {repCount}趟的成绩",
       "setNumberLabel": "第{setNumber}组",
-      "setAverageDetail": "平均: {avg}（{count}趟）",
+      "setAverageDetail": "平均：{avg}（{count}趟）",
       "noInput": "未录入",
-      "overallAverage": "整体平均:",
-      "fastest": "最快:",
+      "overallAverage": "整体平均：",
+      "fastest": "最快：",
       "premiumLimited": "Premium 专享",
       "timeInputPlaceholder": "2.00.00",
       "reauthRequired": "需要认证，请重新登录。",
@@ -1387,11 +1413,11 @@
       "viewModeTime": "成绩",
       "viewModePoints": "得分",
       "edit": {
-        "tapHint": "点击空格输入成绩",
+        "tapHint": "点击空白格输入成绩",
         "relayModeHint": "正在输入接力交接成绩",
-        "currentBest": "当前最好成绩 {time}",
-        "noCurrentBest": "当前最好成绩：未登记",
-        "slowerThanBest": "比当前最好成绩慢（仍会作为记录保存）",
+        "currentBest": "当前最佳成绩 {time}",
+        "noCurrentBest": "当前最佳成绩：未登记",
+        "slowerThanBest": "比当前最佳成绩慢（仍会作为记录保存）",
         "addNote": "＋ 比赛名称·备注",
         "notePlaceholder": "比赛名称·备注",
         "clear": "清除",
@@ -1421,12 +1447,12 @@
         "juniorHigh": "初中",
         "highSchool": "高中",
         "university": "大学",
-        "general": "一般"
+        "general": "成年"
       },
       "compareMetricInfoAriaLabel": "什么是比较指标？",
-      "compareMetricInfo": "WA积分：World Aquatics（世界水上运动联合会）的官方积分制度，以世界纪录为基准的得分\n日本纪录基准：相对日本纪录的得分\n年龄段纪录基准：相对小学·初中·高中·大学·一般各年龄段纪录的得分",
+      "compareMetricInfo": "WA积分：World Aquatics（世界水上运动联合会）的官方积分制度，以世界纪录为基准的得分\n日本纪录基准：相对日本纪录的得分\n年龄段纪录基准：相对小学·初中·高中·大学·成年各年龄段纪录的得分",
       "pointsInfoAriaLabel": "得分的计算方法",
-      "pointsInfo": "与基准纪录同成绩为1000分。按「1000×(基准用时÷成绩)³」计算，因此不同项目和泳池长度之间也可比较。"
+      "pointsInfo": "成绩与基准纪录相同时为1000分。按“1000×(基准用时÷成绩)³”计算，因此不同项目和泳池长度之间也可比较。"
     },
     "error": {
       "title": "发生错误",
@@ -1445,7 +1471,7 @@
       "practiceTitle": "记录训练",
       "practiceDescription": "在仪表盘的“训练记录”中记录每日训练，可详细管理组次、距离和成绩。",
       "competitionTitle": "管理比赛记录",
-      "competitionDescription": "按比赛记录报名和成绩，可通过图表查看个人最佳成绩的变化趋势。",
+      "competitionDescription": "按比赛记录报名和成绩，可通过图表查看个人最好成绩的变化趋势。",
       "teamTitle": "加入团队",
       "teamDescription": "与教练和伙伴一起创建或加入团队，分享通知和记录，让团队共同成长。",
       "mypageTitle": "在我的页面查看",
@@ -1525,7 +1551,8 @@
       "saving": "保存中...",
       "nextButton": "下一步",
       "skipButton": "跳过",
-      "backButton": "返回"
+      "backButton": "返回",
+      "emailNameHint": "您输入的是电子邮件地址格式。请输入您的姓名（此步骤无法跳过）。"
     },
     "step3": {
       "title": "登记最佳成绩",
@@ -1599,7 +1626,7 @@
       "title": "SwimHub 服务一览",
       "currentBadge": "使用中",
       "swimhubDesc": "游泳团队的综合管理",
-      "timerDesc": "在视频上叠加成绩",
+      "timerDesc": "在视频上叠加计时",
       "scannerDesc": "用 AI 解析手写记录表"
     }
   },
@@ -1626,7 +1653,7 @@
     "support": {
       "title": "支持与常见问题",
       "metaTitle": "支持与常见问题 | SwimHub",
-      "metaDesc": "SwimHub 的支持信息和常见问题。涵盖账户、训练记录、比赛记录、团队功能、最佳成绩、数据管理、套餐方案等，解答你关于 SwimHub 的各种疑问。",
+      "metaDesc": "SwimHub 的支持信息和常见问题。涵盖账户、训练记录、比赛记录、团队功能、最佳成绩、数据管理、套餐价格等，解答你关于 SwimHub 的各种疑问。",
       "headerDescription": "整理了 SwimHub 的使用方法和常见问题。遇到困难时请查看此处。",
       "contactButton": "联系我们",
       "stillNotSolved": "仍未解决吗？",
@@ -1635,23 +1662,23 @@
   },
   "competition": {
     "header": {
-      "title": "比赛成绩",
+      "title": "比赛记录",
       "description": "管理和分析比赛中的成绩。"
     },
     "loading": "加载中...",
     "error": "发生错误",
     "errorPage": {
       "title": "发生错误",
-      "description": "加载比赛成绩页面时发生问题。",
+      "description": "加载比赛记录页面时发生问题。",
       "unknownError": "未知错误",
       "retry": "重试",
       "reload": "重新加载页面",
       "helpText": "如果问题仍未解决，请重新加载页面或联系客服。"
     },
     "client": {
-      "deleteConfirm": "要删除这条比赛成绩吗？",
+      "deleteConfirm": "要删除这条比赛记录吗？",
       "recordNotFound": "未找到成绩数据",
-      "viewDetailAriaLabel": "查看比赛成绩详情",
+      "viewDetailAriaLabel": "查看比赛记录详情",
       "competitionFallback": "比赛",
       "styleFallback": "成绩",
       "bulkInputLabel": "批量录入",
@@ -1665,10 +1692,10 @@
       "onlyRelay": "仅接力"
     },
     "empty": {
-      "noRecordsTitle": "暂无比赛成绩",
-      "noRecordsDesc": "创建你的第一条比赛成绩吧。",
+      "noRecordsTitle": "暂无比赛记录",
+      "noRecordsDesc": "创建你的第一条比赛记录吧。",
       "noMatchTitle": "没有符合条件的成绩",
-      "noMatchDesc": "未找到与所选条件匹配的比赛成绩。"
+      "noMatchDesc": "未找到与所选条件匹配的比赛记录。"
     },
     "table": {
       "date": "日期",
@@ -1688,14 +1715,14 @@
       "deleting": "删除中..."
     },
     "detail": {
-      "title": "比赛成绩详情",
-      "recordSection": "比赛成绩",
+      "title": "比赛记录详情",
+      "recordSection": "比赛记录",
       "share": "分享",
       "close": "关闭"
     },
     "mobile": {
       "loadingInfo": "正在加载比赛信息...",
-      "loading": "正在加载比赛成绩...",
+      "loading": "正在加载比赛记录...",
       "loadingData": "正在加载数据...",
       "recordLoading": "正在加载成绩...",
       "stylesLoading": "正在加载项目...",
@@ -1703,7 +1730,7 @@
       "notFound": "未找到比赛",
       "fetchFailed": "获取比赛信息失败",
       "competitionFetchFailed": "获取比赛信息失败",
-      "recordFetchFailed": "获取比赛成绩失败",
+      "recordFetchFailed": "获取比赛记录失败",
       "calendarSyncFailedTitle": "日历同步失败",
       "calendarSyncFailedMessage": "比赛信息已保存，但同步到日历失败。",
       "saveFailed": "保存失败",
@@ -1711,12 +1738,12 @@
       "noCompetitions": "暂无比赛",
       "selectCompetition": "选择比赛",
       "deleteConfirmTitle": "删除确认",
-      "deleteConfirmMessage": "要删除这条比赛成绩吗？\n此操作无法撤销。",
+      "deleteConfirmMessage": "要删除这条比赛记录吗？\n此操作无法撤销。",
       "deleteConfirmButton": "删除",
       "fallbackTitle": "比赛",
       "videoUploadFailedTitle": "视频上传失败",
       "videoUploadFailedSession": "视频上传失败：会话已失效。请重新登录。",
-      "videoUploadFailedSaved": "比赛成绩已保存，但视频上传失败。",
+      "videoUploadFailedSaved": "比赛记录已保存，但视频上传失败。",
       "imageProcessingFailedTitle": "警告",
       "imageProcessingFailed": "成绩已保存，但图片处理失败"
     },
@@ -1741,7 +1768,7 @@
       "tabRecord": "赛事记录",
       "daysLabel": "天数",
       "daysValue": "{count}天",
-      "endDatePreview": "结束日: {date}",
+      "endDatePreview": "结束日期：{date}",
       "decreaseDays": "减少天数",
       "increaseDays": "增加天数"
     },
@@ -1756,10 +1783,10 @@
       "memoLabel": "备注",
       "memoPlaceholder": "备注（可选）",
       "skipButton": "跳过",
-      "continueToRecord": "继续创建比赛成绩",
+      "continueToRecord": "继续创建比赛记录",
       "selectStyleRequired": "请选择项目",
       "addAtLeastOne": "请至少添加一项报名",
-      "duplicateStyle": "项目「{styleName}」已报名",
+      "duplicateStyle": "项目“{styleName}”已报名",
       "timeFormatInvalid": "成绩格式不正确（例如：1:23.45 或 83.45）",
       "stylesFetchFailed": "获取项目失败",
       "entryNotFound": "未找到报名",
@@ -1820,9 +1847,9 @@
       "pastDateBlocked": "该比赛日期已过，无法代为录入报名信息",
       "closedWarning": "报名已截止，但管理员仍可代为录入",
       "bestTimePrefillButton": "使用最佳成绩",
-      "bestTimePrefillButtonShort": "用最佳",
+      "bestTimePrefillButtonShort": "填入最佳",
       "bestTimePrefillBadge": "已自动填入最佳成绩",
-      "duplicateMemberStyle": "同一选手・项目的组合被输入了多次，请检查各行。",
+      "duplicateMemberStyle": "同一选手与项目的组合被输入了多次，请检查各行。",
       "confirmModal": {
         "title": "确认保存内容",
         "statusNew": "新增",
@@ -1839,7 +1866,7 @@
       "noValidRowsError": "请至少选择一个项目",
       "deleteConflictError": "{detail} 与待删除的项目重复。请先单独保存删除操作，然后再保存项目变更。",
       "saveFailedDuplicate": "保存失败。可能是由于项目重复导致的。请刷新页面确认最新状态后重试。",
-      "emptyState": "尚无报名信息。请点击“选择对象成员”添加。"
+      "emptyState": "尚无报名信息。请点击“选择目标成员”添加。"
     },
     "sortSheet": {
       "title": "排序",
@@ -1905,7 +1932,7 @@
       },
       "trialDaysRemaining": "试用剩余 {days} 天（至 {date}）",
       "nextRenewal": "下次续费日：{date}",
-      "cancelScheduled": "已计划取消（期间结束时将恢复为 Free）",
+      "cancelScheduled": "已预约取消（当前周期结束后恢复为 Free）",
       "pastDueBanner": {
         "title": "付款失败",
         "description": "请更新您的付款方式。若不更新，Premium 功能将被暂停。",
@@ -1937,23 +1964,23 @@
       "title": "Google 日历关联",
       "connectedBadge": "已关联",
       "disconnected": {
-        "description": "关联 Google 日历后，练习记录和比赛成绩将自动添加到日历中。",
+        "description": "关联 Google 日历后，训练记录和比赛成绩将自动添加到日历中。",
         "connectButton": "关联 Google 日历"
       },
       "connected": {
-        "syncPracticesLabel": "自动同步练习记录",
+        "syncPracticesLabel": "自动同步训练记录",
         "syncCompetitionsLabel": "自动同步比赛成绩"
       },
       "bulkSync": {
-        "description": "将已登记的练习记录和比赛成绩同步到 Google 日历。",
+        "description": "将已登记的训练记录和比赛成绩同步到 Google 日历。",
         "button": "同步现有数据",
         "syncing": "同步中...",
         "successTitle": "同步已完成",
-        "practicesSuccess": "练习记录：已同步 {count} 条",
+        "practicesSuccess": "训练记录：已同步 {count} 条",
         "competitionsSuccess": "比赛成绩：已同步 {count} 条",
-        "practicesNoneNeeded": "练习记录：无需同步（已同步）",
+        "practicesNoneNeeded": "训练记录：无需同步（已同步）",
         "competitionsNoneNeeded": "比赛成绩：无需同步（已同步）",
-        "errorCount": "错误：练习记录{practiceErrors}条，比赛成绩{competitionErrors}条"
+        "errorCount": "错误：训练记录{practiceErrors}条，比赛成绩{competitionErrors}条"
       },
       "disconnectButton": "解除关联",
       "confirmTitle": "确认",
@@ -1973,11 +2000,11 @@
     "iosCalendar": {
       "title": "iOS 日历关联",
       "connectedBadge": "已关联",
-      "disconnectedDescription": "关联 iOS 日历后，练习记录和比赛成绩将添加到设备的日历中。",
+      "disconnectedDescription": "关联 iOS 日历后，训练记录和比赛成绩将添加到设备的日历中。",
       "connectButton": "关联 iOS 日历",
-      "syncPracticesLabel": "自动同步练习记录",
+      "syncPracticesLabel": "自动同步训练记录",
       "syncCompetitionsLabel": "自动同步比赛成绩",
-      "connectedDescription": "创建或更新练习和比赛后，将自动反映到 iOS 日历中。",
+      "connectedDescription": "创建或更新训练和比赛后，将自动同步到 iOS 日历中。",
       "disconnectButton": "解除关联",
       "confirmTitle": "确认",
       "confirmDisconnect": "要解除 iOS 日历关联吗？",
@@ -1995,13 +2022,13 @@
     },
     "email": {
       "title": "邮箱地址",
-      "notRegistered": "未注册邮箱地址",
-      "registerButton": "注册",
+      "notRegistered": "未绑定邮箱地址",
+      "registerButton": "绑定",
       "changeButton": "更改",
       "modal": {
-        "registerTitle": "注册邮箱地址",
-        "registerLabel": "要注册的邮箱地址",
-        "registerSubmit": "注册",
+        "registerTitle": "绑定邮箱地址",
+        "registerLabel": "要绑定的邮箱地址",
+        "registerSubmit": "绑定",
         "changeTitle": "更改邮箱地址",
         "currentEmail": "当前邮箱地址：{email}",
         "currentEmailLabel": "当前邮箱地址：",
@@ -2012,7 +2039,7 @@
         "cancelButton": "取消",
         "closeButton": "关闭",
         "closeAriaLabel": "关闭对话框",
-        "registerAria": "注册邮箱地址",
+        "registerAria": "绑定邮箱地址",
         "changeAria": "更改邮箱地址",
         "cancelAriaLabel": "取消",
         "errors": {
@@ -2055,17 +2082,17 @@
     },
     "accountDelete": {
       "title": "删除账户",
-      "description": "删除账户后，所有个人数据（练习记录、比赛成绩、图片等）将被永久删除且无法恢复。团队的练习和比赛数据将保留在团队中。",
+      "description": "删除账户后，所有个人数据（训练记录、比赛成绩、图片等）将被永久删除且无法恢复。团队的训练和比赛数据将保留在团队中。",
       "deleteButton": "删除账户",
       "deleting": "删除中...",
       "deleteButtonAriaLabel": "删除账户",
       "deleteButtonAriaHint": "永久删除您的账户及所有数据",
       "authNotFound": "未找到认证信息。请重新登录。",
       "mobileConfirmTitle": "要删除账户吗？",
-      "mobileConfirmMessage": "此操作无法撤销。所有练习记录、比赛成绩、团队信息及图片数据将被永久删除。\n\n※团队的练习和比赛数据将保留在团队中。",
+      "mobileConfirmMessage": "此操作无法撤销。所有训练记录、比赛成绩、团队信息及图片数据将被永久删除。\n\n※团队的训练和比赛数据将保留在团队中。",
       "confirmDialog": {
         "title": "要永久删除账户吗？",
-        "message": "此操作无法撤销。所有练习记录、比赛成绩及图片数据将被永久删除。团队的练习和比赛数据将保留在团队中。",
+        "message": "此操作无法撤销。所有训练记录、比赛成绩及图片数据将被永久删除。团队的训练和比赛数据将保留在团队中。",
         "confirmLabel": "删除",
         "cancelLabel": "取消"
       },
@@ -2106,7 +2133,7 @@
     "page": {
       "title": "模板管理"
     },
-    "distanceFormat": "{distance}m × {reps}次 × {sets}组",
+    "distanceFormat": "{distance}m × {reps}趟 × {sets}组",
     "circleFormat": "出发间隔 {circle}",
     "list": {
       "savedCount": "已保存：{count}/{max}",
@@ -2128,7 +2155,7 @@
       "closeMenuAriaLabel": "关闭菜单",
       "deleteConfirm": {
         "title": "删除模板",
-        "message": "要删除「{name}」吗？此操作无法撤销。",
+        "message": "要删除“{name}”吗？此操作无法撤销。",
         "confirmLabel": "删除"
       },
       "deleteFailed": "删除模板失败"
@@ -2141,7 +2168,7 @@
       "styleLabel": "项目",
       "categoryLabel": "分类",
       "distanceLabel": "距离 (m)",
-      "repLabel": "次数",
+      "repLabel": "趟数",
       "setLabel": "组数",
       "circleLabel": "出发间隔",
       "circleMinUnit": "分",
@@ -2170,8 +2197,8 @@
   },
   "bulkBestTime": {
     "header": {
-      "title": "批量录入最好成绩",
-      "description": "可按项目直接录入最好成绩"
+      "title": "批量录入最佳成绩",
+      "description": "可按项目直接录入最佳成绩"
     },
     "tabs": {
       "fr": "自由泳",
@@ -2207,7 +2234,7 @@
     "returnToOnboarding": "返回引导设置",
     "tabsAriaLabel": "选择项目",
     "mobile": {
-      "description": "可添加项目，批量登记最好成绩。",
+      "description": "可添加项目，批量登记最佳成绩。",
       "successTitle": "登记完成",
       "addRelaying": "＋ 添加接力成绩",
       "hideRelaying": "隐藏接力成绩",
@@ -2235,8 +2262,8 @@
       "delete": "删除",
       "competitionFallback": "比赛",
       "styleFallback": "项目",
-      "competitionInfoUnavailable": "无大会信息",
-      "editUnavailableReason": "因缺少大会信息，无法编辑",
+      "competitionInfoUnavailable": "无比赛信息",
+      "editUnavailableReason": "因缺少比赛信息，无法编辑",
       "diffFromBest": "(最佳{diff})"
     },
     "detail": {
@@ -2340,18 +2367,18 @@
       "title": "目标组目标成绩计算",
       "autoFetchTitle": "自动获取信息",
       "targetLabel": "目标：",
-      "poolTypeLabel": "比赛泳道：",
+      "poolTypeLabel": "比赛泳池：",
       "ageLabel": "年龄：",
       "genderLabel": "性别：",
       "loading": "加载中…",
       "ageNotSetError": "尚未设定年龄。请在个人资料中设定。",
       "genderNotSetError": "尚未设定性别。请在个人资料中设定。",
       "profileSettingHint": "请在个人资料设置中输入出生日期。",
-      "practicePoolTypeLabel": "目标组实施泳道",
+      "practicePoolTypeLabel": "目标组训练泳池",
       "poolTypeShort": "短池 (25m)",
       "poolTypeLong": "长池 (50m)",
       "resultLabel": "目标组目标",
-      "resultDescription": "50m平均（50m×6组×3轮）",
+      "resultDescription": "50m平均（50m×6趟×3组）",
       "calculating": "计算中…",
       "warningText": "计算结果可能不切实际",
       "confirmButton": "使用该数值",
@@ -2362,7 +2389,7 @@
       "genderFemale": "女子",
       "ageUnit": "岁",
       "descriptionLinkText": "顺天堂大学游泳研究室的多元回归公式",
-      "descriptionBody": "据此反推为达成目标成绩，在目标组（50m×6组×3轮）中应游出的平均成绩。",
+      "descriptionBody": "据此反推为达成目标成绩，在目标组（50m×6趟×3组）中应游出的平均成绩。",
       "subjectiveNote": "※主观达成度（1～5级）固定按“3”进行计算。"
     },
     "reflection": {
@@ -2413,15 +2440,15 @@
         },
         "repsTime": {
           "label": "训练平均成绩目标",
-          "description": "将组数×轮数的平均成绩设为里程碑。推荐用于100m以上的项目"
+          "description": "将趟数×组数的平均成绩设为里程碑。推荐用于100m以上的项目"
         },
         "set": {
-          "label": "循环出发目标",
-          "description": "将按＠循环时间能完成的组数、轮数设为里程碑。推荐用于200m以上的项目"
+          "label": "出发间隔目标",
+          "description": "将按＠出发间隔能完成的趟数、组数设为里程碑。推荐用于200m以上的项目"
         },
         "practiceTime": {
-          "label": "训练时间目标",
-          "description": "将训练或计时测试中想达到的时间设为里程碑。增加组数和次数时按平均时间判定"
+          "label": "训练成绩目标",
+          "description": "将训练或计时测验中想游出的成绩设为里程碑。增加趟数×组数时按平均成绩判定"
         },
         "other": {
           "label": "其他",
@@ -2441,11 +2468,11 @@
       "targetTimeLabel": "目标成绩",
       "timeRequired": "请输入目标成绩",
       "timeInvalid": "请输入有效的成绩格式（例：1:14.28 或 74.28）",
-      "repsLabel": "组数",
-      "setsLabel": "轮数",
+      "repsLabel": "趟数",
+      "setsLabel": "组数",
       "averageTimeLabel": "平均目标成绩",
-      "circleMinLabel": "循环(分)",
-      "circleSecLabel": "循环(秒)",
+      "circleMinLabel": "出发间隔(分)",
+      "circleSecLabel": "出发间隔(秒)",
       "averageTimeRequired": "请输入平均目标成绩",
       "paramsInvalid": "有未填写或为0的项目，请输入1以上的值"
     },
@@ -2465,16 +2492,16 @@
     },
     "template": {
       "timeTrial": "计时测验",
-      "timeTrialDesc": "自动观测训练、比赛中的计时成绩",
+      "timeTrialDesc": "自动采集训练、比赛中的计时成绩",
       "goalSet": "目标组",
-      "goalSetDesc": "50m×6组×3轮（由100m目标成绩反推）"
+      "goalSetDesc": "50m×6趟×3组（由100m目标成绩反推）"
     },
     "milestoneSummary": {
       "time": "{distance}m：{time}",
-      "repsTime": "{distance}m × {reps}组 @{time} 平均",
-      "repsTimeWithSets": "{distance}m × {reps}组 × {sets}轮 @{time} 平均",
-      "set": "{distance}m × {reps}组（{circle}循环）完成",
-      "setWithSets": "{distance}m × {reps}组 × {sets}轮（{circle}循环）完成"
+      "repsTime": "{distance}m × {reps}趟 @{time} 平均",
+      "repsTimeWithSets": "{distance}m × {reps}趟 × {sets}组 @{time} 平均",
+      "set": "{distance}m × {reps}趟（间隔 {circle}）完成",
+      "setWithSets": "{distance}m × {reps}趟 × {sets}组（间隔 {circle}）完成"
     },
     "mobile": {
       "notFound": "未找到该目标",
@@ -2484,8 +2511,8 @@
     "achievementPrompt": {
       "title": "你是否已达成这个里程碑？",
       "confirm": "达成！",
-      "recordTime": "成绩: {time}",
-      "averageTime": "平均: {time}"
+      "recordTime": "成绩：{time}",
+      "averageTime": "平均：{time}"
     }
   },
   "teamMemberGoals": {
@@ -2516,6 +2543,14 @@
         "achieved": "已达成",
         "expired": "已过期"
       }
+    },
+    "focusPoints": {
+      "title": "重点意识",
+      "empty": "还没有重点意识",
+      "loadError": "无法加载重点意识",
+      "activeCount": "练习中 {count}",
+      "masteredTitle": "已掌握（{count}）",
+      "masteredOn": "{date} 已掌握"
     }
   },
   "teams": {
@@ -2563,7 +2598,7 @@
       "deleteConfirmText": "删除",
       "fallbackMemberName": "该成员",
       "unnamedMember": "未设置姓名",
-      "retiredMemberBadge": "已退出的成员",
+      "retiredMemberBadge": "已退出",
       "fallbackTeamName": "团队",
       "roleAdmin": "管理员",
       "roleMember": "成员",
@@ -2582,7 +2617,7 @@
       "announcementListCreateButton": "+ 创建公告",
       "announcementListEmpty": "暂无公告",
       "announcementListEmptyCreate": "创建公告",
-      "announcementPublishPeriod": "发布期间：{start} 〜 {end}",
+      "announcementPublishPeriod": "发布期间：{start} 至 {end}",
       "monthlyAttendance": {
         "statusOpen": "提交受理中",
         "statusClosed": "提交已截止",
@@ -2590,7 +2625,7 @@
         "noEvents": "本月没有活动"
       },
       "adminAttendance": {
-        "title": "出勤接收管理",
+        "title": "出勤受理管理",
         "statusOpen": "受理中",
         "statusClosed": "已截止",
         "empty": "没有即将到来的活动",
@@ -2599,7 +2634,7 @@
         "openButton": "开始受理",
         "closeButton": "截止受理",
         "confirmTitle": "确认",
-        "confirmOpen": "是否开始接受该活动的出勤申报？",
+        "confirmOpen": "是否开始受理该活动的出勤申报？",
         "confirmClose": "是否截止该活动的出勤申报？",
         "defaultPractice": "训练",
         "defaultCompetition": "比赛",
@@ -2616,12 +2651,12 @@
         "bulkChange": {
           "title": "批量修改出勤状态",
           "empty": "暂无活动",
-          "statusOpen": "报名中",
+          "statusOpen": "受理中",
           "statusClosed": "已截止",
           "statusUnset": "未设置",
           "competitionLabel": "（比赛）",
           "selectAll": "全选",
-          "openButton": "设为报名中",
+          "openButton": "设为受理中",
           "closedButton": "设为已截止"
         }
       },
@@ -2629,7 +2664,7 @@
         "title": "分组管理",
         "subtitle": "可按类别对成员进行分组",
         "emptyTitle": "还没有分组",
-        "emptyHint": "点击「添加」来创建类别和分组吧",
+        "emptyHint": "点击“添加”来创建类别和分组吧",
         "memberCount": "{count}名成员",
         "membersEmpty": "尚未登记成员",
         "groupCount": "（{count}个分组）",
@@ -2648,12 +2683,12 @@
         "modeTabPractice": "训练",
         "modeTabCompetition": "比赛",
         "resultErrorPrefix": "错误：{detail}",
-        "selectWeekdayAria": "选择本月所有{weekday}",
+        "selectWeekdayAria": "选择本月所有星期{weekday}",
         "legendExistingPractice": "已登记的训练",
         "legendExistingCompetition": "已登记的比赛",
         "legendSelected": "已选择",
         "legendNewCompetition": "要添加的比赛",
-        "calendarHintPractice": "点击日期进行选择。点击星期（日〜六）可一次选择本月所有该星期的日期。",
+        "calendarHintPractice": "点击日期进行选择。点击星期（日至六）可一次选择本月所有该星期的日期。",
         "calendarHintCompetition": "点击比赛的第一天即可添加。多日比赛请指定天数。",
         "selectedDays": "已选择 {count} 天",
         "clearSelection": "取消选择",
@@ -2661,10 +2696,10 @@
         "sameDayAsCompetition": "与比赛同一天",
         "sameDayAsCompetitionCount": "⚠ 与比赛同一天 {count} 天",
         "applyToAll": "应用于所选的全部 {count} 天",
-        "commonContent": "共通内容",
+        "commonContent": "通用内容",
         "perDayEdit": "按日期修改 ›",
         "perDayTitle": "按日期修改",
-        "perDayHint": "留空的项目将使用共通内容。",
+        "perDayHint": "留空的项目将使用通用内容。",
         "removeDay": "移除此日",
         "overrideNotice": "※ 有 {count} 天优先使用按日期设置的内容",
         "addMemo": "+ 备注",
@@ -2694,8 +2729,8 @@
       "groupDeleteFailed": "删除分组失败",
       "groupDuplicateError": "同一类别中已存在同名分组",
       "groupCreateFailedSimple": "创建失败",
-      "groupAlreadyExists": "「{name}」已存在",
-      "groupCreateError": "「{name}」：{message}",
+      "groupAlreadyExists": "“{name}”已存在",
+      "groupCreateError": "“{name}”：{message}",
       "groupMemberFetchFailed": "获取成员信息失败",
       "groupMemberAssignFailed": "分配成员失败",
       "memberListTitle": "成员",
@@ -2723,8 +2758,8 @@
       "attendanceSaveSuccessTitle": "保存完成",
       "attendanceSaveSuccessMessage": "已保存出勤信息",
       "attendanceSaveFailed": "保存出勤信息失败",
-      "attendanceUnanswered": "有未回答",
-      "attendanceAllAnswered": "全部已回答",
+      "attendanceUnanswered": "有未回复",
+      "attendanceAllAnswered": "已全部回复",
       "attendanceNotePlaceholder": "请输入备注（可选）",
       "attendanceSaveMonth": "统一保存{label}的内容",
       "bulkPracticeEmpty": "没有可登记的训练数据",
@@ -2739,7 +2774,7 @@
       "memberRemoveLoading": "正在删除...",
       "memberRemoveButton": "从团队中移除",
       "memberDetailTitle": "成员详情",
-      "memberRoleChangeMessage": "确定要将{name}的权限变更为「{role}」吗？",
+      "memberRoleChangeMessage": "确定要将{name}的权限变更为“{role}”吗？",
       "memberRemoveMessage": "确定要将{name}从团队中移除吗？\n此操作无法撤销。",
       "bestTimeSection": "Best Time",
       "youBadge": "你",
@@ -2747,13 +2782,13 @@
       "adminControlsTitle": "成员设置",
       "bestTimesEmpty": "暂无记录",
       "bestTimesEmptySubText": "该成员尚未登记任何记录",
-      "bestTimesIncludeRelaying": "含接力交接",
-      "bestTimesWaPointsToggle": "得分",
-      "bestTimesAnnotation": "※ L：长池，R：含接力交接",
+      "bestTimesIncludeRelaying": "含接力",
+      "bestTimesWaPointsToggle": "换算得分",
+      "bestTimesAnnotation": "※ L：长池，R：含接力",
       "groupDisplayLabel": "分组显示：",
       "groupAddAria": "添加分组",
       "groupConfirmTitle": "确认",
-      "groupDeleteConfirmMessage": "确定要删除「{name}」吗？\n分配到该分组的成员信息也将被删除。",
+      "groupDeleteConfirmMessage": "确定要删除“{name}”吗？\n分配到该分组的成员信息也将被删除。",
       "groupAddTitle": "添加分组",
       "groupEditTitle": "编辑分组",
       "groupCategoryPlaceholder": "例：年级、距离、S1",
@@ -2767,7 +2802,7 @@
       "groupCategoryNone": "无类别",
       "groupCategoryHint": "用于将同一分类的分组归类的名称",
       "groupNameLabel": "分组名称",
-      "groupNameMultiHint": "用逗号分隔可一次创建多个分组",
+      "groupNameMultiHint": "用半角逗号（,）分隔可一次创建多个分组",
       "uncategorized": "未分类",
       "expandAria": "展开",
       "collapseAria": "折叠",
@@ -2815,12 +2850,12 @@
       "pendingApproveConfirmMessage": "是否审批通过 {name}？",
       "pendingRejectConfirmTitle": "确认拒绝",
       "pendingRejectConfirmMessage": "是否拒绝 {name}？",
-      "pendingApproveFailed": "审批失败",
+      "pendingApproveFailed": "批准失败",
       "pendingRejectFailed": "拒绝失败",
       "pendingLoading": "正在加载待审批成员...",
       "pendingFetchFailed": "获取待审批成员失败",
       "teamPracticeList": {
-        "title": "团队训练 ({count}件)",
+        "title": "团队训练（{count}项）",
         "addButton": "添加训练",
         "empty": "暂无团队训练记录",
         "fetchFailed": "训练记录加载失败",
@@ -2830,7 +2865,7 @@
         "recordBulkButton": "代为录入成绩"
       },
       "teamCompetitionList": {
-        "title": "团队比赛 ({count}件)",
+        "title": "团队比赛（{count}项）",
         "addButton": "添加比赛",
         "empty": "暂无团队比赛",
         "fetchFailed": "比赛信息加载失败",
@@ -2852,36 +2887,36 @@
         "deleteConfirmMessage": "确定删除该报名吗？此操作无法撤销。",
         "deleteFailed": "删除报名失败",
         "title": "{title} 的报名",
-        "totalEntries": "报名总数: {count}",
-        "entryStatusLabel": "报名受理状态",
+        "totalEntries": "报名总数：{count}",
+        "entryStatusLabel": "报名状态",
         "statusBefore": "未开始",
-        "statusOpen": "受理中",
+        "statusOpen": "报名中",
         "statusClosed": "已截止",
         "selfEntryButton": "添加报名",
-        "confirmTitle": "更改受理状态",
-        "confirmBefore": "将报名受理状态更改为\"未开始\"吗？",
-        "confirmOpen": "将报名受理状态更改为\"受理中\"吗？",
-        "confirmClosed": "将报名受理状态更改为\"已截止\"吗？",
-        "changeStatusAria": "将受理状态更改为{status}",
-        "saveFailed": "更改受理状态失败",
+        "confirmTitle": "更改报名状态",
+        "confirmBefore": "确定将报名状态更改为“未开始”吗？",
+        "confirmOpen": "确定将报名状态更改为“报名中”吗？",
+        "confirmClosed": "确定将报名状态更改为“已截止”吗？",
+        "changeStatusAria": "将报名状态更改为{status}",
+        "saveFailed": "更改报名状态失败",
         "loading": "正在加载报名信息...",
         "fetchFailed": "获取报名信息失败",
         "emptyNoEntry": "暂无报名",
         "emptyOpenHint": "当前正在受理报名",
         "unknownStyle": "项目不明",
         "unknownUser": "未知用户",
-        "entryTimeLabel": "报名成绩:",
+        "entryTimeLabel": "报名成绩：",
         "close": "关闭",
         "pastDateNotice": "比赛日期已过，报名已自动截止。"
       },
-      "announcementDeleteFailed": "删除通知失败",
-      "attendanceConfirmEditAfterDeadline": "这将是在提交截止后的编辑（{dates}）。编辑时间将自动添加到备注中。要保存吗？",
+      "announcementDeleteFailed": "删除公告失败",
+      "attendanceConfirmEditAfterDeadline": "已过提交截止时间（{dates}）。编辑时间将自动添加到备注中。确定保存吗？",
       "attendanceStatusPresent": "出席",
       "attendanceStatusAbsent": "缺席",
       "attendanceStatusOther": "其他",
       "entryBulk": {
         "pageTitle": "代为录入报名",
-        "description": "选择选手，即可代为录入大会报名信息。",
+        "description": "选择选手，即可代为录入比赛报名信息。",
         "memberSelectTitle": "选择要报名的选手",
         "addMemberButton": "添加选手",
         "emptyMembersHint": "请添加选手后录入报名信息。",
@@ -2894,7 +2929,7 @@
         "memoLabel": "备注",
         "memoPlaceholder": "备注（可选）",
         "prefillButton": "使用最佳成绩",
-        "duplicateError": "同一选手・项目的行重复",
+        "duplicateError": "存在选手和项目均相同的重复行",
         "closedStatusWarning": "报名已截止，但管理员仍可代为录入。",
         "pastDateWarning": "由于已超过比赛日期，无法代为录入。",
         "saveButton": "批量保存",
@@ -2939,30 +2974,30 @@
         "goalsDescription": "每场比赛的目标和里程碑进度"
       },
       "attendanceTab": {
-        "summaryTitle": "正在接受的出勤",
+        "summaryTitle": "受理中的出勤",
         "unansweredCount": "未回复 {count}项",
         "allAnswered": "已全部回复",
         "savedToast": "已保存出勤",
         "statusChangedToast": "已将 {count} 项设为“{status}”",
         "closedTag": "已截止",
-        "empty": "没有即将到来的练习或比赛",
-        "rowAria": "查看 {date} {title} 的全员出勤",
+        "empty": "没有即将到来的训练或比赛",
+        "rowAria": "查看 {date} {title} 的全员出勤情况",
         "answerAria": "将 {title} 回复为“{status}”",
-        "statusPillAria": "更改 {title} 的接受状态（当前：{status}）",
+        "statusPillAria": "更改 {title} 的受理状态（当前：{status}）",
         "selectAria": "选择 {title}",
-        "adminHint": "点击右侧的接受状态即可更改",
+        "adminHint": "点击右侧的受理状态即可更改",
         "bulkChange": "批量更改",
         "bulkSelected": "已选择 {count}项",
-        "bulkToOpen": "设为接受中",
+        "bulkToOpen": "设为受理中",
         "bulkToClosed": "设为已截止",
         "statusHelpOpen": "成员可以回复",
         "statusHelpClosed": "截止回复。截止后更改回复时，备注中会添加编辑时间。日期过后会自动截止",
-        "statusSection": "接受状态",
+        "statusSection": "受理状态",
         "myAnswer": "你的出勤",
         "myAnswerHint": "点击即保存",
         "myAnswerHintClosed": "截止后的更改会在备注中添加编辑时间",
         "noteSave": "保存备注",
-        "everyone": "全员出勤",
+        "everyone": "全员出勤情况",
         "editMember": "更改",
         "editMemberAria": "更改 {name} 的出勤",
         "you": "你",
@@ -3049,7 +3084,7 @@
       "segmentSwimmer": "选手",
       "segmentNonSwimmer": "非选手",
       "infoAriaLabel": "关于非选手设置",
-      "infoText": "设为“非选手”后，该成员将在成员标签页的最佳成绩列表中折叠到底部的“非选手”分组，且不会出现在比赛报名和练习记录输入的候选名单中。出勤确认中仍会显示。",
+      "infoText": "设为“非选手”后，该成员将在成员标签页的最佳成绩列表中折叠到底部的“非选手”分组，且不会出现在比赛报名和训练记录输入的候选名单中。出勤确认中仍会显示。",
       "sectionToggle": "非选手（{count}）",
       "updateFailed": "非选手设置更新失败",
       "confirmTitle": "选手设置变更确认",
@@ -3106,7 +3141,9 @@
         "tapForDetails": "点击查看详情",
         "noRecords": "暂无登记记录",
         "addable": "可添加",
-        "viewRecordsAriaLabel": "查看{title}的记录"
+        "viewRecordsAriaLabel": "查看{title}的记录",
+        "entryCount": "报名：{count} 条",
+        "createdBy": "创建者："
       },
       "entryStatus": {
         "before": "报名前",
@@ -3158,7 +3195,7 @@
       "filter": {
         "style": "泳姿",
         "distance": "距离",
-        "poolType": "泳道类型",
+        "poolType": "泳池类型",
         "gender": "性别",
         "scope": "范围",
         "period": "期间",
@@ -3174,14 +3211,14 @@
         "allCompetitionsNote": "包含成员以其他团队或个人身份参赛的比赛成绩。"
       },
       "period": {
-        "allTime": "总计",
+        "allTime": "全部时间",
         "fiscalYear": "{year}年度",
         "fiscalYearOrEarlier": "{year}年度及以前",
         "fiscalYearNote": "选择年度后，未关联比赛的记录（批量登记）不会被计入。"
       },
       "aggregation": {
         "personalBest": "各自最佳",
-        "allRaces": "全部比赛"
+        "allRaces": "全部成绩"
       },
       "col": {
         "name": "成员",
@@ -3191,15 +3228,15 @@
       },
       "empty": {
         "noMatchTitle": "没有符合条件的成绩",
-        "noMatchBody": "未找到与所选泳姿、距离、泳道类型或性别匹配的成绩。请更改筛选条件。",
+        "noMatchBody": "未找到与所选泳姿、距离、泳池类型或性别匹配的成绩。请更改筛选条件。",
         "noRecordsTitle": "团队暂无比赛成绩",
         "noRecordsBody": "成员登记比赛成绩后，这里将显示排行榜。"
       },
       "error": "获取排行榜失败",
       "retry": "重试",
       "individualUnavailable": {
-        "fetchFailed": "泳姿主数据加载失败，无法显示个人项目排行。接力排行仍可使用。",
-        "empty": "未找到泳姿主数据，无法显示个人项目排行。接力排行仍可使用。"
+        "fetchFailed": "项目数据加载失败，无法显示个人项目排行。接力排行仍可使用。",
+        "empty": "未找到项目数据，无法显示个人项目排行。接力排行仍可使用。"
       },
       "loading": "正在加载...",
       "showMore": "显示更多",
@@ -3240,7 +3277,7 @@
         "noLegs": "该成绩未登记选手信息",
         "empty": {
           "noMatchTitle": "没有符合条件的接力成绩",
-          "noMatchBody": "未找到与所选类型、距离、泳道类型或性别组别匹配的接力成绩。请更改筛选条件。",
+          "noMatchBody": "未找到与所选类型、距离、泳池类型或性别组别匹配的接力成绩。请更改筛选条件。",
           "noRecordsTitle": "团队暂无接力成绩",
           "noRecordsBody": "在比赛成绩录入中登记接力项目后，这里将显示排行榜。"
         },
@@ -3278,11 +3315,11 @@
         "removing": "正在删除...",
         "removeFromTeam": "从团队中移除",
         "roleInfoAriaLabel": "关于管理员权限",
-        "roleInfoText": "管理员可以进行以下操作:\n- 批准加入申请\n- 变更成员的权限、变更选手身份、移除成员\n- 管理分组和公告\n- 创建训练/比赛安排并批量登记\n- 代为登记其他成员的出勤并设置出勤接收的开放/截止\n- 批量登记比赛报名\n- 变更团队设置及删除团队"
+        "roleInfoText": "管理员可以进行以下操作：\n- 批准加入申请\n- 变更成员的权限、变更选手身份、移除成员\n- 管理分组和公告\n- 创建训练/比赛安排并批量登记\n- 代为登记其他成员的出勤并设置出勤受理的截止\n- 批量登记比赛报名\n- 变更团队设置及删除团队"
       },
       "roleChange": {
         "title": "权限变更确认",
-        "message": "确定要将{name}的权限变更为「{role}」吗？",
+        "message": "确定要将{name}的权限变更为“{role}”吗？",
         "roleAdmin": "管理员",
         "roleUser": "用户",
         "cancel": "取消",
@@ -3307,7 +3344,7 @@
         "legend": {
           "longCourse": "L：长池",
           "relaying": "R：含接力",
-          "relayingExcludedFromWaPoints": "接力交接成绩不计入WA积分"
+          "relayingExcludedFromWaPoints": "接力成绩不计入WA积分"
         },
         "waPointsToggle": "换算为得分",
         "compareMetricLabel": "比较指标",
@@ -3323,12 +3360,12 @@
           "juniorHigh": "初中",
           "highSchool": "高中",
           "university": "大学",
-          "general": "一般"
+          "general": "成年"
         },
         "compareMetricInfoAriaLabel": "什么是比较指标？",
-        "compareMetricInfo": "WA积分：World Aquatics（世界水上运动联合会）的官方积分制度，以世界纪录为基准的得分\n日本纪录基准：相对日本纪录的得分\n年龄段纪录基准：相对小学·初中·高中·大学·一般各年龄段纪录的得分",
+        "compareMetricInfo": "WA积分：World Aquatics（世界泳联）的官方积分制度，以世界纪录为基准的得分\n日本纪录基准：相对日本纪录的得分\n年龄段纪录基准：相对小学·初中·高中·大学·成年各年龄段纪录的得分",
         "pointsInfoAriaLabel": "得分的计算方法",
-        "pointsInfo": "与基准纪录同成绩为1000分。按「1000×(基准用时÷成绩)³」计算，因此不同项目和泳池长度之间也可比较。"
+        "pointsInfo": "与基准纪录同成绩为1000分。按“1000×(基准用时÷成绩)³”计算，因此不同项目和泳池长度之间也可比较。"
       }
     },
     "attendance": {
@@ -3374,7 +3411,7 @@
     "waPointsCompare": {
       "buttonLabel": "按WA积分比较",
       "infoAriaLabel": "什么是WA积分？",
-      "infoTooltip": "WA积分是World Aquatics（世界游泳联合会）的官方积分制度。将世界纪录级别的基准时间设为1000分，按「1000×(基准时间÷成绩)³」计算。即使项目或泳池长度不同，也能比较游泳水平。",
+      "infoTooltip": "WA积分是World Aquatics（世界泳联）的官方积分制度。将世界纪录级别的基准时间设为1000分，按“1000×(基准时间÷成绩)³”计算。即使项目或泳池长度不同，也能比较游泳水平。",
       "modalTitle": "按WA积分比较",
       "rankLabel": "排名",
       "pointsLabel": "WA积分",
@@ -3409,7 +3446,7 @@
       "notePlaceholder": "请输入备注（可选）"
     },
     "monthDetail": {
-      "title": "按月出勤",
+      "title": "月度出勤",
       "close": "关闭",
       "saveButton": "保存",
       "saving": "正在保存...",
@@ -3423,7 +3460,7 @@
       "absent": "缺席",
       "late": "迟到",
       "early": "早退",
-      "unknown": "未回答"
+      "unknown": "未回复"
     },
     "attendanceStatusModal": {
       "title": "出勤状态",
@@ -3443,7 +3480,7 @@
     },
     "attendanceEditHook": {
       "saveError": "保存出勤信息失败",
-      "confirmEditAfterDeadline": "这将是在提交截止后的编辑（{dates}）。编辑时间将自动添加到备注中。要保存吗？",
+      "confirmEditAfterDeadline": "已过提交截止时间（{dates}）。编辑时间将自动添加到备注中。确定保存吗？",
       "authRequired": "需要身份验证"
     },
     "attendanceStatusHook": {
@@ -3458,7 +3495,7 @@
     "recentAttendanceHook": {
       "loadError": "获取近期出勤信息失败",
       "saveSuccess": "已保存",
-      "confirmEditAfterDeadline": "这将是在提交截止后的编辑（{date}）。编辑时间将自动添加到备注中。要保存吗？",
+      "confirmEditAfterDeadline": "已过提交截止时间（{date}）。编辑时间将自动添加到备注中。确定保存吗？",
       "authRequired": "需要身份验证",
       "saveError": "保存出勤信息失败"
     },
@@ -3508,7 +3545,7 @@
       "saving": "正在保存...",
       "deleteButton": "删除记录",
       "deleting": "正在删除...",
-      "freePlanLimitNotice": "免费方案的记录数量有上限",
+      "freePlanLimitNotice": "Free 套餐的记录数量有上限",
       "relayLabel": "接力项目",
       "zoneLabel": "区间分配",
       "description": "可按项目逐一输入成员的记录",
@@ -3519,15 +3556,15 @@
       "eventNumber": "项目 {n}",
       "selectMemberButton": "选择成员",
       "selectedMemberCount": "已选择{n}名",
-      "groupNumber": "第{n}组",
-      "addHeatButton": "添加第{n}组",
+      "groupNumber": "第{n}趟",
+      "addHeatButton": "添加第{n}趟",
       "noMembersSelected": "尚未选择成员",
       "removeMemberConfirmTitle": "确定要移除该选手吗？",
       "removeMemberConfirmMessage": "{name}已输入的数据将被删除。",
       "removeHeatConfirmTitle": "确定要删除该组吗？",
-      "removeHeatConfirmMessage": "第{n}组已输入的数据将被删除。",
-      "removeHeatButtonLabel": "删除第{n}组",
-      "relaySwimmerPlaceholder": "选择泳手",
+      "removeHeatConfirmMessage": "第{n}趟已输入的数据将被删除。",
+      "removeHeatButtonLabel": "删除第{n}趟",
+      "relaySwimmerPlaceholder": "选择选手",
       "totalTime": "总成绩",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "成绩",
@@ -3542,15 +3579,15 @@
       "videoSelect": "选择视频",
       "addEventButton": "添加项目",
       "cancelButton": "取消",
-      "memberSelectTitle": "选择目标成员",
+      "memberSelectTitle": "选择参赛成员",
       "selectAll": "全选",
       "selectAllToggle": "全选",
       "selectAllToggleGroup": "全选{group}",
       "clearSelection": "取消选择",
       "confirmSelection": "确定",
       "relayAllMembersRequired": "接力项目请选择全部4名成员",
-      "relayAllTimesRequired": "接力项目请输入所有泳手的成绩",
-      "relayTimeReversed": "累计成绩出现倒置。第{next}棒泳手的累计成绩应输入大于第{prev}棒泳手的值。",
+      "relayAllTimesRequired": "接力项目请输入所有选手的成绩",
+      "relayTimeReversed": "累计成绩出现倒置。第{next}棒选手的累计成绩应输入大于第{prev}棒选手的值。",
       "noRecordsError": "请至少输入一条记录",
       "saveFailed": "保存时发生错误。请重试。",
       "adminBadge": "管理员"
@@ -3560,7 +3597,7 @@
       "filledCountIndividual": "{n}人",
       "filledCountRelay": "{n}队",
       "emptyLabel": "未输入",
-      "entryCountLabel": "({n}人报名)"
+      "entryCountLabel": "（{n}人报名）"
     },
     "practiceForm": {
       "title": "添加训练记录",
@@ -3572,9 +3609,9 @@
       "createFailed": "创建团队训练记录失败",
       "dateLabel": "训练日期",
       "titleLabel": "训练标题",
-      "titlePlaceholder": "例：基础训练、短距离训练（留空时显示为「团队训练」）",
+      "titlePlaceholder": "例：基础训练、短距离训练（留空时显示为“团队训练”）",
       "placeLabel": "训练地点",
-      "placePlaceholder": "例：市营泳池、学校泳池",
+      "placePlaceholder": "例：市立泳池、学校泳池",
       "noteLabel": "备注",
       "notePlaceholder": "训练内容或感想等",
       "cancelButton": "取消",
@@ -3594,7 +3631,7 @@
       "updateFailed": "更新团队比赛失败",
       "deleteFailed": "删除团队比赛失败",
       "competitionNameLabel": "比赛名称",
-      "competitionNamePlaceholder": "例：省级比赛（留空时显示为「比赛」）",
+      "competitionNamePlaceholder": "例：省级比赛（留空时显示为“比赛”）",
       "startDateLabel": "开始日期",
       "endDateLabel": "结束日期",
       "endDateHelperText": "多日举办时",
@@ -3616,7 +3653,7 @@
       "practiceContentLabel": "训练内容",
       "memoLabel": "备注",
       "noTimeRecorded": "无成绩记录",
-      "setRepLabel": "第{rep}组",
+      "setRepLabel": "第{rep}趟",
       "setHeader": "第{set}组",
       "setAvgLabel": "第{set}组平均",
       "setAvgSingleLabel": "组平均",
@@ -3676,11 +3713,11 @@
       "statusChangeFailed": "状态变更失败"
     },
     "attendanceList": {
-      "outsidePeriod": "当前不在出勤提交期间内。请等待管理员将提交期间更改为「提交受理中」。",
+      "outsidePeriod": "当前未开放出勤提交。请等待管理员将状态更改为“提交受理中”。",
       "statsPresent": "出席",
       "statsAbsent": "缺席",
       "statsOther": "其他",
-      "statsPending": "未回答",
+      "statsPending": "未回复",
       "statsTotal": "合计",
       "colName": "姓名",
       "colStatus": "状态",
@@ -3688,7 +3725,7 @@
       "statusPresent": "出席",
       "statusAbsent": "缺席",
       "statusOther": "其他",
-      "statusPending": "未回答",
+      "statusPending": "未回复",
       "notePlaceholder": "请输入备注...",
       "saveButton": "保存",
       "cancelButton": "取消",
@@ -3726,13 +3763,15 @@
       "rejectConfirm": "确定要拒绝此加入申请吗？"
     },
     "timeInputModal": {
-      "titleWithMenu": "项目{menu}的团队成绩输入",
-      "titleDefault": "团队成绩输入"
+      "titleWithMenu": "菜单{menu}的团队成绩输入",
+      "titleDefault": "团队成绩输入",
+      "description": "{sets}组 × {reps}趟 = 请输入 {total} 个成绩",
+      "average": "平均"
     },
     "actions": {
       "joinFailed": "加入团队失败",
       "reactivateFailed": "重新激活成员资格失败",
-      "approveFailed": "审核成员资格失败",
+      "approveFailed": "批准成员资格失败",
       "rejectFailed": "拒绝成员资格失败"
     },
     "settingsTab": {
@@ -3750,7 +3789,7 @@
       "dangerZoneTitle": "危险操作",
       "leaveTeam": "退出团队",
       "leaveConfirmTitle": "要退出该团队吗？",
-      "leaveConfirmMessage": "你将退出“{name}”。该团队的训练、比赛和考勤将不再显示。",
+      "leaveConfirmMessage": "你将退出“{name}”。该团队的训练、比赛和出勤将不再显示。",
       "leaveFailed": "退出团队失败",
       "leaving": "正在退出...",
       "lastAdminCannotLeave": "你是最后一位管理员，无法退出。请先将其他成员设为管理员。",
@@ -3764,10 +3803,15 @@
         "teamNotFound": "未找到团队，可能已被删除。",
         "authRequired": "登录已过期，请重新登录。"
       },
-      "leaveDescription": "退出后，该团队的训练、比赛和考勤将不再显示。若要重新加入，需要邀请码。你本人的训练记录和比赛记录会保留。",
+      "leaveDescription": "退出后，该团队的训练、比赛和出勤将不再显示。若要重新加入，需要邀请码。你本人的训练记录和比赛记录会保留。",
       "leaveButton": "退出该团队",
       "deleteDescription": "删除团队将永久移除比赛、报名、公告和成员信息，且无法恢复。成员的训练记录和比赛记录会作为个人记录保留。",
       "deleteButton": "删除该团队"
+    },
+    "adminAttendanceHook": {
+      "loadEventsError": "无法获取活动信息",
+      "saveError": "保存出勤状态失败",
+      "bulkUpdateError": "批量更新失败"
     }
   },
   "teamsAdmin": {
@@ -3793,7 +3837,7 @@
     },
     "tabs": {
       "attendance": "出勤",
-      "announcements": "通知",
+      "announcements": "公告",
       "members": "成员",
       "groups": "分组",
       "practices": "训练",
@@ -3816,33 +3860,33 @@
       "editButton": "编辑"
     },
     "announcementList": {
-      "title": "通知",
+      "title": "公告",
       "createButton": "新建",
-      "empty": "暂无通知",
+      "empty": "暂无公告",
       "draftBadge": "草稿",
       "updatedAtLabel": "更新：",
       "editButton": "编辑",
       "deleteButton": "删除",
       "deleting": "删除中…",
-      "loadError": "加载通知失败",
+      "loadError": "加载公告失败",
       "retry": "重试",
       "showMore": "显示全文",
       "showLess": "收起",
       "deleteConfirm": {
-        "title": "删除通知",
-        "message": "确定要删除此通知吗？",
+        "title": "删除公告",
+        "message": "确定要删除此公告吗？",
         "confirmButton": "删除",
         "cancelButton": "取消"
       }
     },
     "announcementForm": {
-      "createTitle": "新建通知",
-      "editTitle": "编辑通知",
+      "createTitle": "新建公告",
+      "editTitle": "编辑公告",
       "closeButton": "关闭",
       "titleLabel": "标题",
-      "titlePlaceholder": "请输入通知标题",
+      "titlePlaceholder": "请输入公告标题",
       "contentLabel": "内容",
-      "contentPlaceholder": "请输入通知内容",
+      "contentPlaceholder": "请输入公告内容",
       "startAtLabel": "开始时间",
       "endAtLabel": "结束时间",
       "endAtPastError": "显示结束时间必须晚于当前时间",
@@ -3855,12 +3899,12 @@
       "authRequired": "需要登录认证"
     },
     "announcementDetail": {
-      "title": "通知详情",
+      "title": "公告详情",
       "editButton": "编辑",
       "deleteButton": "删除",
       "deleting": "删除中…",
       "closeButton": "关闭",
-      "loadError": "加载通知失败",
+      "loadError": "加载公告失败",
       "draftBadge": "草稿",
       "createdAtLabel": "创建：",
       "updatedAtLabel": "更新：",
@@ -3870,8 +3914,8 @@
       "noLimit": "无限制",
       "outOfPeriodWarning": "当前不在显示期间内",
       "deleteConfirm": {
-        "title": "删除通知",
-        "message": "确定要删除此通知吗？",
+        "title": "删除公告",
+        "message": "确定要删除此公告吗？",
         "confirmButton": "删除",
         "cancelButton": "取消"
       }
@@ -3897,21 +3941,22 @@
       "results": {
         "sectionTitle": "解析结果",
         "distanceLabel": "距离：",
-        "repsLabel": "次数：",
+        "repsLabel": "趟数：",
         "circleLabel": "出发间隔：",
         "col": {
           "no": "No",
           "member": "成员",
           "style": "项目",
           "average": "平均",
-          "repN": "第{n}次"
+          "repN": "第{n}趟"
         },
         "unselectedOption": "未选择",
         "alreadySelectedSuffix": " （已选择）",
         "unassignedWarning": "未分配的记录将被丢弃",
         "retryButton": "重新解析",
         "cancelButton": "取消",
-        "applyButton": "应用到表单"
+        "applyButton": "应用到表单",
+        "editTimeAria": "编辑 {no} 号第 {n} 趟的成绩"
       },
       "discardConfirm": {
         "title": "存在未分配的记录",
@@ -3941,11 +3986,11 @@
       "description": "可按类别将成员进行分组",
       "addButton": "添加分组",
       "emptyTitle": "暂无分组",
-      "emptyDescription": "点击「添加分组」来创建类别和分组吧",
+      "emptyDescription": "点击“添加分组”来创建类别和分组吧",
       "memberCount": "{count}人",
       "deleteConfirm": {
         "title": "删除分组",
-        "message": "确定要删除「{name}」吗？分组中已分配的成员信息也将被删除。",
+        "message": "确定要删除“{name}”吗？分组中已分配的成员信息也将被删除。",
         "confirmButton": "删除",
         "cancelButton": "取消"
       },
@@ -3954,7 +3999,7 @@
         "createFailed": "创建分组失败",
         "createFailedGeneric": "创建失败",
         "duplicateName": "同一类别中已存在同名分组",
-        "duplicateNameSpecific": "「{name}」已存在",
+        "duplicateNameSpecific": "“{name}”已存在",
         "updateFailed": "更新分组失败",
         "deleteFailed": "删除分组失败",
         "fetchMembersFailed": "获取成员信息失败",
@@ -3971,9 +4016,9 @@
       "categoryPlaceholder": "例如：年级、距离、S1",
       "categoryHint": "用于归类同一分类下分组的名称",
       "nameLabel": "分组名称",
-      "namePlaceholderCreate": "例如：短距离、长距离、中距离",
+      "namePlaceholderCreate": "例如：短距离,长距离,中距离",
       "namePlaceholderEdit": "例如：短距离",
-      "multipleHint": "用逗号分隔可一次创建多个分组",
+      "multipleHint": "用半角逗号（,）分隔可一次创建多个分组",
       "cancelButton": "取消",
       "saving": "保存中…",
       "updateButton": "更新",
@@ -4017,7 +4062,7 @@
       "deleteAriaLabel": "删除 {name}"
     },
     "eventListItem": {
-      "openButton": "报名中",
+      "openButton": "受理中",
       "closedButton": "已截止",
       "saveButton": "保存",
       "saving": "保存中…"
@@ -4025,11 +4070,11 @@
     "bulkChange": {
       "title": "批量修改出勤状态",
       "empty": "暂无活动",
-      "statusOpen": "报名中",
+      "statusOpen": "受理中",
       "statusClosed": "已截止",
       "statusUnset": "未设置",
       "competitionLabel": "（比赛）",
-      "openButton": "设为报名中",
+      "openButton": "设为受理中",
       "closedButton": "设为已截止"
     },
     "attendanceStatus": {
@@ -4086,13 +4131,15 @@
       "registerButton": "批量登记",
       "registering": "登记中…",
       "poolShort": "25m",
-      "poolLong": "50m"
+      "poolLong": "50m",
+      "typeData": "{type}数据",
+      "errorLocation": "{sheet} 工作表第 {row} 行"
     },
     "practiceLog": {
       "backButton": "返回训练列表",
-      "participantsSection": "对象用户",
+      "participantsSection": "参与成员",
       "timesSection": "录入成绩",
-      "addMenuButton": "添加项目",
+      "addMenuButton": "添加菜单",
       "addSplitButton": "添加分段成绩",
       "saveButton": "保存团队训练日志",
       "saving": "保存中…",
@@ -4106,11 +4153,11 @@
       "printButton": "打印记录表",
       "closeError": "关闭",
       "cancelButton": "取消",
-      "menuTitle": "项目 {index}",
+      "menuTitle": "菜单 {index}",
       "style1Label": "项目①",
       "style2Label": "项目②",
       "distanceLabel": "距离(m)",
-      "repsLabel": "次数",
+      "repsLabel": "趟数",
       "setsLabel": "组数",
       "circleMinLabel": "出发间隔(分)",
       "circleSecLabel": "出发间隔(秒)",
@@ -4121,14 +4168,14 @@
       "videoSelect": "选择视频",
       "tagLabel": "标签",
       "memoLabel": "备注",
-      "memoPlaceholder": "项目的详情或注意事项等",
-      "timeInputSummary": "{sets}组 × {reps}次 = 共 {total} 次成绩录入",
+      "memoPlaceholder": "菜单的详情或注意事项等",
+      "timeInputSummary": "{sets}组 × {reps}趟 = 共 {total} 趟成绩录入",
       "timeInputOptional": "（成绩录入为可选项）",
       "timeInputButton": "录入成绩",
       "recordedTimesTitle": "已记录的成绩",
-      "recordedCount": "已记录 {count} 次",
-      "setRepLabel": "第{set}组-第{rep}次",
-      "userSelectModalTitle": "选择对象用户",
+      "recordedCount": "已记录 {count} 趟",
+      "setRepLabel": "第{set}组-第{rep}趟",
+      "userSelectModalTitle": "选择参与成员",
       "selectAllButton": "全选",
       "selectPresentButton": "仅出席者（{count}名）",
       "deselectButton": "取消选择",
@@ -4138,8 +4185,8 @@
       "adminBadge": "管理员",
       "morePeopleCount": "+{count}名",
       "overwriteConfirm": {
-        "title": "处理已有项目",
-        "message": "已存在录入完成的项目。是否覆盖？点击「追加」将添加到现有项目之后。",
+        "title": "处理已有菜单",
+        "message": "已有录入的菜单。是否覆盖？点击“追加”将添加到现有菜单之后。",
         "confirmLabel": "覆盖",
         "cancelLabel": "取消",
         "tertiaryLabel": "追加"
@@ -4206,6 +4253,18 @@
     "common": {
       "close": "关闭",
       "copyTitle": "复制"
+    },
+    "bulkRegisterHook": {
+      "invalidFileType": "请选择 Excel 文件（.xlsx 或 .xls）",
+      "parseErrors": "发现 {count} 个错误。请查看预览。",
+      "unknownFormat": "无法识别文件格式。请使用“训练批量登记”或“比赛批量登记”模板。",
+      "readFailed": "读取文件失败",
+      "noData": "没有可登记的数据",
+      "confirmWithErrors": "存在 {count} 个错误。是否仅登记没有错误的数据？",
+      "successPractice": "已完成 {count} 条训练的登记",
+      "successCompetition": "已完成 {count} 场比赛的登记",
+      "partialFailure": "部分登记失败：{errors}",
+      "registerFailed": "批量登记失败"
     }
   },
   "paywallMobile": {
@@ -4250,7 +4309,7 @@
     "deleteFailed": "删除失败",
     "saveFailed": "保存失败",
     "videoUploadFailedTitle": "视频上传失败",
-    "videoUploadFailedSession": "视频上传失败: 会话已失效，请重新登录。",
+    "videoUploadFailedSession": "视频上传失败：会话已失效，请重新登录。",
     "videoUploadFailedSaved": "比赛记录已保存，但视频上传失败。",
     "imageProcessingFailedTitle": "警告",
     "imageProcessingFailed": "记录已保存，但图片处理失败",
@@ -4260,7 +4319,7 @@
     "poolTypeShortDetail": "短池 (25m)",
     "poolTypeLongDetail": "长池 (50m)",
     "filterAllStyles": "全部项目",
-    "entryTimeInfo": "报名成绩: {time}",
+    "entryTimeInfo": "报名成绩：{time}",
     "filterAllPeriods": "全部时期",
     "filterYearFormat": "{year}年度",
     "tabAll": "全部",
@@ -4283,7 +4342,7 @@
     "deleteButton": "删除",
     "deletingButton": "正在删除...",
     "bestTimeAria": "刷新个人最好成绩",
-    "bestTimeDiffAria": "比最好成绩慢 +{diff}",
+    "bestTimeDiffAria": "比最佳成绩慢 +{diff}",
     "dateUnknown": "日期不明",
     "unknownValue": "未知",
     "recordNumber": "记录 {index}",
@@ -4315,13 +4374,13 @@
       "timeRequired": "请输入成绩",
       "timePositive": "成绩请输入正数",
       "reactionTimeRange": "反应时间必须在-1.00至2.00秒之间",
-      "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
-      "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）",
+      "timeFormatInvalid": "成绩格式不正确（例如：1:23.45 或 31-2）",
+      "timeFormatInvalid2": "成绩格式不正确（例如：1:23.45 或 31-2）",
       "recordNumber": "记录 {n}",
       "sectionTitle": "赛事记录"
     },
     "lapTime": {
-      "raceLapTab": "分距 Lap",
+      "raceLapTab": "分距离 Lap",
       "allLapTab": "All Lap",
       "noSplits": "请输入分段成绩",
       "noStyle": "请选择项目",
@@ -4358,8 +4417,8 @@
           "description": "菜单·成绩"
         }
       },
-      "title_create": "登记练习记录",
-      "title_edit": "编辑练习记录",
+      "title_create": "登记训练记录",
+      "title_edit": "编辑训练记录",
       "subtitle_create": "创建 {date} 的训练计划",
       "subtitle_edit": "编辑 {date} 的训练计划",
       "date_label": "训练日期",
@@ -4406,7 +4465,7 @@
       "name_label": "比赛名称",
       "name_placeholder": "全国大赛、对抗赛",
       "place_label": "地点",
-      "pool_type_label": "泳道",
+      "pool_type_label": "泳池类型",
       "pool_short": "短池 (25m)",
       "pool_long": "长池 (50m)",
       "pool_short_abbrev": "短池",
@@ -4423,7 +4482,7 @@
       "cancel": "取消",
       "days_label": "天数",
       "days_unit": "天",
-      "end_date_preview": "结束日: {date}",
+      "end_date_preview": "结束日期：{date}",
       "days_decrease": "减少",
       "days_increase": "增加"
     },
@@ -4434,7 +4493,7 @@
       "saveAsTemplate": "保存为模板",
       "templateSaveTitle": "保存为模板",
       "templateNameLabel": "模板名称",
-      "templateNamePlaceholder": "例：100m × 10组 Fr",
+      "templateNamePlaceholder": "例：100m × 10趟 Fr",
       "cancel": "取消",
       "save": "保存",
       "saving": "保存中…",
@@ -4449,18 +4508,18 @@
       "style1Label": "项目①",
       "style2Label": "项目②",
       "distanceLabel": "距离(m)",
-      "repsLabel": "组数",
-      "setsLabel": "轮数",
-      "circleMinLabel": "循环(分)",
-      "circleSecLabel": "循环(秒)",
+      "repsLabel": "趟数",
+      "setsLabel": "组数",
+      "circleMinLabel": "出发间隔(分)",
+      "circleSecLabel": "出发间隔(秒)",
       "timeLabel": "训练成绩",
       "timeEdit": "编辑成绩（已登记 {count} 条）",
       "timeAdd": "输入成绩",
       "noteLabel": "备注",
       "notePlaceholder": "关于该菜单的备注",
       "timesHeader": "已登记成绩",
-      "setHeader": "第 {n} 轮",
-      "repHeader": "第 {n} 组",
+      "setHeader": "第 {n} 组",
+      "repHeader": "第 {n} 趟",
       "avgRow": "平均",
       "overallAvg": "总平均",
       "overallFastest": "总最快",
@@ -4471,17 +4530,17 @@
     "timeInput": {
       "title": "菜单 {n} 的成绩输入",
       "titleGeneric": "成绩输入",
-      "subtitle": "请输入 {sets} 轮 × {reps} 组的成绩",
-      "setHeader": "第 {n} 轮",
-      "repLabel": "第 {n} 组",
+      "subtitle": "请输入 {sets} 组 × {reps} 趟的成绩",
+      "setHeader": "第 {n} 组",
+      "repLabel": "第 {n} 趟",
       "average": "平均：",
       "notEntered": "未输入",
       "overallAvg": "总平均：",
       "save": "保存",
       "cancel": "取消",
       "helpTitle": "成绩输入技巧",
-      "helpBodyBasic": "用非数字字符（. - : 等）分隔数字进行输入。仅用小数点分隔也可以，因此只用数字键盘即可完成输入。例如：\"1.23.4\" → 1:23.4，\"2.00.00\" → 2:00.00，\"31-2\" → 31.2，\"1分12秒3\" → 1:12.3。",
-      "helpBody": "用非数字字符（. - : 等）分隔数字进行输入。仅用小数点分隔也可以，因此只用数字键盘即可完成输入。例如：\"1.23.4\" → 1:23.4，\"2.00.00\" → 2:00.00，\"31-2\" → 31.2，\"1分12秒3\" → 1:12.3。\n\n在前一格输入\"33-2\"后，下一格只需输入\"3-2\"即可自动补全为\"33.2\"（继承十位数字）。清空该格后继承将被重置。"
+      "helpBodyBasic": "用非数字字符（. - : 等）分隔数字进行输入。\n用“.”分隔最方便，只用数字键盘就能输入。\n例如：“1.23.4”→ 1:23.4，“2.00.00”→ 2:00.00，“31-2”→ 31.2，“1分12秒3”→ 1:12.3。",
+      "helpBody": "用非数字字符（. - : 等）分隔数字进行输入。\n用“.”分隔最方便，只用数字键盘就能输入。\n例如：“1.23.4”→ 1:23.4，“2.00.00”→ 2:00.00，“31-2”→ 31.2，“1分12秒3”→ 1:12.3。\n\n在前一格输入“33-2”后，下一格只需输入“3-2”即可自动补全为“33.2”（沿用十位数字）。清空该格后将不再沿用。"
     },
     "record": {
       "title_create": "添加记录",
@@ -4652,7 +4711,7 @@
       "submit": "加入团队"
     },
     "lapTime": {
-      "raceLapTab": "分距 Lap",
+      "raceLapTab": "按距离 Lap",
       "allLapTab": "All Lap",
       "noSplits": "请输入分段成绩",
       "noStyle": "请选择项目",
@@ -4683,7 +4742,7 @@
       "back": "上一步",
       "fieldRequired": "为必填项",
       "partialSaveError": "基本信息已保存。详细信息保存失败，请重试。",
-      "duplicateEntryStyle": "存在重复的泳姿，请修改各参赛项目的泳姿。",
+      "duplicateEntryStyle": "同一项目重复输入了多次，请更改项目。",
       "discardWarning": {
         "title": "输入内容尚未保存",
         "message": "输入内容尚未保存。仍要关闭吗？",
@@ -4701,8 +4760,8 @@
       "upgradeText": "升级到 Premium",
       "imageUpload": "添加图片为 Premium 会员专属功能",
       "videoUpload": "添加视频为 Premium 会员专属功能",
-      "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记",
-      "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记"
+      "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记。",
+      "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记。"
     },
     "itemTabs": {
       "removeConfirmTitle": "确定要删除{label}吗？",
@@ -4711,20 +4770,20 @@
   },
   "timeLevel": {
     "metaTitle": "游泳成绩等级测定 | SwimHub",
-    "metaDesc": "输入性别、泳道类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标查看你的游泳水平。",
+    "metaDesc": "输入性别、泳池类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标查看你的游泳水平。",
     "title": "游泳成绩等级测定",
-    "description": "输入性别、泳道类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标确认你的水平。",
+    "description": "输入性别、泳池类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标确认你的水平。",
     "genderLabel": "性别",
     "genderMale": "男性",
     "genderFemale": "女性",
-    "poolTypeLabel": "泳道类型",
+    "poolTypeLabel": "泳池类型",
     "styleLabel": "项目",
     "distanceLabel": "距离",
     "timeLabel": "成绩",
     "timePlaceholder": "2.00.00",
     "invalidTimeFormat": "成绩格式不正确（例如：1:23.45 或 83.45）",
     "emptyEnterTime": "请输入成绩",
-    "noStandardTime": "该项目・距离没有基准成绩",
+    "noStandardTime": "该项目和距离没有基准成绩",
     "lcmOnly": "仅支持长池（LCM）",
     "pointsUnit": "分",
     "baseTimeLabel": "基准成绩",
@@ -4735,11 +4794,11 @@
     },
     "tochu": {
       "title": "都中积分",
-      "note": "「都中积分」并非东京都中学校体育联盟的官方评分制度，而是SwimHub将都选拔赛的参赛标准成绩视为1000分独自换算的指标。"
+      "note": "“都中积分”并非东京都初中体育联盟的官方评分制度，而是 SwimHub 将东京都锦标赛的参赛标准成绩视为1000分自行换算的指标。"
     },
     "toko": {
       "title": "都高积分",
-      "note": "「都高积分」并非东京都高中体育联盟的官方评分制度，而是SwimHub将都高中大赛的出场限制成绩视为1000分独自换算的指标。"
+      "note": "“都高积分”并非东京都高中体育联盟的官方评分制度，而是 SwimHub 将东京都高中大赛的出场限制成绩视为1000分自行换算的指标。"
     }
   },
   "account": {
@@ -4750,7 +4809,7 @@
       "rows": {
         "plan": "套餐",
         "calendar": "日历",
-        "practiceLogTemplates": "练习日志模板",
+        "practiceLogTemplates": "训练日志模板",
         "security": "登录与安全"
       },
       "planValue": {
@@ -4779,9 +4838,9 @@
       "rows": {
         "plan": "套餐",
         "calendar": "日历",
-        "templates": "练习日志模板",
+        "templates": "训练日志模板",
         "security": "登录与安全",
-        "terms": "服务条款",
+        "terms": "使用条款",
         "privacy": "隐私政策",
         "logout": "退出登录"
       },
@@ -4796,10 +4855,48 @@
       },
       "sections": {
         "plan": "查看和更改订阅",
-        "calendar": "Google 日历同步与仪表板记录颜色",
-        "templates": "管理用于录入练习日志的模板",
+        "calendar": "Google 日历同步与仪表盘记录颜色",
+        "templates": "管理用于录入训练日志的模板",
         "security": "邮箱、密码、登录方式及删除账户"
-      }
+      },
+      "loadError": "加载账户页面时出现问题。"
+    }
+  },
+  "focusPoints": {
+    "title": "重点意识",
+    "count": "{count} / {max}",
+    "add": "＋ 添加",
+    "addAria": "添加重点意识",
+    "editAria": "编辑“{title}”",
+    "emptyTitle": "写下游泳时想注意的要点",
+    "emptyDescription": "例：右手入水再远一些 / 让踢腿与划手配合 / 保持髋部上浮",
+    "loadError": "无法加载重点意识",
+    "limitError": "重点意识最多同时{max}条。请先将其中一条标为“已掌握”或删除。",
+    "masteredTitle": "已掌握（{count}）",
+    "masteredOn": "{date} 已掌握",
+    "form": {
+      "createTitle": "添加重点意识",
+      "editTitle": "编辑重点意识",
+      "titleLabel": "要注意的点",
+      "titlePlaceholder": "例：右手入水再远一些",
+      "titleRequired": "请输入要注意的点",
+      "noteLabel": "备注（可选）",
+      "notePlaceholder": "教练说过的话、做得好时的诀窍等",
+      "create": "添加",
+      "save": "保存",
+      "cancel": "取消",
+      "saveFailed": "保存失败，请稍后重试",
+      "markMastered": "已掌握",
+      "reactivate": "重新练习",
+      "statusFailed": "更改失败，请稍后重试",
+      "delete": "删除",
+      "deleteConfirmTitle": "删除重点意识",
+      "deleteConfirmMessage": "将删除“{title}”。此操作无法撤销。",
+      "deleteFailed": "删除失败，请稍后重试",
+      "notFound": "找不到该重点意识",
+      "masteredConfirmTitle": "已经掌握了吗？",
+      "masteredConfirmMessage": "将“{title}”标为“已掌握”。它会从当前要点中移到已掌握列表。",
+      "reactivateUnavailable": "当前已有{max}条重点意识，暂时无法重新练习。请先将其中一条标为“已掌握”或删除。"
     }
   },
   "recordFeedback": {

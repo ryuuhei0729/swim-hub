@@ -130,6 +130,7 @@ vi.mock("@/components/record-feedback/RecordFeedbackArrivalPopup", () => ({
   __esModule: true,
   default: () => null,
 }));
+vi.mock("@/components/focus-points/FocusPointsCard", () => ({ __esModule: true, default: () => null }));
 vi.mock("@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal", () => ({
   __esModule: true,
   default: () => null,

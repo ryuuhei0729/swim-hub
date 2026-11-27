@@ -28,6 +28,10 @@ export default async function Home({
   const t = await getTranslations({ locale, namespace: "lp.v42" });
   // lp.footer は既存 lp namespace から (lp.footer.terms 等)
   const tLpFooter = await getTranslations({ locale, namespace: "lp.footer" });
+  // スクリーンショットの alt は既存の lp.features.alt* を再利用する
+  const tLpFeatures = await getTranslations({ locale, namespace: "lp.features" });
+  // 「/月」は pricing.monthSuffix を再利用する
+  const tPricing = await getTranslations({ locale, namespace: "pricing" });
 
   // features items は配列 — t.raw() で取得
   const f1Items = t.raw("features.f1.items") as string[];
@@ -64,6 +68,9 @@ export default async function Home({
           pricing: t("nav.pricing"),
           signup: t("hero.cta.signup"),
           login: t("hero.cta.login"),
+          mainNavAria: t("nav.mainNavAria"),
+          mobileNavAria: t("nav.mobileNavAria"),
+          openMenuAria: t("nav.openMenuAria"),
         }}
       />
 
@@ -83,6 +90,8 @@ export default async function Home({
           comingSoon: t("hero.store.comingSoon"),
           deviceCaption: t("hero.deviceCaption"),
           downloadOn: t("hero.downloadOn"),
+          altPc: t("hero.altPc"),
+          altMobile: t("hero.altMobile"),
         }}
       />
 
@@ -99,18 +108,24 @@ export default async function Home({
             title: t("features.f1.title"),
             desc: t("features.f1.desc"),
             items: f1Items,
+            imgAlt: tLpFeatures("altPractice"),
+            caption: t("features.f1.caption"),
           },
           f2: {
             label: t("features.f2.label"),
             title: t("features.f2.title"),
             desc: t("features.f2.desc"),
             items: f2Items,
+            imgAlt: tLpFeatures("altCompetition"),
+            caption: t("features.f2.caption"),
           },
           f3: {
             label: t("features.f3.label"),
             title: t("features.f3.title"),
             desc: t("features.f3.desc"),
             items: f3Items,
+            imgAlt: tLpFeatures("altProxy"),
+            caption: t("features.f3.caption"),
           },
         }}
       />
@@ -123,6 +138,8 @@ export default async function Home({
           desc1: t("scanner.desc1"),
           desc2: t("scanner.desc2"),
           cta: t("scanner.cta"),
+          imgAlt: tLpFeatures("altScanner"),
+          caption: t("scanner.caption"),
         }}
       />
 
@@ -135,6 +152,7 @@ export default async function Home({
             h2: t("pricing.h2"),
             lead: t("pricing.lead"),
             detailLink: t("pricing.detailLink"),
+            monthSuffix: tPricing("monthSuffix"),
             free: {
               name: t("pricing.free.name"),
               price: t("pricing.free.price"),
@@ -201,6 +219,7 @@ export default async function Home({
           terms: tLpFooter("terms"),
           privacy: tLpFooter("privacy"),
           about: tLpFooter("about"),
+          navAria: t("footer.navAria"),
         }}
       />
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
 
@@ -14,9 +15,10 @@ interface AuthGuardProps {
  */
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { loading, isAuthenticated } = useAuth();
+  const t = useTranslations("auth.signin");
 
   if (loading) {
-    return <FullScreenLoading message="認証情報を確認中..." />;
+    return <FullScreenLoading message={t("loadingMessage")} />;
   }
 
   if (!isAuthenticated) {

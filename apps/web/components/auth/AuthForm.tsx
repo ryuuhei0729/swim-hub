@@ -262,7 +262,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess, 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="pl-10 mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-3 px-3 transition duration-150 ease-in-out"
-                    placeholder="山田太郎"
+                    placeholder={tFields("namePlaceholder")}
                   />
                 </div>
               </div>

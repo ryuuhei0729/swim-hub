@@ -25,6 +25,9 @@ export * from "./goals";
 // 練習ログテンプレート型
 export * from "./practiceLogTemplate";
 
+// フォーカスポイント型
+export * from "./focusPoint";
+
 // チーム大会エントリー代理一括入力型
 export * from "./team-entry";
 

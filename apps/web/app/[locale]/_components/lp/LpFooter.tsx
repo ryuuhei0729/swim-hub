@@ -9,6 +9,7 @@ interface LpFooterProps {
     terms: string;
     privacy: string;
     about: string;
+    navAria: string;
   };
 }
 
@@ -75,7 +76,7 @@ export default function LpFooter({ t }: LpFooterProps) {
 
         {/* リンク */}
         <nav
-          aria-label="フッターナビゲーション"
+          aria-label={t.navAria}
           style={{
             display: "flex",
             flexWrap: "wrap",

@@ -250,6 +250,6 @@ describe("ReflectionModal (マイルストーン)", () => {
     await act(async () => { fireEvent.click(saveBtn()); });
     await tick();
     expect(onSaved).not.toHaveBeenCalled();
-    expect(vi.mocked(Alert.alert).mock.calls[0]![1]).toBe("内省メモの保存に失敗しました");
+    expect(vi.mocked(Alert.alert).mock.calls[0]![1]).toBe("振り返りの保存に失敗しました");
   });
 });

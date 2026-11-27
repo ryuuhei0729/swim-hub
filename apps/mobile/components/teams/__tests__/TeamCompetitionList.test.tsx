@@ -2693,7 +2693,7 @@ describe("TeamCompetitionList", () => {
       const ENTRY_BUTTON_UNCHANGED: Record<string, string> = {
         ja: "エントリー",
         en: "Entry",
-        de: "Anmelden",
+        de: "Melden",
         ko: "엔트리",
         zh: "报名",
       };
@@ -2703,7 +2703,7 @@ describe("TeamCompetitionList", () => {
       // 厳密一致検証する。表と実ファイルが食い違えばこのテストが red になる)。
       const NEW_RECORD_BUTTON: Record<string, string> = {
         ja: "記録追加",
-        en: "Add Record",
+        en: "Add record",
         de: "Ergebnis hinzufügen",
         ko: "기록 추가",
         zh: "添加成绩",

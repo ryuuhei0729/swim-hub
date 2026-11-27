@@ -209,6 +209,8 @@ export type MainStackParamList = {
   GoalForm: { goalId?: string; competitionId?: string; styleId?: number };
   /** milestoneId あり = 編集、なし = 新規作成 */
   MilestoneForm: { goalId: string; milestoneId?: string };
+  /** focusPointId あり = 編集、なし = 新規作成 (ホームのカードと目標タブの両方から開く) */
+  FocusPointForm: { focusPointId?: string } | undefined;
   Paywall: undefined;
 };
 

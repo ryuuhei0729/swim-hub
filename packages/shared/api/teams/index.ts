@@ -5,6 +5,7 @@ export * from "./core";
 export * from "./goalTargets";
 export * from "./groups";
 export * from "./memberGoals";
+export * from "./memberFocusPoints";
 export * from "./members";
 export * from "./practices";
 export * from "./rankings";

@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import type { CompetitionShareData } from "./types";
 import { formatTime, formatReactionTime, getShareBadgeState } from "./utils";
 import { BestBadge } from "./BestBadge";
@@ -21,6 +22,8 @@ interface CompetitionShareCardProps {
  */
 export const CompetitionShareCard = forwardRef<HTMLDivElement, CompetitionShareCardProps>(
   function CompetitionShareCard({ data, className = "" }, ref) {
+    const tShare = useTranslations("common.shareCardModal");
+    const tBestTimes = useTranslations("mypage.bestTimesTable");
     // split-timeを有効なものだけフィルタリング
     const validSplitTimes: LapSplitPoint[] = useMemo(() => {
       if (!data.splitTimes) return [];
@@ -125,9 +128,9 @@ export const CompetitionShareCard = forwardRef<HTMLDivElement, CompetitionShareC
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-800">
-                    <th className="py-2 pr-4 text-left text-xs font-medium text-gray-400">距離</th>
+                    <th className="py-2 pr-4 text-left text-xs font-medium text-gray-400">{tBestTimes("distanceHeader")}</th>
                     <th className="py-2 pr-4 text-left text-xs font-medium text-gray-400">
-                      スプリット
+                      {tShare("splitHeader")}
                     </th>
                     {visibleLapIntervals.map((interval) => (
                       <th

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { ShareBadgeState } from "./utils";
 
 /**
@@ -8,12 +9,13 @@ import type { ShareBadgeState } from "./utils";
  * - none: 非表示
  */
 export function BestBadge({ state }: { state: ShareBadgeState }) {
+  const t = useTranslations("recordMobile.bestBadge");
   if (state.kind === "none") return null;
 
   if (state.kind === "first") {
     return (
       <div className="bg-amber-50 rounded-lg px-4 py-2 text-center shrink-0">
-        <p className="text-amber-600 text-lg font-bold">初</p>
+        <p className="text-amber-600 text-lg font-bold">{t("first")}</p>
       </div>
     );
   }
@@ -22,7 +24,7 @@ export function BestBadge({ state }: { state: ShareBadgeState }) {
   const valCls = state.kind === "best" ? "text-blue-600" : "text-red-600";
   return (
     <div className={`${boxCls} rounded-lg px-4 py-2 text-center shrink-0`}>
-      <p className="text-gray-500 text-xs">自己ベスト</p>
+      <p className="text-gray-500 text-xs">{t("personalBest")}</p>
       <p className={`${valCls} text-lg font-bold`}>{state.label}</p>
     </div>
   );

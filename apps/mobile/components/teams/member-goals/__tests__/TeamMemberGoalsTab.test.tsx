@@ -30,6 +30,13 @@ vi.mock("@apps/shared/utils/milestoneRatio", async (importOriginal) => {
   h.ratio.mockImplementation(actual.computeMilestoneRatio);
   return { ...actual, computeMilestoneRatio: h.ratio };
 });
+// フォーカスポイントの欄は別の RPC を呼ぶ別部品 (TeamMemberFocusPoints.test.tsx で確かめる)。
+// このテストは大会目標・マイルストーンの振る舞いだけを見るので、受け取った値だけ出す代役にする
+vi.mock("../TeamMemberFocusPoints", () => ({
+  TeamMemberFocusPoints: ({ teamId, memberId }: { teamId: string; memberId: string }) => (
+    <div data-testid="member-focus-points-stub" data-team={teamId} data-member={memberId} />
+  ),
+}));
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ supabase: { rpc: h.rpc, from: h.from }, user: { id: "admin" } }),
 }));
@@ -77,6 +84,18 @@ beforeEach(() => {
     for (const m of ["select", "order", "eq"]) b[m] = vi.fn(() => b);
     b.then = (f: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(f);
     return b;
+  });
+});
+
+describe("フォーカスポイントの欄", () => {
+  it("メンバーを選ぶまでは出さず、選ぶとそのメンバーの欄を出す", async () => {
+    h.rpc.mockResolvedValue({ data: [], error: null });
+    renderTab();
+    expect(screen.queryByTestId("member-focus-points-stub")).toBeNull();
+    fireEvent.click(screen.getByText("Alice"));
+    const stub = await screen.findByTestId("member-focus-points-stub");
+    expect(stub.getAttribute("data-team")).toBe(TEAM);
+    expect(stub.getAttribute("data-member")).toBe("A");
   });
 });
 

@@ -178,7 +178,7 @@ describe("localizeAuthError", () => {
 
     it("Apple/Google認証エラーが正しくマッピングされる", () => {
       expect(localizeAuthError("apple authentication failed")).toBe("Apple認証に失敗しました");
-      expect(localizeAuthError("google sign in failed")).toBe("Googleサインインに失敗しました");
+      expect(localizeAuthError("google sign in failed")).toBe("Googleログインに失敗しました");
     });
 
     it("サーバーエラーが正しくマッピングされる", () => {

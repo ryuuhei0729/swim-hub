@@ -14,5 +14,6 @@ export * from "./recordFeedbacks";
 export * from "./styles";
 export * from "./teams";
 export * from "./practiceLogTemplates";
+export * from "./focusPoints";
 // 段階移行中: 新ディレクトリのエクスポートは個別にimportする側で参照
 // export * from './teams/index'

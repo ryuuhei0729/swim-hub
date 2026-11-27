@@ -256,7 +256,7 @@ function flushAsync(ms = 300) {
 }
 
 function titleInput(): HTMLInputElement {
-  return screen.getByPlaceholderText("例: 全国大会, 対抗戦, タイムトライアル") as HTMLInputElement;
+  return screen.getByPlaceholderText("例: 全国大会、対抗戦、タイムトライアル") as HTMLInputElement;
 }
 
 beforeEach(() => {

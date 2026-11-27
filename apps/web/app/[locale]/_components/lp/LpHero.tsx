@@ -16,6 +16,8 @@ interface LpHeroProps {
     comingSoon: string;
     deviceCaption: string;
     downloadOn: string;
+    altPc: string;
+    altMobile: string;
   };
 }
 
@@ -284,7 +286,7 @@ export default function LpHero({ t }: LpHeroProps) {
               >
                 <Image
                   src="/screenshots/members-desktop.png"
-                  alt="SwimHub ダッシュボード画面（PC）"
+                  alt={t.altPc}
                   width={1472}
                   height={820}
                   style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left" }}
@@ -346,7 +348,7 @@ export default function LpHero({ t }: LpHeroProps) {
             >
               <Image
                 src="/screenshots/dashboard-mobile.png"
-                alt="SwimHub ダッシュボード画面（スマホ）"
+                alt={t.altMobile}
                 width={300}
                 height={568}
                 style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }}

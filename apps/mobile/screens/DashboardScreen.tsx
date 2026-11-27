@@ -37,6 +37,7 @@ import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calend
 import {
   announcementKeys,
   dashboardKeys,
+  focusPointKeys,
   notificationKeys,
   recordKeys,
   userKeys,
@@ -45,6 +46,8 @@ import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { DashboardNoticesSection } from "@/components/dashboard/DashboardNoticesSection";
 import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
+import { DashboardTopCarousel } from "@/components/dashboard/DashboardTopCarousel";
+import { FocusPointCard } from "@/components/focusPoints/FocusPointCard";
 import { DashboardBestTimesSection } from "@/components/dashboard/DashboardBestTimesSection";
 import {
   BottomDockHost,
@@ -281,6 +284,8 @@ export const DashboardScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() }),
       // チーム内フィードバックの未読 (受信ポップアップ)。ダッシュボードを表示するたびに確認する
       queryClient.invalidateQueries({ queryKey: recordFeedbackKeys.unread(user?.id) }),
+      // カルーセルのフォーカスポイント (別端末・Web での追加・編集を拾う)
+      queryClient.invalidateQueries({ queryKey: focusPointKeys.all }),
     ]);
   }, [refetch, refetchTeams, refetchColorSettings, queryClient, user?.id]);
 
@@ -405,9 +410,26 @@ export const DashboardScreen: React.FC = () => {
             onRetry={() => refetch()}
           />
           <DashboardNoticesSection teams={teams} />
-          <NextCompetitionCard
-            hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
-            onOpenDay={handleOpenCompetitionDay}
+          {/* 次の大会とフォーカスポイントは横スワイプのカルーセルで並べる */}
+          <DashboardTopCarousel
+            pages={[
+              {
+                key: "next-competition",
+                label: t("dashboard.nextCompetition.title"),
+                node: (
+                  <NextCompetitionCard
+                    hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
+                    onOpenDay={handleOpenCompetitionDay}
+                    style={styles.carouselCard}
+                  />
+                ),
+              },
+              {
+                key: "focus-points",
+                label: t("focusPoints.title"),
+                node: <FocusPointCard style={styles.carouselCard} />,
+              },
+            ]}
           />
           <View style={styles.calendar}>
             <CalendarView
@@ -573,6 +595,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  // カルーセルの中のカード: 外側の余白はカルーセルが持ち、高さは並んだカードの高い方に揃える
+  carouselCard: {
+    flex: 1,
+    marginHorizontal: 0,
+    marginTop: 0,
   },
   calendar: {
     marginTop: 12,
