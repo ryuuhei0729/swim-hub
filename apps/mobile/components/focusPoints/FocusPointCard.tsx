@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -30,7 +29,8 @@ interface FocusPointCardProps {
 /**
  * フォーカスポイント (数字で測らない、泳ぎで意識すること) のカード。
  * ホーム (次の大会の隣のカルーセル) と目標タブの両方に置き、どちらからでも追加・編集できる。
- * 取り組み中は FOCUS_POINT_MAX_ACTIVE 個までで、超えて追加しようとするとエラーのダイアログを出す
+ * 取り組み中は FOCUS_POINT_MAX_ACTIVE 個までで、埋まっている間は「＋ 追加」を押せなくする
+ * (別の端末で増えていた場合は、保存時に DB の上限エラーをフォームに出す)
  */
 export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = false, style }) => {
   const { supabase, user } = useAuth();
@@ -43,14 +43,10 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
   const { active, mastered } = useMemo(() => splitFocusPoints(data ?? []), [data]);
   const [isMasteredOpen, setIsMasteredOpen] = useState(false);
 
+  const isFull = active.length >= FOCUS_POINT_MAX_ACTIVE;
+
   const handleAdd = () => {
-    if (active.length >= FOCUS_POINT_MAX_ACTIVE) {
-      Alert.alert(
-        t("focusPoints.limitTitle"),
-        t("focusPoints.limitError", { max: FOCUS_POINT_MAX_ACTIVE }),
-      );
-      return;
-    }
+    if (isFull) return;
     navigation.navigate("FocusPointForm", {});
   };
 
@@ -78,12 +74,19 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
         {!isError && active.length > 0 && (
           <Pressable
             onPress={handleAdd}
+            disabled={isFull}
             style={styles.addButton}
             accessibilityRole="button"
             accessibilityLabel={t("focusPoints.addAria")}
+            accessibilityState={{ disabled: isFull }}
+            accessibilityHint={
+              isFull ? t("focusPoints.limitError", { max: FOCUS_POINT_MAX_ACTIVE }) : undefined
+            }
             testID="focus-points-add"
           >
-            <Text style={styles.addText}>{t("focusPoints.add")}</Text>
+            <Text style={[styles.addText, isFull && styles.addTextDisabled]}>
+              {t("focusPoints.add")}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -223,6 +226,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: colors.primary,
+  },
+  addTextDisabled: {
+    color: "#9CA3AF",
   },
   errorText: {
     marginTop: 8,

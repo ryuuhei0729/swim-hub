@@ -26,3 +26,12 @@ export interface UpdateFocusPointInput {
   title?: string;
   note?: string | null;
 }
+
+/**
+ * チーム管理者がメンバーのフォーカスポイントを見るときの1行
+ * (RPC get_team_member_focus_points の戻り値。user_id は返さない)
+ */
+export type TeamMemberFocusPoint = Pick<
+  FocusPoint,
+  "id" | "title" | "note" | "status" | "mastered_at" | "created_at"
+>;

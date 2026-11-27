@@ -968,7 +968,12 @@
       "addRecord": "記録を追加",
       "moreItems": "+{count}件",
       "teamDefault": "チーム",
-      "competitionDefault": "大会"
+      "competitionDefault": "大会",
+      "practiceDefault": "練習",
+      "teamPracticeDefault": "チーム練習",
+      "practiceLogTitle": "{distance}m × {reps}本",
+      "practiceLogTitleWithSets": "{distance}m × {reps}本 × {sets}セット",
+      "moreItemsShort": "+{count}件"
     },
     "attendance": {
       "title": "出欠状況",
@@ -2514,6 +2519,14 @@
         "achieved": "達成",
         "expired": "期限切れ"
       }
+    },
+    "focusPoints": {
+      "title": "フォーカスポイント",
+      "empty": "フォーカスポイントはまだありません",
+      "loadError": "フォーカスポイントを読み込めませんでした",
+      "activeCount": "取り組み中 {count}",
+      "masteredTitle": "身についた（{count}）",
+      "masteredOn": "{date} に身についた"
     }
   },
   "teams": {
@@ -4809,7 +4822,6 @@
     "emptyTitle": "泳ぎで意識したいことを書いておこう",
     "emptyDescription": "例: 右手の入水を遠くに / キックとプルのタイミングを合わせる / 腰を浮かせる",
     "loadError": "フォーカスポイントを読み込めませんでした",
-    "limitTitle": "追加できません",
     "limitError": "フォーカスポイントは同時に{max}つまでです。どれかを「身についた」にするか削除してから追加してください。",
     "masteredTitle": "身についた（{count}）",
     "masteredOn": "{date} に身についた",
@@ -4832,7 +4844,10 @@
       "deleteConfirmTitle": "フォーカスポイントを削除",
       "deleteConfirmMessage": "「{title}」を削除します。元に戻せません。",
       "deleteFailed": "削除できませんでした。時間をおいてもう一度お試しください",
-      "notFound": "このフォーカスポイントは見つかりませんでした"
+      "notFound": "このフォーカスポイントは見つかりませんでした",
+      "masteredConfirmTitle": "身につきましたか？",
+      "masteredConfirmMessage": "「{title}」を「身についた」にします。取り組み中から外れ、身についた一覧に移ります。",
+      "reactivateUnavailable": "取り組み中が{max}つあるため、もう一度取り組むことはできません。どれかを「身についた」にするか削除してください。"
     }
   }
 }

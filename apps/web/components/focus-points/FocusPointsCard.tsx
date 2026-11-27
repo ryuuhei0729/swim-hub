@@ -23,7 +23,8 @@ type FormTarget = "create" | FocusPoint | null;
 /**
  * フォーカスポイント (数字で測らない、泳ぎで意識すること) のカード。
  * ダッシュボードと目標ページの両方に置き、どちらからでも追加・編集できる。
- * 取り組み中は FOCUS_POINT_MAX_ACTIVE 個までで、超えて追加しようとするとカード内にエラーを出す
+ * 取り組み中は FOCUS_POINT_MAX_ACTIVE 個までで、埋まっている間は「＋ 追加」を押せなくする
+ * (別の端末で増えていた場合は、保存時に DB の上限エラーをフォームに出す)
  */
 export default function FocusPointsCard({ showMastered = false }: FocusPointsCardProps) {
   const t = useTranslations("focusPoints");
@@ -35,21 +36,15 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
   const { active, mastered } = useMemo(() => splitFocusPoints(data ?? []), [data]);
 
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
-  const [showLimitError, setShowLimitError] = useState(false);
+  const isFull = active.length >= FOCUS_POINT_MAX_ACTIVE;
+  const limitMessage = t("limitError", { max: FOCUS_POINT_MAX_ACTIVE });
 
   const handleAdd = () => {
-    if (active.length >= FOCUS_POINT_MAX_ACTIVE) {
-      setShowLimitError(true);
-      return;
-    }
-    setShowLimitError(false);
+    if (isFull) return;
     setFormTarget("create");
   };
 
-  const handleEdit = (point: FocusPoint) => {
-    setShowLimitError(false);
-    setFormTarget(point);
-  };
+  const handleEdit = (point: FocusPoint) => setFormTarget(point);
 
   if (isPending && !isError) {
     return (
@@ -74,14 +69,24 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
           )}
         </div>
         {!isError && active.length > 0 && (
-          <button
-            type="button"
-            onClick={handleAdd}
-            aria-label={t("addAria")}
-            className="-my-1 -mr-2 min-h-11 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-          >
-            {t("add")}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={isFull}
+              aria-label={t("addAria")}
+              aria-describedby={isFull ? "focus-points-full-hint" : undefined}
+              title={isFull ? limitMessage : undefined}
+              className="-my-1 -mr-2 min-h-11 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
+            >
+              {t("add")}
+            </button>
+            {isFull && (
+              <span id="focus-points-full-hint" className="sr-only">
+                {limitMessage}
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -125,12 +130,6 @@ export default function FocusPointsCard({ showMastered = false }: FocusPointsCar
             </li>
           ))}
         </ol>
-      )}
-
-      {showLimitError && (
-        <p className="mt-2 text-xs text-red-600" role="alert">
-          {t("limitError", { max: FOCUS_POINT_MAX_ACTIVE })}
-        </p>
       )}
 
       {showMastered && !isError && mastered.length > 0 && (

@@ -15,6 +15,7 @@ import {
 import {
   useCreateFocusPointMutation,
   useDeleteFocusPointMutation,
+  useFocusPointsQuery,
   useSetFocusPointStatusMutation,
   useUpdateFocusPointMutation,
 } from "@apps/shared/hooks/queries/focusPoints";
@@ -33,13 +34,20 @@ interface FocusPointFormModalProps {
  */
 export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointFormModalProps) {
   const t = useTranslations("focusPoints");
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const isEdit = focusPoint !== null;
 
   const [title, setTitle] = useState(focusPoint?.title ?? "");
   const [note, setNote] = useState(focusPoint?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isMasteredConfirmOpen, setIsMasteredConfirmOpen] = useState(false);
+
+  // 取り組み中が埋まっているときは「もう一度取り組む」を押せなくする (カードと同じ一覧のキャッシュを使う)
+  const { data: allPoints } = useFocusPointsQuery(supabase, user?.id);
+  const activeCount = (allPoints ?? []).filter((p) => p.status === "active").length;
+  const canReactivate =
+    focusPoint?.status === "mastered" ? activeCount < FOCUS_POINT_MAX_ACTIVE : true;
 
   const createMutation = useCreateFocusPointMutation(supabase);
   const updateMutation = useUpdateFocusPointMutation(supabase);
@@ -75,6 +83,7 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
 
   const handleToggleStatus = async () => {
     if (!isEdit) return;
+    setIsMasteredConfirmOpen(false);
     setError(null);
     try {
       await statusMutation.mutateAsync({
@@ -154,16 +163,27 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
               {error}
             </p>
           )}
+          {isEdit && !canReactivate && (
+            <p id="focus-point-reactivate-hint" className="text-xs text-gray-500">
+              {t("form.reactivateUnavailable", { max: FOCUS_POINT_MAX_ACTIVE })}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             {isEdit ? (
               <div className="flex gap-2">
+                {/* 「身についた」は確認してから。「もう一度取り組む」は空きがあるときだけ押せる */}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => void handleToggleStatus()}
-                  disabled={isBusy}
+                  onClick={() =>
+                    focusPoint.status === "active"
+                      ? setIsMasteredConfirmOpen(true)
+                      : void handleToggleStatus()
+                  }
+                  disabled={isBusy || !canReactivate}
+                  aria-describedby={!canReactivate ? "focus-point-reactivate-hint" : undefined}
                 >
                   {focusPoint.status === "active" ? t("form.markMastered") : t("form.reactivate")}
                 </Button>
@@ -196,6 +216,19 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
           </div>
         </form>
       </BaseModal>
+
+      {isEdit && (
+        <ConfirmDialog
+          isOpen={isMasteredConfirmOpen}
+          onConfirm={() => void handleToggleStatus()}
+          onCancel={() => setIsMasteredConfirmOpen(false)}
+          title={t("form.masteredConfirmTitle")}
+          message={t("form.masteredConfirmMessage", { title: focusPoint.title })}
+          confirmLabel={t("form.markMastered")}
+          cancelLabel={t("form.cancel")}
+          variant="info"
+        />
+      )}
 
       {isEdit && (
         <ConfirmDialog

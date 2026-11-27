@@ -968,7 +968,12 @@
       "addRecord": "기록 추가",
       "moreItems": "+{count}건",
       "teamDefault": "팀",
-      "competitionDefault": "대회"
+      "competitionDefault": "대회",
+      "practiceDefault": "연습",
+      "teamPracticeDefault": "팀 연습",
+      "practiceLogTitle": "{distance}m × {reps}",
+      "practiceLogTitleWithSets": "{distance}m × {reps} × {sets}세트",
+      "moreItemsShort": "+{count}건"
     },
     "attendance": {
       "title": "출결 현황",
@@ -2514,6 +2519,14 @@
         "achieved": "달성",
         "expired": "기한 만료"
       }
+    },
+    "focusPoints": {
+      "title": "포커스 포인트",
+      "empty": "아직 포커스 포인트가 없습니다",
+      "loadError": "포커스 포인트를 불러오지 못했습니다",
+      "activeCount": "진행 중 {count}",
+      "masteredTitle": "몸에 익힘 ({count})",
+      "masteredOn": "{date}에 몸에 익힘"
     }
   },
   "teams": {
@@ -4809,7 +4822,6 @@
     "emptyTitle": "수영할 때 의식하고 싶은 점을 적어 두세요",
     "emptyDescription": "예: 오른손 입수를 멀리 / 킥과 풀의 타이밍 맞추기 / 허리를 띄우기",
     "loadError": "포커스 포인트를 불러오지 못했습니다",
-    "limitTitle": "추가할 수 없습니다",
     "limitError": "포커스 포인트는 동시에 {max}개까지입니다. 하나를 '몸에 익혔다'로 바꾸거나 삭제한 뒤 추가하세요.",
     "masteredTitle": "몸에 익힘 ({count})",
     "masteredOn": "{date}에 몸에 익힘",
@@ -4832,7 +4844,10 @@
       "deleteConfirmTitle": "포커스 포인트 삭제",
       "deleteConfirmMessage": "\"{title}\"을(를) 삭제합니다. 되돌릴 수 없습니다.",
       "deleteFailed": "삭제하지 못했습니다. 잠시 후 다시 시도하세요",
-      "notFound": "이 포커스 포인트를 찾을 수 없습니다"
+      "notFound": "이 포커스 포인트를 찾을 수 없습니다",
+      "masteredConfirmTitle": "몸에 익혔나요?",
+      "masteredConfirmMessage": "\"{title}\"을(를) '몸에 익혔다'로 바꿉니다. 진행 중 목록에서 빠지고 몸에 익힌 목록으로 옮겨집니다.",
+      "reactivateUnavailable": "진행 중인 포커스 포인트가 이미 {max}개라서 다시 연습할 수 없습니다. 하나를 '몸에 익혔다'로 바꾸거나 삭제하세요."
     }
   }
 }

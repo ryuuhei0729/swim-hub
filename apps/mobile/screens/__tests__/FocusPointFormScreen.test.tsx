@@ -168,16 +168,49 @@ describe("FocusPointFormScreen — 編集", () => {
     );
   });
 
-  it("「身についた」で状態を変えて閉じる", async () => {
+  it("「身についた」は確認ダイアログで選んだときだけ状態を変えて閉じる", async () => {
     const { getByText } = render(<FocusPointFormScreen />);
     fireEvent.click(getByText("身についた"));
+    expect(mocks.setStatus).not.toHaveBeenCalled();
+
+    const [title, message, buttons] = vi.mocked(Alert.alert).mock.calls[0]! as [
+      string,
+      string,
+      Array<{ text: string; onPress?: () => void }>,
+    ];
+    expect(title).toBe("身につきましたか？");
+    expect(message).toContain("「腰を浮かせる」を「身についた」にします");
+    expect(buttons.map((b) => b.text)).toEqual(["キャンセル", "身についた"]);
+
+    await act(async () => {
+      buttons.find((b) => b.text === "身についた")!.onPress!();
+    });
     await waitFor(() =>
       expect(mocks.setStatus).toHaveBeenCalledWith({ id: "fp-1", status: "mastered" }),
     );
     expect(mocks.goBack).toHaveBeenCalled();
   });
 
-  it("身についたものは「もう一度取り組む」を出し、上限ならエラーを出す", async () => {
+  it("取り組み中が3つあるときは「もう一度取り組む」を押せず、理由を出す", () => {
+    mocks.query = {
+      data: [
+        point({ status: "mastered", mastered_at: "2026-10-01T00:00:00Z" }),
+        point({ id: "a1" }),
+        point({ id: "a2" }),
+        point({ id: "a3" }),
+      ],
+      isPending: false,
+      isError: false,
+    };
+    const { getByText } = render(<FocusPointFormScreen />);
+    const reactivate = getByText("もう一度取り組む").closest("button")!;
+    expect(reactivate.hasAttribute("disabled")).toBe(true);
+    expect(getByText(/もう一度取り組むことはできません/)).toBeTruthy();
+    fireEvent.click(reactivate);
+    expect(mocks.setStatus).not.toHaveBeenCalled();
+  });
+
+  it("身についたものは「もう一度取り組む」を確認なしで押せ、別端末で埋まっていたら上限のエラーを出す", async () => {
     mocks.query = {
       data: [point({ status: "mastered", mastered_at: "2026-10-01T00:00:00Z" })],
       isPending: false,

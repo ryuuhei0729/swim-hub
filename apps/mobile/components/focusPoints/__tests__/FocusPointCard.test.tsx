@@ -67,15 +67,14 @@ describe("FocusPointCard", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("FocusPointForm", { focusPointId: "c" });
   });
 
-  it("3つあるときに追加しようとすると、フォームを開かずにエラーを出す", () => {
+  it("3つあるときは「＋ 追加」を押せない (押してもフォームを開かない)", () => {
     mocks.query = { data: threeActive, isPending: false, isError: false };
     const { getByText } = render(<FocusPointCard />);
-    fireEvent.click(getByText("＋ 追加"));
-    expect(Alert.alert).toHaveBeenCalledWith(
-      "追加できません",
-      expect.stringContaining("同時に3つまでです"),
-    );
+    const add = getByText("＋ 追加").closest("button")!;
+    expect(add.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(add);
     expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it("2つなら追加フォームを開ける", () => {

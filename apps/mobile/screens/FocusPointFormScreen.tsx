@@ -112,6 +112,28 @@ export const FocusPointFormScreen: React.FC = () => {
     }
   };
 
+  // 取り組み中が埋まっているときは「もう一度取り組む」を押せなくする
+  const activeCount = (focusPointsQuery.data ?? []).filter((p) => p.status === "active").length;
+  const canReactivate =
+    focusPoint?.status === "mastered" ? activeCount < FOCUS_POINT_MAX_ACTIVE : true;
+
+  // 「身についた」は確認してから (誤タップで一覧から外れないように)。戻すほうは確認なし
+  const handleStatusPress = () => {
+    if (!focusPoint || isBusy) return;
+    if (focusPoint.status !== "active") {
+      void handleToggleStatus();
+      return;
+    }
+    Alert.alert(
+      t("focusPoints.form.masteredConfirmTitle"),
+      t("focusPoints.form.masteredConfirmMessage", { title: focusPoint.title }),
+      [
+        { text: t("focusPoints.form.cancel"), style: "cancel" },
+        { text: t("focusPoints.form.markMastered"), onPress: () => void handleToggleStatus() },
+      ],
+    );
+  };
+
   const handleToggleStatus = async () => {
     if (!focusPoint || isBusy) return;
     setError(null);
@@ -218,10 +240,11 @@ export const FocusPointFormScreen: React.FC = () => {
         {focusPoint && (
           <View style={styles.actions}>
             <Pressable
-              style={[styles.outlineButton, isBusy && styles.disabled]}
-              onPress={() => void handleToggleStatus()}
-              disabled={isBusy}
+              style={[styles.outlineButton, (isBusy || !canReactivate) && styles.disabled]}
+              onPress={handleStatusPress}
+              disabled={isBusy || !canReactivate}
               accessibilityRole="button"
+              accessibilityState={{ disabled: isBusy || !canReactivate }}
               testID="focus-point-toggle-status"
             >
               <Text style={styles.outlineButtonText}>
@@ -240,6 +263,11 @@ export const FocusPointFormScreen: React.FC = () => {
               <Text style={styles.deleteButtonText}>{t("focusPoints.form.delete")}</Text>
             </Pressable>
           </View>
+        )}
+        {focusPoint && !canReactivate && (
+          <Text style={styles.hint}>
+            {t("focusPoints.form.reactivateUnavailable", { max: FOCUS_POINT_MAX_ACTIVE })}
+          </Text>
         )}
       </ScrollView>
 
@@ -303,6 +331,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
     textAlignVertical: "top",
+  },
+  hint: {
+    marginTop: -8,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
   counter: {
     alignSelf: "flex-end",

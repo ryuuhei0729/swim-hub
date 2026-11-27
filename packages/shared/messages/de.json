@@ -968,7 +968,12 @@
       "addRecord": "Eintrag hinzufügen",
       "moreItems": "+{count} weitere",
       "teamDefault": "Mannschaft",
-      "competitionDefault": "Wettkampf"
+      "competitionDefault": "Wettkampf",
+      "practiceDefault": "Training",
+      "teamPracticeDefault": "Mannschaftstraining",
+      "practiceLogTitle": "{distance}m × {reps}",
+      "practiceLogTitleWithSets": "{distance}m × {reps} × {sets}",
+      "moreItemsShort": "+{count}"
     },
     "attendance": {
       "title": "Anwesenheit",
@@ -2514,6 +2519,14 @@
         "achieved": "Erreicht",
         "expired": "Abgelaufen"
       }
+    },
+    "focusPoints": {
+      "title": "Fokuspunkte",
+      "empty": "Noch keine Fokuspunkte",
+      "loadError": "Fokuspunkte konnten nicht geladen werden",
+      "activeCount": "In Arbeit: {count}",
+      "masteredTitle": "Verinnerlicht ({count})",
+      "masteredOn": "Verinnerlicht am {date}"
     }
   },
   "teams": {
@@ -4809,7 +4822,6 @@
     "emptyTitle": "Notiere, worauf du beim Schwimmen achten willst",
     "emptyDescription": "z. B. Rechte Hand weiter vorne eintauchen / Beinschlag und Zug abstimmen / Hüfte hoch halten",
     "loadError": "Fokuspunkte konnten nicht geladen werden",
-    "limitTitle": "Hinzufügen nicht möglich",
     "limitError": "Du kannst höchstens {max} Fokuspunkte gleichzeitig haben. Markiere zuerst einen als verinnerlicht oder lösche ihn.",
     "masteredTitle": "Verinnerlicht ({count})",
     "masteredOn": "Verinnerlicht am {date}",
@@ -4832,7 +4844,10 @@
       "deleteConfirmTitle": "Fokuspunkt löschen",
       "deleteConfirmMessage": "„{title}“ wird gelöscht. Das kann nicht rückgängig gemacht werden.",
       "deleteFailed": "Löschen fehlgeschlagen. Bitte versuche es später erneut",
-      "notFound": "Dieser Fokuspunkt wurde nicht gefunden"
+      "notFound": "Dieser Fokuspunkt wurde nicht gefunden",
+      "masteredConfirmTitle": "Verinnerlicht?",
+      "masteredConfirmMessage": "„{title}“ wird als verinnerlicht markiert und aus deinen aktuellen Fokuspunkten in die Liste der verinnerlichten verschoben.",
+      "reactivateUnavailable": "Du hast bereits {max} Fokuspunkte und kannst diesen deshalb noch nicht wieder aufnehmen. Markiere zuerst einen als verinnerlicht oder lösche ihn."
     }
   }
 }

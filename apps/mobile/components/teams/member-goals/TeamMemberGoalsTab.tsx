@@ -14,6 +14,7 @@ import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamMemberGoal, TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { TeamMemberGoalCard } from "./TeamMemberGoalCard";
+import { TeamMemberFocusPoints } from "./TeamMemberFocusPoints";
 
 interface TeamMemberGoalsTabProps {
   teamId: string;
@@ -28,7 +29,10 @@ function sectionOf(goal: TeamMemberGoal): SectionKey {
 
 const SECTION_ORDER: readonly SectionKey[] = ["upcoming", "noCompetition"];
 
-/** 管理者ビュー専用: メンバーを1人選び、そのメンバーの目標とマイルストーンを読み取り専用で表示する */
+/**
+ * 管理者ビュー専用: メンバーを1人選び、そのメンバーのフォーカスポイント・目標・マイルストーンを
+ * 読み取り専用で表示する
+ */
 export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, members }) => {
   const { t } = useTranslation();
   const { supabase } = useAuth();
@@ -170,6 +174,8 @@ export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, 
           <Text style={styles.note}>{t("teamMemberGoals.snapshotNote")}</Text>
         </View>
       )}
+      {/* 大会目標の上に、そのメンバーのフォーカスポイント (泳ぎで意識していること) を出す */}
+      {memberId !== undefined && <TeamMemberFocusPoints teamId={teamId} memberId={memberId} />}
       {renderBody()}
     </ScrollView>
   );

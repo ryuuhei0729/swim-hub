@@ -124,12 +124,20 @@ describe("FocusPointsCard", () => {
     expect(screen.getByRole("button", { name: "「腰を浮かせる」を編集" })).toBeInTheDocument();
   });
 
-  it("3つあるときに追加しようとすると、フォームを開かずにエラーを出す", () => {
+  it("3つあるときは「＋ 追加」を押せず、理由を読み上げ用に添える", () => {
     mocks.query = { data: threeActive, isPending: false, isError: false };
     renderWithI18n(<FocusPointsCard />);
-    fireEvent.click(screen.getByRole("button", { name: "フォーカスポイントを追加" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("同時に3つまでです");
+    const add = screen.getByRole("button", { name: "フォーカスポイントを追加" });
+    expect(add).toBeDisabled();
+    expect(add).toHaveAccessibleDescription(/同時に3つまでです/);
+    fireEvent.click(add);
     expect(screen.queryByLabelText("泳ぎで意識すること")).toBeNull();
+  });
+
+  it("2つなら「＋ 追加」を押せる", () => {
+    mocks.query = { data: threeActive.slice(0, 2), isPending: false, isError: false };
+    renderWithI18n(<FocusPointsCard />);
+    expect(screen.getByRole("button", { name: "フォーカスポイントを追加" })).toBeEnabled();
   });
 
   it("別端末で増えていて DB に上限で止められたときも、フォームに上限のエラーを出す", async () => {
@@ -147,10 +155,33 @@ describe("FocusPointsCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "「腰を浮かせる」を編集" }));
     expect(screen.getByLabelText("泳ぎで意識すること")).toHaveValue("腰を浮かせる");
 
+    // 確認ダイアログを挟む。キャンセルなら変えない
     fireEvent.click(screen.getByRole("button", { name: "身についた" }));
+    expect(screen.getByText(/「腰を浮かせる」を「身についた」にします/)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "キャンセル" }).at(-1)!);
+    expect(mocks.setStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "身についた" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "身についた" }).at(-1)!);
     await waitFor(() =>
       expect(mocks.setStatus).toHaveBeenCalledWith({ id: "c", status: "mastered" }),
     );
+  });
+
+  it("取り組み中が3つあるときは、身についたものの「もう一度取り組む」を押せない", () => {
+    mocks.query = {
+      data: [
+        ...threeActive,
+        point({ id: "m", title: "ストリームライン", status: "mastered", mastered_at: "2026-10-01T00:00:00Z" }),
+      ],
+      isPending: false,
+      isError: false,
+    };
+    renderWithI18n(<FocusPointsCard showMastered />);
+    fireEvent.click(screen.getByRole("button", { name: "「ストリームライン」を編集" }));
+    const reactivate = screen.getByRole("button", { name: "もう一度取り組む" });
+    expect(reactivate).toBeDisabled();
+    expect(reactivate).toHaveAccessibleDescription(/もう一度取り組むことはできません/);
   });
 
   it("確認してから削除する", async () => {
