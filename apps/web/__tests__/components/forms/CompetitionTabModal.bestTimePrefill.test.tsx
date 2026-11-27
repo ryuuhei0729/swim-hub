@@ -199,8 +199,8 @@ describe("CompetitionTabModal — ベストタイムを流用ボタン [W1]", ()
       expect(screen.getByTestId("entry-style-1-relay")).toHaveAttribute("aria-checked", "true");
     });
 
-    // バッジは引き継ぎ優先で "ベストタイム(引継): 29.00" になっているはず
-    await screen.findByText("ベストタイム(引継): 29.00");
+    // バッジは引き継ぎ優先で "ベストタイム(引き継ぎ): 29.00" になっているはず
+    await screen.findByText("ベストタイム(引き継ぎ): 29.00");
 
     fireEvent.click(screen.getByTestId("entry-best-time-prefill-1"));
     expect(screen.getByTestId("entry-time-1")).toHaveValue("29.00");

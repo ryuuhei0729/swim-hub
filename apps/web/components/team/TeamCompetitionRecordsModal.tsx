@@ -10,6 +10,7 @@ import {
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import Avatar from "@/components/ui/Avatar";
@@ -19,6 +20,8 @@ import { useQuery } from "@tanstack/react-query";
 import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
 import { calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
 import type { RelayRecordWithLegs } from "@apps/shared/types";
+import RecordFeedbackCell from "@/components/record-feedback/RecordFeedbackCell";
+import { useRecordFeedbackSummaries } from "@/components/record-feedback/useRecordFeedbackSummaries";
 
 interface RecordUser {
   name: string;
@@ -67,6 +70,11 @@ interface TeamCompetitionRecordsModalProps {
   onClose: () => void;
   competitionId: string;
   competitionTitle: string;
+  /**
+   * 管理者として開いているか。true のときは各記録に「FBを書く」を出す
+   * (書けるかどうかの最終判定は DB の RLS が行う)
+   */
+  isAdmin?: boolean;
 }
 
 export function buildDisplaySplits(
@@ -197,9 +205,14 @@ export default function TeamCompetitionRecordsModal({
   onClose,
   competitionId,
   competitionTitle,
+  isAdmin = false,
 }: TeamCompetitionRecordsModalProps) {
   const { supabase } = useAuth();
   const t = useTranslations("teams.competitionRecordsModal");
+  const tFeedback = useTranslations("recordFeedback");
+  const tCommon = useTranslations("common");
+  // 種目名は DB の name_jp を直接出すと全ロケールで日本語になるため、ロケールに合わせて組み立てる
+  const styleLabel = useStyleLabel();
   // リレー種目ラベル・レグ表示は既存のランキング画面の文言を流用する
   // (CLAUDE.md「種目コードの canonical」節と同じ理由で、二重管理にしない)。
   const tRelay = useTranslations("teams.ranking");
@@ -267,6 +280,9 @@ export default function TeamCompetitionRecordsModal({
   const competition = recordsQuery.data?.competition ?? null;
   const records = recordsQuery.data?.records ?? EMPTY_RECORDS;
   const relayRecords = recordsQuery.data?.relayRecords ?? EMPTY_RELAY_RECORDS;
+  // 各記録のフィードバック件数 (閲覧できるものだけ。選手本人は自分の記録、管理者は全員分)
+  const recordIds = useMemo(() => records.map((r) => r.id), [records]);
+  const feedbackSummaries = useRecordFeedbackSummaries(recordIds, { enabled: isOpen });
   // 読み込み表示 / エラーは表示できる内容が無いときだけ出す
   const loading = !recordsQuery.data && recordsQuery.isPending;
   const error = !recordsQuery.data && recordsQuery.isError ? t("loadError") : null;
@@ -405,8 +421,10 @@ export default function TeamCompetitionRecordsModal({
                         {/* 種目ヘッダー */}
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-1 h-5 bg-blue-500 rounded-full" />
-                          <h4 className="text-base font-semibold text-blue-800">{style.name_jp}</h4>
-                          <span className="text-sm text-blue-600">({visibleCount}件)</span>
+                          <h4 className="text-base font-semibold text-blue-800">{styleLabel(style) ?? style.name_jp}</h4>
+                          <span className="text-sm text-blue-600">
+                            ({tCommon("listToolbar.itemCount", { count: visibleCount })})
+                          </span>
                         </div>
 
                         {/* 記録テーブル */}
@@ -428,6 +446,9 @@ export default function TeamCompetitionRecordsModal({
                                 </th>
                                 <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
                                   {t("noteLabel")}
+                                </th>
+                                <th className="text-center py-2 px-3 font-medium text-blue-800">
+                                  {tFeedback("sectionTitle")}
                                 </th>
                               </tr>
                             </thead>
@@ -463,6 +484,16 @@ export default function TeamCompetitionRecordsModal({
                                     <td className="py-2 px-3 text-center text-gray-600 hidden sm:table-cell">
                                       {record.note || "-"}
                                     </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <RecordFeedbackCell
+                                        recordId={record.id}
+                                        recipientId={record.user_id}
+                                        recipientName={user?.name ?? null}
+                                        summary={feedbackSummaries[record.id]}
+                                        isAdmin={isAdmin}
+                                        subtitle={`${getUserName(record.users, t("unknownUser"))} / ${styleLabel(style) ?? style.name_jp}`}
+                                      />
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -477,7 +508,7 @@ export default function TeamCompetitionRecordsModal({
                                 <>
                                   <tr className="bg-gray-50">
                                     <td
-                                      colSpan={5}
+                                      colSpan={6}
                                       className="py-2 px-3 text-xs font-medium text-gray-500"
                                     >
                                       {t("relay")}
@@ -516,6 +547,16 @@ export default function TeamCompetitionRecordsModal({
                                         <td className="py-2 px-3 text-center text-gray-600 hidden sm:table-cell">
                                           {record.note || "-"}
                                         </td>
+                                        <td className="py-2 px-3 text-center">
+                                          <RecordFeedbackCell
+                                            recordId={record.id}
+                                            recipientId={record.user_id}
+                                            recipientName={user?.name ?? null}
+                                            summary={feedbackSummaries[record.id]}
+                                            isAdmin={isAdmin}
+                                            subtitle={`${getUserName(record.users, t("unknownUser"))} / ${styleLabel(style) ?? style.name_jp}`}
+                                          />
+                                        </td>
                                       </tr>
                                     );
                                   })}
@@ -535,7 +576,7 @@ export default function TeamCompetitionRecordsModal({
                         <div className="w-1 h-5 bg-blue-500 rounded-full" />
                         <h4 className="text-base font-semibold text-blue-800">{t("relay")}</h4>
                         <span className="text-sm text-blue-600">
-                          ({sortedRelayRecords.length}件)
+                          ({tRelay("resultCount", { count: sortedRelayRecords.length })})
                         </span>
                       </div>
 
@@ -691,6 +732,9 @@ export default function TeamCompetitionRecordsModal({
                                                 <th className="py-1 px-2 text-right font-medium">
                                                   {tRelay("relay.legHeader.cumulative")}
                                                 </th>
+                                                <th className="py-1 px-2 text-center font-medium">
+                                                  {tFeedback("sectionTitle")}
+                                                </th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -727,7 +771,7 @@ export default function TeamCompetitionRecordsModal({
                                                       </span>
                                                     </td>
                                                     <td className="py-1 px-2">
-                                                      {leg.styleNameJp ?? "-"}
+                                                      {styleLabel(leg.styleNameJp ? { name_jp: leg.styleNameJp } : null) ?? "-"}
                                                     </td>
                                                     <td className="py-1 px-2 text-right tabular-nums">
                                                       <div className="inline-flex items-center gap-1.5">
@@ -755,6 +799,20 @@ export default function TeamCompetitionRecordsModal({
                                                           ? "-"
                                                           : formatTimeBest(cumulative);
                                                       })()}
+                                                    </td>
+                                                    <td className="py-1 px-2 text-center">
+                                                      {/* レグ単位の FB (元の records 行に付く)。
+                                                          退会・行削除で recordId / userId が無いレグには出さない */}
+                                                      {leg.recordId && leg.userId && (
+                                                        <RecordFeedbackCell
+                                                          recordId={leg.recordId}
+                                                          recipientId={leg.userId}
+                                                          recipientName={leg.userName}
+                                                          summary={feedbackSummaries[leg.recordId]}
+                                                          isAdmin={isAdmin}
+                                                          subtitle={`${swimmerName} / ${eventLabel}`}
+                                                        />
+                                                      )}
                                                     </td>
                                                   </tr>
                                                 );

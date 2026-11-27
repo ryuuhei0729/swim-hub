@@ -7,6 +7,8 @@ interface LpScannerProps {
     desc1: string;
     desc2: string;
     cta: string;
+    imgAlt: string;
+    caption: string;
   };
 }
 
@@ -188,7 +190,7 @@ export default function LpScanner({ t }: LpScannerProps) {
             ))}
             <Image
               src="/screenshots/lp-scanner.png"
-              alt="SwimHub Scanner のスクリーンショット"
+              alt={t.imgAlt}
               width={600}
               height={450}
               style={{ width: "100%" }}
@@ -205,7 +207,7 @@ export default function LpScanner({ t }: LpScannerProps) {
               color: "var(--lp-w-dim2)",
             }}
           >
-            Scanner — 手書き解析
+            {t.caption}
           </div>
         </div>
       </div>

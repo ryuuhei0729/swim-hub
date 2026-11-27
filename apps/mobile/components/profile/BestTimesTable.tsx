@@ -346,7 +346,10 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({
           {/* ヘッダー */}
           <View style={styles.tableHeader}>
             <View style={[styles.headerCell, styles.distanceCell]}>
-              <Text style={styles.headerText}>{t("mypage.bestTimesTable.distanceHeader")}</Text>
+              {/* 列幅が狭い (40pt) ので、英語の "Distance" などは1行のまま縮めて収める (単語の途中で折り返さない) */}
+              <Text style={styles.headerText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                {t("mypage.bestTimesTable.distanceHeader")}
+              </Text>
             </View>
             {STYLES.map((style) => (
               <View

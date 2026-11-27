@@ -33,7 +33,7 @@
     }
   },
   "metadata": {
-    "title": "SwimHub - 水泳選手のための記録管理システム",
+    "title": "SwimHub（スイムハブ）- 水泳選手のための記録管理システム",
     "description": "練習も大会もチーム管理も。中高大マスターズまで、選手ひとりの水泳記録を一生分積み上げる無料の記録プラットフォーム。",
     "shortDescription": "水泳選手のための記録管理システム",
     "ogLocale": "ja_JP",
@@ -140,14 +140,21 @@
     },
     "pagination": {
       "prev": "前へ",
-      "next": "次へ"
+      "next": "次へ",
+      "summary": "{start}〜{end}件 / 全{total}件"
     },
     "errorBoundary": {
       "title": "エラーが発生しました",
       "unknownError": "不明なエラー",
       "retry": "再試行",
       "reload": "ページを再読み込み",
-      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
+      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。",
+      "appDescriptionLine1": "申し訳ありませんが、予期しないエラーが発生しました。",
+      "appDescriptionLine2": "ページを再読み込みするか、しばらく時間をおいてから再度お試しください。",
+      "devDetails": "エラー詳細 (開発モード)",
+      "backToDashboard": "ダッシュボードに戻る",
+      "supportHint": "問題が続く場合は、<link>サポート</link>までお問い合わせください。",
+      "supportHintWithCode": "問題が続く場合は、エラーコード<chip>{code}</chip>とともに<link>サポート</link>までお問い合わせください。"
     },
     "video": {
       "loading": "動画を読み込み中...",
@@ -262,7 +269,9 @@
       "cancelPending": "取り消し",
       "deleteVideo": "動画を削除",
       "addVideo": "動画を追加",
-      "deleteVideoAriaLabel": "動画を削除"
+      "deleteVideoAriaLabel": "動画を削除",
+      "selectForUser": "{name} の動画を選択",
+      "selectDescription": "動画ファイルを選択して編集・プレビューできます"
     },
     "videoPlayer": {
       "loading": "動画を読み込み中...",
@@ -293,14 +302,17 @@
       "share": "シェア",
       "competitionTitle": "記録をシェア",
       "practiceTitle": "練習メニューをシェア",
-      "competitionShareText": "【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app",
-      "practiceShareText": "【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app"
+      "competitionShareText": "【SwimHub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう！\nhttps://swim-hub.app",
+      "practiceShareText": "【SwimHub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう！\nhttps://swim-hub.app",
+      "splitHeader": "スプリット"
     },
     "discardTitle": "入力内容が保存されていません",
     "discardMessage": "入力内容が保存されていません。このまま閉じますか？",
     "discard": "破棄",
     "listToolbar": {
       "itemCount": "{count}件",
+      "itemCount_one": "{count}件",
+      "itemCount_other": "{count}件",
       "sortButton": "並べ替え",
       "filterButton": "絞り込み"
     },
@@ -412,7 +424,10 @@
         "practice": "練習記録",
         "competition": "大会記録",
         "proxy": "代理入力",
-        "pricing": "料金プラン"
+        "pricing": "料金プラン",
+        "mainNavAria": "メインナビゲーション",
+        "mobileNavAria": "モバイルナビゲーション",
+        "openMenuAria": "メニューを開く"
       },
       "hero": {
         "ghostText": "SWIMHUB",
@@ -433,7 +448,9 @@
         "deviceCaption": "SwimHub App ◆ PC & Mobile",
         "h1Line3Blue": "これひとつ",
         "h1Line3Suffix": "で。",
-        "downloadOn": "ダウンロード"
+        "downloadOn": "ダウンロード",
+        "altPc": "SwimHub ダッシュボード画面（PC）",
+        "altMobile": "SwimHub ダッシュボード画面（スマホ）"
       },
       "marquee": {
         "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
@@ -447,7 +464,8 @@
             "サークル・本数・セット数を記録",
             "平均タイムも自動で計算",
             "タグでフィルタリング可能"
-          ]
+          ],
+          "caption": "Practice — 練習記録"
         },
         "f2": {
           "label": "Race Result",
@@ -457,7 +475,8 @@
             "途中タイムからラップを自動計算",
             "ベストタイム表の自動更新",
             "大会エントリーも管理可能"
-          ]
+          ],
+          "caption": "Competition — 大会記録"
         },
         "f3": {
           "label": "Team / Coach",
@@ -467,7 +486,8 @@
             "コーチ・マネージャーが一括登録",
             "記録は個人に紐付いて蓄積",
             "一生使えるアプリ"
-          ]
+          ],
+          "caption": "Team — 代理入力"
         },
         "introLabel": "Features",
         "introH2": "記録を資産に変える3つの機能"
@@ -477,7 +497,8 @@
         "h2": "手書きの練習記録を、AIで解析。",
         "desc1": "練習が終わった後の記録入力、面倒ですよね。SwimHub Scanner なら、手書きの練習表をスマホで撮影するだけで、AIが内容を読み取って自動でデータ化します。",
         "desc2": "コーチが配布する練習表や、自分でメモした記録もそのまま取り込めるので、入力の手間を大幅に削減できます。",
-        "cta": "SwimHub Scanner を試す"
+        "cta": "SwimHub Scanner を試す",
+        "caption": "Scanner — 手書き解析"
       },
       "pricing": {
         "label": "Pricing",
@@ -490,8 +511,8 @@
           "note": "ずっと無料で使える",
           "items": [
             "練習記録・大会記録",
-            "Split-time: 最大3個/記録",
-            "PracticeTime: 最大18個/練習ログ",
+            "スプリットタイム: 最大3個/記録",
+            "練習タイム: 最大18個/練習ログ",
             "画像アップロード（動画は不可）"
           ],
           "cta": "無料で始める"
@@ -503,8 +524,8 @@
           "annualNote": "年払い: ¥5,000/年（2ヶ月分お得）",
           "items": [
             "全機能無制限",
-            "Split-time: 無制限",
-            "PracticeTime: 無制限",
+            "スプリットタイム: 無制限",
+            "練習タイム: 無制限",
             "画像・動画アップロード",
             "7日間の無料トライアル付き"
           ],
@@ -536,7 +557,8 @@
       "footer": {
         "tagline": "競泳選手のための記録管理プラットフォーム",
         "copyright": "© 2025 SwimHub. All rights reserved.",
-        "slogan": "Records for Life"
+        "slogan": "Records for Life",
+        "navAria": "フッターナビゲーション"
       },
       "stopwatch": {
         "ariaLabel": "ページ滞在タイム"
@@ -685,9 +707,9 @@
       "connectionRefused": "接続が拒否されました。しばらくしてから再度お試しください",
       "timeout": "接続がタイムアウトしました。再度お試しください",
       "appleAuthFailed": "Apple認証に失敗しました",
-      "appleSignInFailed": "Appleサインインに失敗しました",
+      "appleSignInFailed": "Appleログインに失敗しました",
       "googleAuthFailed": "Google認証に失敗しました",
-      "googleSignInFailed": "Googleサインインに失敗しました",
+      "googleSignInFailed": "Googleログインに失敗しました",
       "internalServerError": "サーバーエラーが発生しました。しばらくしてから再度お試しください",
       "serviceUnavailable": "サービスが一時的に利用できません。しばらくしてから再度お試しください",
       "badGateway": "サーバーとの通信に問題が発生しました"
@@ -757,8 +779,8 @@
       "feature1": "練習記録・大会記録",
       "feature2": "ベストタイム表",
       "feature3": "チーム機能・目標管理",
-      "feature4": "Split-time: 最大3個/記録",
-      "feature5": "PracticeTime: 最大18個/練習ログ",
+      "feature4": "スプリットタイム: 最大3個/記録",
+      "feature5": "練習タイム: 最大18個/練習ログ",
       "feature6": "画像アップロード",
       "exclude1": "動画アップロード"
     },
@@ -769,8 +791,8 @@
       "annualSaving": "2ヶ月分お得",
       "startButton": "無料トライアルを始める",
       "feature1": "全機能無制限",
-      "feature2": "Split-time: 無制限",
-      "feature3": "PracticeTime: 無制限",
+      "feature2": "スプリットタイム: 無制限",
+      "feature3": "練習タイム: 無制限",
       "feature4": "画像・動画アップロード",
       "feature5": "7日間の無料トライアル付き"
     },
@@ -784,7 +806,7 @@
       "rowVideoUpload": "動画アップロード",
       "rowAiAnalysis": "AI メニュー分析",
       "rowAds": "広告",
-      "valueSplit3PerRecord": "3個/レコード",
+      "valueSplit3PerRecord": "3個/記録",
       "value18PerLog": "18個/ログ",
       "valueUnlimited": "無制限",
       "valueOncePerDay": "1回/日"
@@ -797,8 +819,8 @@
       "rowBestTime": "ベストタイム表",
       "rowTeam": "チーム機能",
       "rowGoals": "目標管理",
-      "rowSplitTime": "Split-time",
-      "rowPracticeTime": "PracticeTime",
+      "rowSplitTime": "スプリットタイム",
+      "rowPracticeTime": "練習タイム",
       "rowImageUpload": "画像アップロード",
       "rowVideoUpload": "動画アップロード",
       "rowScanner": "SwimHub Scanner 連携",
@@ -811,11 +833,11 @@
       "title": "よくある質問",
       "q1": "無料トライアル中に課金されますか？",
       "a1": "いいえ。7日間の無料トライアル中は一切課金されません。トライアル終了前にキャンセルすれば料金は発生しません。",
-      "q2": "年払いと月払いの違いは?",
+      "q2": "年払いと月払いの違いは？",
       "a2": "年払いは¥5,000/年で、月払い(¥500/月 = ¥6,000/年)と比べて2ヶ月分(¥1,000)お得です。",
-      "q3": "途中でプランを変更できますか?",
+      "q3": "途中でプランを変更できますか？",
       "a3": "はい。いつでもアップグレード・ダウングレードが可能です。設定画面からプランを管理できます。",
-      "q4": "SwimHub Scanner や SwimHub Timer も使えますか?",
+      "q4": "SwimHub Scanner や SwimHub Timer も使えますか？",
       "a4": "はい。SwimHub の Premium プランに加入すると、SwimHub Scanner・SwimHub Timer の有料機能も統一課金で利用できます。"
     },
     "cta": {
@@ -969,7 +991,12 @@
       "addRecord": "記録を追加",
       "moreItems": "+{count}件",
       "teamDefault": "チーム",
-      "competitionDefault": "大会"
+      "competitionDefault": "大会",
+      "practiceDefault": "練習",
+      "teamPracticeDefault": "チーム練習",
+      "practiceLogTitle": "{distance}m × {reps}本",
+      "practiceLogTitleWithSets": "{distance}m × {reps}本 × {sets}セット",
+      "moreItemsShort": "+{count}件"
     },
     "attendance": {
       "title": "出欠状況",
@@ -1007,7 +1034,7 @@
       "entryLabel": "エントリー:",
       "entryTimeLabel": "エントリータイム:",
       "memoLabel": "メモ:",
-      "entered": "エントリー済",
+      "entered": "エントリー済み",
       "enteredNoRecord": "エントリー済み（記録未登録）",
       "editCompetition": "大会を編集",
       "deleteCompetition": "大会を削除",
@@ -1174,7 +1201,8 @@
       "noMatchTitle": "該当する記録がありません",
       "noMatchDesc": "選択した条件に一致する練習記録が見つかりませんでした。",
       "sortOptionDateDesc": "日付(新しい順)",
-      "sortOptionDateAsc": "日付(古い順)"
+      "sortOptionDateAsc": "日付(古い順)",
+      "distanceFormatNoSets": "{distance}m × {reps}本"
     },
     "details": {
       "badge": "練習記録",
@@ -1286,7 +1314,7 @@
     },
     "filterSheet": {
       "title": "絞り込み",
-      "tagsAndNote": "(選択した全てのタグを含む練習ログがある日のみ表示)"
+      "tagsAndNote": "(選択したすべてのタグを含む練習ログがある日のみ表示)"
     }
   },
   "mypage": {
@@ -1534,7 +1562,8 @@
       "saving": "保存中...",
       "nextButton": "次へ",
       "skipButton": "スキップ",
-      "backButton": "戻る"
+      "backButton": "戻る",
+      "emailNameHint": "メールアドレス形式が入力されています。お名前を入力してください（このステップはスキップできません）"
     },
     "step3": {
       "title": "ベストタイムを登録",
@@ -1727,12 +1756,12 @@
       "videoUploadFailedSession": "動画アップロード失敗: セッションが無効です。再ログインしてください。",
       "videoUploadFailedSaved": "大会記録は保存されましたが、動画のアップロードに失敗しました。",
       "imageProcessingFailedTitle": "警告",
-      "imageProcessingFailed": "レコードは保存されましたが、画像の処理に失敗しました"
+      "imageProcessingFailed": "大会記録は保存されましたが、画像の処理に失敗しました"
     },
     "form": {
       "startDateLabel": "開始日",
       "nameLabel": "大会名",
-      "namePlaceholder": "例: 全国大会, 対抗戦, タイムトライアル",
+      "namePlaceholder": "例: 全国大会、対抗戦、タイムトライアル",
       "placeLabel": "場所",
       "placePlaceholder": "例: 東京アクアティクスセンター",
       "poolTypeLabel": "水路",
@@ -1810,7 +1839,7 @@
       },
       "error": {
         "splitDeleteFailed": "スプリットタイムの削除に失敗しました",
-        "recordDeleteFailed": "既存レコードの削除に失敗しました",
+        "recordDeleteFailed": "既存の記録の削除に失敗しました",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
       },
       "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
@@ -1917,7 +1946,7 @@
       "cancelScheduled": "解約予定（期間終了時に Free に戻ります）",
       "pastDueBanner": {
         "title": "お支払いが失敗しました",
-        "description": "お支払い方法を更新してください。更新しない場合、プレミアム機能が停止します。",
+        "description": "お支払い方法を更新してください。更新しない場合、Premium 機能が停止します。",
         "updatePayment": "お支払い方法を更新する →"
       },
       "monthlyPlan": {
@@ -2391,7 +2420,7 @@
       "saveButton": "保存",
       "deadlineLabel": "期限:",
       "otherPrefix": "その他: {note}",
-      "saveFailed": "内省メモの保存に失敗しました",
+      "saveFailed": "振り返りの保存に失敗しました",
       "goToGoalsLink": "目標管理を見る"
     },
     "form": {
@@ -2525,6 +2554,14 @@
         "achieved": "達成",
         "expired": "期限切れ"
       }
+    },
+    "focusPoints": {
+      "title": "フォーカスポイント",
+      "empty": "フォーカスポイントはまだありません",
+      "loadError": "フォーカスポイントを読み込めませんでした",
+      "activeCount": "取り組み中 {count}",
+      "masteredTitle": "身についた（{count}）",
+      "masteredOn": "{date} に身についた"
     }
   },
   "teams": {
@@ -2552,7 +2589,7 @@
       "creating": "作成中...",
       "createButton": "作成",
       "teamIdFetchFailed": "チームIDの取得に失敗しました",
-      "joinFailed": "チームの参加に失敗しました",
+      "joinFailed": "チームへの参加に失敗しました",
       "joining": "参加中...",
       "joinButton": "参加",
       "inviteCodeHint": "チーム管理者から提供された招待コードを入力してください",
@@ -2583,11 +2620,11 @@
       "noTeamsSubtext": "チームを作成するか、招待コードで参加してください",
       "pendingRetry": "状態を更新",
       "teamNotFound": "チームが見つかりません",
-      "webGuide": "チーム管理機能に関してはWEB版をご利用ください。",
+      "webGuide": "チーム管理機能に関してはWeb版をご利用ください。",
       "bulkRegisterAdminRequired": "この機能を利用するには管理者権限が必要です。",
-      "webGuideButton": "WEB版を開く",
+      "webGuideButton": "Web版を開く",
       "pendingMessage": "チームへの参加リクエストは管理者の承認待ちです。\n承認されるまでしばらくお待ちください。",
-      "memberRemoveConfirm": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
+      "memberRemoveConfirm": "{name}さんをチームから削除しますか？\nこの操作は取り消せません。",
       "announcementListCreateButton": "+ お知らせを作成",
       "announcementListEmpty": "お知らせがありません",
       "announcementListEmptyCreate": "お知らせを作成",
@@ -2710,7 +2747,7 @@
       "memberListTitle": "メンバー",
       "memberListEmpty": "メンバーがいません",
       "memberListTotal": "人数: {count}人",
-      "bestTimeLoading": "ベストタイム読込中...",
+      "bestTimeLoading": "ベストタイムを読み込み中...",
       "memberColLabel": "メンバー",
       "youLabel": "あなた",
       "announcementLoading": "お知らせを読み込み中...",
@@ -2733,7 +2770,7 @@
       "attendanceSaveSuccessMessage": "出欠情報を保存しました",
       "attendanceSaveFailed": "出欠情報の保存に失敗しました",
       "attendanceUnanswered": "未回答あり",
-      "attendanceAllAnswered": "全て回答済み",
+      "attendanceAllAnswered": "すべて回答済み",
       "attendanceNotePlaceholder": "備考を入力（任意）",
       "attendanceSaveMonth": "{label}分をまとめて保存",
       "bulkPracticeEmpty": "登録する練習データがありません",
@@ -2749,7 +2786,7 @@
       "memberRemoveButton": "チームから削除",
       "memberDetailTitle": "メンバー詳細",
       "memberRoleChangeMessage": "{name}さんの権限を「{role}」に変更しますか？",
-      "memberRemoveMessage": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
+      "memberRemoveMessage": "{name}さんをチームから削除しますか？\nこの操作は取り消せません。",
       "bestTimeSection": "Best Time",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
@@ -2927,7 +2964,7 @@
       "headerAnnouncements": "お知らせ",
       "headerSettings": "チーム設定",
       "schedule": {
-        "filterAll": "全て",
+        "filterAll": "すべて",
         "filterPractices": "練習",
         "filterCompetitions": "大会",
         "filterPast": "過去",
@@ -3036,7 +3073,7 @@
     "joinModal": {
       "title": "チームに参加",
       "loginRequired": "ログインが必要です",
-      "joinFailed": "チームの参加に失敗しました",
+      "joinFailed": "チームへの参加に失敗しました",
       "teamIdFailed": "チームIDの取得に失敗しました"
     },
     "members": {
@@ -3115,7 +3152,9 @@
         "tapForDetails": "タップで詳細",
         "noRecords": "登録記録なし",
         "addable": "追加可能",
-        "viewRecordsAriaLabel": "{title}の記録を閲覧"
+        "viewRecordsAriaLabel": "{title}の記録を閲覧",
+        "entryCount": "エントリー: {count}件",
+        "createdBy": "作成者:"
       },
       "entryStatus": {
         "before": "受付前",
@@ -3484,7 +3523,7 @@
       "styleSelectPlaceholder": "選択してください",
       "entryTimeLabel": "エントリータイム（任意）",
       "entryTimePlaceholder": "2.00.00",
-      "timeFormatHint": "形式: 分.秒.ミリ秒（例: 1.23.4）/ 分:秒.ミリ秒（例: 1:23.45）/ 秒.ミリ秒（例: 65.23）",
+      "timeFormatHint": "形式: 分.秒（例: 1.23.4）/ 分:秒（例: 1:23.45）/ 秒（例: 65.23）",
       "memoLabel": "メモ（任意）",
       "memoPlaceholder": "補足情報があれば入力してください",
       "registerButton": "エントリーする",
@@ -3512,7 +3551,7 @@
       "backButton": "大会一覧に戻る",
       "participantsHeader": "参加者",
       "timesHeader": "タイム記録",
-      "addSplitButton": "分割タイムを追加",
+      "addSplitButton": "スプリットタイムを追加",
       "saveButton": "記録を保存",
       "saving": "保存中...",
       "deleteButton": "記録を削除",
@@ -3533,7 +3572,7 @@
       "noMembersSelected": "メンバーが選択されていません",
       "removeMemberConfirmTitle": "選手を削除しますか？",
       "removeMemberConfirmMessage": "{name}の入力済みデータが削除されます。",
-      "removeHeatConfirmTitle": "この本目を削除しますか？",
+      "removeHeatConfirmTitle": "この記録を削除しますか？",
       "removeHeatConfirmMessage": "{n}本目の入力済みデータが削除されます。",
       "removeHeatButtonLabel": "{n}本目を削除",
       "relaySwimmerPlaceholder": "泳者を選択",
@@ -3627,7 +3666,7 @@
       "noTimeRecorded": "タイム記録なし",
       "setRepLabel": "{rep}本目",
       "setHeader": "{set}セット目",
-      "setAvgLabel": "{set}set平均",
+      "setAvgLabel": "{set}セット平均",
       "setAvgSingleLabel": "セット平均",
       "overallFastest": "全体最速",
       "overallAverage": "全体平均",
@@ -3736,10 +3775,12 @@
     },
     "timeInputModal": {
       "titleWithMenu": "メニュー{menu}のチームタイム入力",
-      "titleDefault": "チームタイム入力"
+      "titleDefault": "チームタイム入力",
+      "description": "{sets}セット × {reps}本 = {total}本のタイムを入力してください",
+      "average": "平均"
     },
     "actions": {
-      "joinFailed": "チームの参加に失敗しました",
+      "joinFailed": "チームへの参加に失敗しました",
       "reactivateFailed": "メンバーシップの再アクティブ化に失敗しました",
       "approveFailed": "メンバーシップの承認に失敗しました",
       "rejectFailed": "メンバーシップの拒否に失敗しました"
@@ -3777,6 +3818,11 @@
       "leaveButton": "チームを脱退する",
       "deleteDescription": "チームを削除すると、大会・エントリー・お知らせ・メンバー情報が完全に削除され、復元できません。メンバーの練習記録とレース記録は個人の記録として残ります。",
       "deleteButton": "チームを削除する"
+    },
+    "adminAttendanceHook": {
+      "loadEventsError": "イベント情報の取得に失敗しました",
+      "saveError": "出欠ステータスの保存に失敗しました",
+      "bulkUpdateError": "一括更新に失敗しました"
     }
   },
   "teamsAdmin": {
@@ -3920,7 +3966,8 @@
         "unassignedWarning": "未割り当ての記録は破棄されます",
         "retryButton": "やり直す",
         "cancelButton": "キャンセル",
-        "applyButton": "フォームに反映"
+        "applyButton": "フォームに反映",
+        "editTimeAria": "{no}番 {n}本目のタイムを編集"
       },
       "discardConfirm": {
         "title": "未割り当ての記録があります",
@@ -3937,7 +3984,7 @@
     "adminAttendance": {
       "loading": "読み込み中...",
       "error": "データの読み込み中にエラーが発生しました",
-      "empty": "未来のイベントがありません",
+      "empty": "今後のイベントがありません",
       "bulkChangeButton": "まとめて出欠状態を変更",
       "eventDefault": {
         "competition": "大会",
@@ -4095,14 +4142,16 @@
       "registerButton": "を一括登録",
       "registering": "登録中...",
       "poolShort": "25m",
-      "poolLong": "50m"
+      "poolLong": "50m",
+      "typeData": "{type}データ",
+      "errorLocation": "{sheet}シート {row}行目"
     },
     "practiceLog": {
       "backButton": "練習一覧に戻る",
       "participantsSection": "対象ユーザー",
       "timesSection": "タイム入力",
       "addMenuButton": "メニューを追加",
-      "addSplitButton": "分割タイムを追加",
+      "addSplitButton": "スプリットタイムを追加",
       "saveButton": "チーム練習ログを保存",
       "saving": "保存中...",
       "deleteButton": "削除",
@@ -4215,6 +4264,18 @@
     "common": {
       "close": "閉じる",
       "copyTitle": "コピー"
+    },
+    "bulkRegisterHook": {
+      "invalidFileType": "Excelファイル（.xlsx または .xls）を選択してください",
+      "parseErrors": "{count}件のエラーが見つかりました。プレビューを確認してください。",
+      "unknownFormat": "ファイルの形式を判別できませんでした。「練習一括登録」または「大会一括登録」のテンプレートを使用してください。",
+      "readFailed": "ファイルの読み込みに失敗しました",
+      "noData": "登録するデータがありません",
+      "confirmWithErrors": "{count}件のエラーがありますが、エラーのないデータのみ登録しますか？",
+      "successPractice": "練習 {count}件の登録が完了しました",
+      "successCompetition": "大会 {count}件の登録が完了しました",
+      "partialFailure": "一部の登録に失敗しました: {errors}",
+      "registerFailed": "一括登録に失敗しました"
     }
   },
   "paywallMobile": {
@@ -4262,7 +4323,7 @@
     "videoUploadFailedSession": "動画アップロード失敗: セッションが無効です。再ログインしてください。",
     "videoUploadFailedSaved": "大会記録は保存されましたが、動画のアップロードに失敗しました。",
     "imageProcessingFailedTitle": "警告",
-    "imageProcessingFailed": "レコードは保存されましたが、画像の処理に失敗しました",
+    "imageProcessingFailed": "大会記録は保存されましたが、画像の処理に失敗しました",
     "fallbackTitle": "大会",
     "poolTypeShort": "短水路",
     "poolTypeLong": "長水路",
@@ -4272,8 +4333,8 @@
     "entryTimeInfo": "エントリータイム: {time}",
     "filterAllPeriods": "全期間",
     "filterYearFormat": "{year}年度",
-    "tabAll": "全て",
-    "tabIncludeRelay": "引き継ぎ含",
+    "tabAll": "すべて",
+    "tabIncludeRelay": "引き継ぎ含む",
     "buttonReset": "リセット",
     "tabSplit": "距離別 Lap",
     "tabAllLap": "All Lap",
@@ -4323,7 +4384,7 @@
       "competitionRequired": "大会を選択してください",
       "timeRequired": "タイムを入力してください",
       "timePositive": "タイムは正の数値を入力してください",
-      "reactionTimeRange": "反応時間は-1.00〜2.00秒の範囲で入力してください",
+      "reactionTimeRange": "リアクションタイムは-1.00〜2.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "recordNumber": "記録 {n}",
@@ -4413,7 +4474,7 @@
       "end_date_label": "終了日",
       "end_date_error": "終了日は開始日以降の日付を指定してください",
       "name_label": "大会名",
-      "name_placeholder": "全国大会, 対抗戦",
+      "name_placeholder": "全国大会、対抗戦",
       "place_label": "場所",
       "pool_type_label": "水路",
       "pool_short": "短水路 (25m)",
@@ -4557,11 +4618,11 @@
       "entryTimeLabel": "エントリータイム:",
       "bestTimeLabel": "ベストタイム",
       "goalTargetLabel": "目標",
-      "bestTimeRelay": "ベストタイム(引継)",
+      "bestTimeRelay": "ベストタイム(引き継ぎ)",
       "bestTimeLong": "ベストタイム(長水路)",
-      "bestTimeLongRelay": "ベストタイム(長水路引継)",
+      "bestTimeLongRelay": "ベストタイム(長水路・引き継ぎ)",
       "bestTimeShort": "ベストタイム(短水路)",
-      "bestTimeShortRelay": "ベストタイム(短水路引継)",
+      "bestTimeShortRelay": "ベストタイム(短水路・引き継ぎ)",
       "styleLabel": "種目",
       "stylePlaceholder": "種目を選択",
       "relayLabel": "リレー",
@@ -4635,7 +4696,7 @@
       "authRequired": "認証が必要です",
       "createFailed": "タグの作成に失敗しました",
       "deleteFailed": "タグの削除に失敗しました",
-      "createLabel": "新規作成："
+      "createLabel": "新規作成:"
     },
     "teamCreate": {
       "title": "新しいチームを作成",
@@ -4667,7 +4728,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "split"
+      "splitTimeHeader": "Split"
     },
     "imageUploader": {
       "label": "画像を添付",
@@ -4710,8 +4771,8 @@
       "upgradeText": "Premium にアップグレード",
       "imageUpload": "画像の添付は Premium 会員限定です",
       "videoUpload": "動画の添付は Premium 会員限定です",
-      "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に",
-      "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に"
+      "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に登録できます",
+      "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に登録できます"
     },
     "itemTabs": {
       "removeConfirmTitle": "{label}を削除しますか？",
@@ -4808,7 +4869,134 @@
         "calendar": "Googleカレンダー連携と、ダッシュボードの記録の色",
         "templates": "練習ログの入力に使うテンプレートの管理",
         "security": "メールアドレス・パスワード・ログイン方法・アカウント削除"
-      }
+      },
+      "loadError": "アカウント画面の読み込み中に問題が発生しました。"
+    }
+  },
+  "focusPoints": {
+    "title": "フォーカスポイント",
+    "count": "{count} / {max}",
+    "add": "＋ 追加",
+    "addAria": "フォーカスポイントを追加",
+    "editAria": "「{title}」を編集",
+    "emptyTitle": "泳ぎで意識したいことを書いておこう",
+    "emptyDescription": "例: 右手の入水を遠くに / キックとプルのタイミングを合わせる / 腰を浮かせる",
+    "loadError": "フォーカスポイントを読み込めませんでした",
+    "limitError": "フォーカスポイントは同時に{max}つまでです。どれかを「身についた」にするか削除してから追加してください。",
+    "masteredTitle": "身についた（{count}）",
+    "masteredOn": "{date} に身についた",
+    "form": {
+      "createTitle": "フォーカスポイントを追加",
+      "editTitle": "フォーカスポイントを編集",
+      "titleLabel": "泳ぎで意識すること",
+      "titlePlaceholder": "例: 右手の入水を遠くに",
+      "titleRequired": "意識することを入力してください",
+      "noteLabel": "メモ（任意）",
+      "notePlaceholder": "コーチに言われたこと、うまくいったときのコツなど",
+      "create": "追加する",
+      "save": "保存する",
+      "cancel": "キャンセル",
+      "saveFailed": "保存できませんでした。時間をおいてもう一度お試しください",
+      "markMastered": "身についた",
+      "reactivate": "もう一度取り組む",
+      "statusFailed": "変更できませんでした。時間をおいてもう一度お試しください",
+      "delete": "削除",
+      "deleteConfirmTitle": "フォーカスポイントを削除",
+      "deleteConfirmMessage": "「{title}」を削除します。元に戻せません。",
+      "deleteFailed": "削除できませんでした。時間をおいてもう一度お試しください",
+      "notFound": "このフォーカスポイントは見つかりませんでした",
+      "masteredConfirmTitle": "身につきましたか？",
+      "masteredConfirmMessage": "「{title}」を「身についた」にします。取り組み中から外れ、身についた一覧に移ります。",
+      "reactivateUnavailable": "取り組み中が{max}つあるため、もう一度取り組むことはできません。どれかを「身についた」にするか削除してください。"
+    }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}件",
+    "countBadgeAria": "フィードバック {count}件",
+    "viewAria": "フィードバックを表示（{count}件）",
+    "sectionTitle": "フィードバック",
+    "listModalTitle": "フィードバック",
+    "unknownAuthor": "退会したユーザー",
+    "edited": "編集済み",
+    "editAria": "フィードバックを編集",
+    "deleteAria": "フィードバックを削除",
+    "loading": "読み込み中...",
+    "loadError": "フィードバックの取得に失敗しました",
+    "empty": "フィードバックはまだありません",
+    "write": "FBを書く",
+    "writeAria": "{name}さんの記録にフィードバックを書く",
+    "written": "記入済み",
+    "deleteFailed": "フィードバックの削除に失敗しました",
+    "form": {
+      "createTitle": "フィードバックを書く",
+      "editTitle": "フィードバックを編集",
+      "recipient": "{name}さんへ",
+      "label": "フィードバック",
+      "placeholder": "良かった点や改善点を書いてください",
+      "counter": "{count} / {max}",
+      "submit": "送信",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "saving": "送信中...",
+      "tooLong": "{max}文字以内で入力してください"
+    },
+    "errors": {
+      "duplicate": "この記録にはすでにフィードバックを書いています",
+      "not_team_record": "チーム記録以外にはフィードバックを書けません",
+      "record_not_found": "記録が見つかりません",
+      "not_authorized": "この操作を行う権限がありません",
+      "content_length": "1〜1000文字で入力してください",
+      "unknown": "フィードバックの保存に失敗しました"
+    },
+    "popup": {
+      "title": "フィードバックが届きました",
+      "from": "{name}さんからフィードバックが届きました",
+      "goToRecord": "記録画面へ",
+      "close": "閉じる",
+      "skipAnimation": "アニメーションをスキップ",
+      "noCompetition": "大会なし",
+      "relay": "リレー"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "FB {count}件",
+    "writtenByMe": "記入済み",
+    "write": "FBを書く",
+    "sectionTitle": "フィードバック ({count})",
+    "loadFailed": "フィードバックの取得に失敗しました",
+    "deletedUser": "退会したユーザー",
+    "newLabel": "NEW",
+    "edit": "フィードバックを編集",
+    "delete": "削除",
+    "edited": "編集済み",
+    "deleteConfirmTitle": "フィードバックを削除",
+    "deleteConfirmMessage": "このフィードバックを削除しますか？",
+    "deletedToast": "フィードバックを削除しました",
+    "savedToast": "フィードバックを保存しました",
+    "errors": {
+      "duplicate": "この記録にはすでにフィードバックを書いています",
+      "not_team_record": "チーム記録以外にはフィードバックを書けません",
+      "record_not_found": "記録が見つかりません",
+      "not_authorized": "この操作を行う権限がありません",
+      "content_length": "1〜1000文字で入力してください",
+      "unknown": "フィードバックの保存に失敗しました",
+      "deleteFailed": "フィードバックの削除に失敗しました"
+    },
+    "form": {
+      "createTitle": "フィードバックを書く",
+      "editTitle": "フィードバックを編集",
+      "placeholder": "良かった点や改善点を書いてください",
+      "inputLabel": "フィードバック本文",
+      "counter": "{count} / {max}",
+      "save": "保存"
+    },
+    "arrival": {
+      "title": "フィードバックが届きました",
+      "from": "{name}さんからフィードバックが届きました",
+      "openRecord": "記録画面へ",
+      "close": "閉じる",
+      "animationText": "フィードバックが届きました",
+      "skipAnimation": "アニメーションをスキップ"
     }
   }
 }

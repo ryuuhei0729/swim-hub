@@ -80,4 +80,15 @@ describe("middleware.ts matcher: 除外語の境界", () => {
     expect(middlewareRuns("/manifest.json")).toBe(false);
     expect(middlewareRuns("/fonts/dseg/DSEG7Classic-BoldItalic.woff2")).toBe(false);
   });
+
+  it("[V-31] robots.txt と sitemap.xml はロケールを付けずに配信される (/ja/robots.txt → 404 の退行防止)", () => {
+    expect(middlewareRuns("/robots.txt")).toBe(false);
+    expect(middlewareRuns("/sitemap.xml")).toBe(false);
+  });
+
+  it("[V-32] robots.txt / sitemap.xml で始まるだけの別パスは素通りしない", () => {
+    expect(middlewareRuns("/robots.txt.bak")).toBe(true);
+    expect(middlewareRuns("/sitemap.xml/admin")).toBe(true);
+    expect(middlewareRuns("/robots.txtx")).toBe(true);
+  });
 });

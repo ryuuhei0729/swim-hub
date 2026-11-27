@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { SupabaseClient } from "@supabase/supabase-js";
 import type { BestTime, RelayingTimeRecord } from "@/types/member-detail";
 
 export function useBestTimes(supabase: SupabaseClient) {
+  const t = useTranslations("teams.memberBestTimesHook");
   const [bestTimes, setBestTimes] = useState<BestTime[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -179,12 +181,12 @@ export function useBestTimes(supabase: SupabaseClient) {
         setBestTimes(result);
       } catch (err) {
         console.error("ベストタイム取得エラー:", err);
-        setError("ベストタイムの取得に失敗しました");
+        setError(t("loadError"));
       } finally {
         setLoading(false);
       }
     },
-    [supabase],
+    [supabase, t],
   );
 
   return {

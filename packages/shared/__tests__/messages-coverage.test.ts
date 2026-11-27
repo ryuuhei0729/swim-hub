@@ -53,6 +53,15 @@ function messagesFor(
   return messages;
 }
 
+/**
+ * 文言中の {var} の変数名を、重複を除いてソートして返す。
+ * ICU の plural (`{count, plural, one {{count} item} other {{count} items}}`) は分岐ごとに
+ * 同じ変数を繰り返すため、出現回数ではなく「どの変数を使うか」で比べる。
+ */
+function placeholderVars(value: string): string[] {
+  return [...new Set([...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1] as string))].sort();
+}
+
 function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   const parts = dottedKey.split(".");
   let cur: unknown = obj;
@@ -204,7 +213,6 @@ describe("shared/messages global coverage", () => {
 
   // [V-05] プレースホルダの一致確認 (zh/ko/de で {var} 形式を保持)
   it("[V-05] zh.json placeholder variables match ja.json", () => {
-    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
     const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
     const mismatches: string[] = [];
 
@@ -213,8 +221,8 @@ describe("shared/messages global coverage", () => {
       const zhVal = getValue(zhMessages as unknown as Record<string, unknown>, key);
       if (typeof jaVal !== "string" || typeof zhVal !== "string") continue;
 
-      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
-      const zhVars = [...zhVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const jaVars = placeholderVars(jaVal);
+      const zhVars = placeholderVars(zhVal);
 
       if (JSON.stringify(jaVars) !== JSON.stringify(zhVars)) {
         mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} zh=${JSON.stringify(zhVars)}`);
@@ -228,7 +236,6 @@ describe("shared/messages global coverage", () => {
   });
 
   it("[V-05] ko.json placeholder variables match ja.json", () => {
-    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
     const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
     const mismatches: string[] = [];
 
@@ -237,8 +244,8 @@ describe("shared/messages global coverage", () => {
       const koVal = getValue(koMessages as unknown as Record<string, unknown>, key);
       if (typeof jaVal !== "string" || typeof koVal !== "string") continue;
 
-      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
-      const koVars = [...koVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const jaVars = placeholderVars(jaVal);
+      const koVars = placeholderVars(koVal);
 
       if (JSON.stringify(jaVars) !== JSON.stringify(koVars)) {
         mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} ko=${JSON.stringify(koVars)}`);
@@ -252,7 +259,6 @@ describe("shared/messages global coverage", () => {
   });
 
   it("[V-05] de.json placeholder variables match ja.json", () => {
-    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
     const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
     const mismatches: string[] = [];
 
@@ -261,8 +267,8 @@ describe("shared/messages global coverage", () => {
       const deVal = getValue(deMessages as unknown as Record<string, unknown>, key);
       if (typeof jaVal !== "string" || typeof deVal !== "string") continue;
 
-      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
-      const deVars = [...deVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const jaVars = placeholderVars(jaVal);
+      const deVars = placeholderVars(deVal);
 
       if (JSON.stringify(jaVars) !== JSON.stringify(deVars)) {
         mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} de=${JSON.stringify(deVars)}`);

@@ -12,6 +12,7 @@ import { GoalListSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { GoalCard } from "@/components/goals/GoalCard";
+import { FocusPointCard } from "@/components/focusPoints/FocusPointCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { localizedStyleName } from "@/utils/styleName";
 import { toISODateString } from "@apps/shared/utils/date";
@@ -20,7 +21,7 @@ import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { goalKeys, useGoalsQuery } from "@apps/shared/hooks/queries/goals";
-import { styleKeys } from "@apps/shared/hooks/queries/keys";
+import { focusPointKeys, styleKeys } from "@apps/shared/hooks/queries/keys";
 import { runMilestoneJudgment } from "@apps/shared/utils/milestoneJudgment";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
@@ -69,13 +70,25 @@ export const GoalsScreen: React.FC = () => {
     return round;
   }, [goalAPI, queryClient, userId]);
 
+  // 上のフォーカスポイントは目標の判定の1周とは別に取り直す (Web や別端末での追加・編集を拾う)。
+  // 表示中のカードだけが対象 (初回はカードがまだ無いので何もしない。カード側が自分で取りに行く)
+  const refetchFocusPoints = useCallback(
+    () => queryClient.refetchQueries({ queryKey: focusPointKeys.all, type: "active" }),
+    [queryClient],
+  );
+
   useFocusEffect(
     useCallback(() => {
       void runRound();
-    }, [runRound]),
+      void refetchFocusPoints();
+    }, [runRound, refetchFocusPoints]),
   );
 
-  const { refreshing, handleRefresh } = usePullToRefresh(runRound);
+  const refreshAll = useCallback(async () => {
+    await Promise.all([runRound(), refetchFocusPoints()]);
+  }, [runRound, refetchFocusPoints]);
+
+  const { refreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   if (!firstRoundDone) {
     return (
@@ -160,12 +173,22 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   }
 
   if (goalsQuery.isError && !goals) {
-    return <ErrorView
-        message={t("goals.list.loadError")}
-        error={goalsQuery.error}
-        onRetry={handleRetry}
-        fullScreen
-      />;
+    // 大会目標が読めなくても、フォーカスポイント (別のクエリ) は見られる・編集できるようにする
+    return (
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={refreshControl}
+      >
+        <FocusPointCard showMastered style={styles.focusPoints} />
+        <ErrorView
+          message={t("goals.list.loadError")}
+          error={goalsQuery.error}
+          onRetry={handleRetry}
+        />
+      </ScrollView>
+    );
   }
 
   if (!goals) {
@@ -180,6 +203,9 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={refreshControl}
     >
+      {/* フォーカスポイント (数字で測らない泳ぎの意識ポイント)。ホームと同じカードで、
+          こちらは身についたものの一覧も出す */}
+      <FocusPointCard showMastered style={styles.focusPoints} />
       {goals.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>{t("goals.list.empty")}</Text>
@@ -231,6 +257,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     // 大会カード (RecordItem の marginVertical: 3 ×2) と同じ間隔
     gap: 6,
+  },
+  focusPoints: {
+    marginBottom: 6,
   },
   emptyCard: {
     backgroundColor: "#FFFFFF",

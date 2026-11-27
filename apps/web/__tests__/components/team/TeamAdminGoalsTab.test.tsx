@@ -27,6 +27,14 @@ const h = vi.hoisted(() => ({
 vi.mock("@/contexts", () => ({
   useAuth: () => ({ supabase: { rpc: h.rpc, from: h.from } }),
 }));
+// フォーカスポイントの欄は別の RPC を呼ぶ別部品 (MemberFocusPoints.test.tsx で確かめる)。
+// このテストは大会目標・マイルストーンの振る舞いだけを見るので描かない
+vi.mock("@/components/team/member-goals/MemberFocusPoints", () => ({
+  __esModule: true,
+  default: ({ teamId, memberId }: { teamId: string; memberId: string }) => (
+    <div data-testid="member-focus-points-stub" data-team={teamId} data-member={memberId} />
+  ),
+}));
 vi.mock("@/components/team/member-management/hooks/useMembers", () => ({
   useMembers: () => ({
     members: h.members,
@@ -82,6 +90,19 @@ beforeEach(() => {
   h.membersState = { loading: false, error: null };
 });
 afterEach(() => vi.restoreAllMocks());
+
+describe("フォーカスポイントの欄", () => {
+  it("メンバーを選ぶまでは出さず、選ぶとそのメンバーのフォーカスポイント欄を目標の上に出す", async () => {
+    h.rpc.mockResolvedValue({ data: [], error: null });
+    renderTab();
+    expect(screen.queryByTestId("member-focus-points-stub")).toBeNull();
+
+    await userEvent.selectOptions(select(), "A");
+    const stub = screen.getByTestId("member-focus-points-stub");
+    expect(stub).toHaveAttribute("data-team", TEAM);
+    expect(stub).toHaveAttribute("data-member", "A");
+  });
+});
 
 describe("選択肢", () => {
   it("非泳者(is_swimmer=false)は選択肢に無い。泳者と is_swimmer 未設定は出る", () => {

@@ -181,6 +181,10 @@ export interface RecordData {
   styleDistance: number;
   videoPath: string | null;
   videoThumbnailPath: string | null;
+  /** 記録の team_id。チーム記録 (非 null) だけにフィードバックが付く。未指定は個人の記録扱い */
+  teamId?: string | null;
+  /** 記録の持ち主 (user_id) */
+  userId?: string | null;
 }
 
 // エントリーデータの型

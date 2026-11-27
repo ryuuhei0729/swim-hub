@@ -25,6 +25,9 @@ export * from "./goals";
 // 練習ログテンプレート型
 export * from "./practiceLogTemplate";
 
+// フォーカスポイント型
+export * from "./focusPoint";
+
 // チーム大会エントリー代理一括入力型
 export * from "./team-entry";
 
@@ -42,3 +45,6 @@ export * from "./teamMemberGoals";
 
 // 入力画面の目標バッジ用型
 export * from "./goalTargets";
+
+// チーム内フィードバック (大会記録へのフィードバック) 型
+export * from "./recordFeedback";

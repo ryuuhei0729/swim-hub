@@ -10,6 +10,7 @@ import {
 } from "@apps/shared/utils/calendarColorResolver";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import type { CalendarItemType } from "@apps/shared/types/common";
+import { localizeCalendarItemTitle } from "@apps/shared/utils/calendarItemTitle";
 import { darkenHex } from "@/utils/colorTone";
 
 interface CalendarDayProps {
@@ -140,18 +141,24 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     }
   };
 
-  // エントリーのタイトルを生成
+  // エントリーのタイトルを生成。DB のビューは「練習」「大会」「100m × 4本」を日本語で返すので、
+  // 表示言語の文言で組み立て直してから使う (英語などで日本語が残らないように)
   const getEntryTitle = (item: CalendarItem): string => {
-    let displayTitle = item.title;
+    const baseTitle = localizeCalendarItemTitle(item, {
+      practice: t("dashboard.calendarGrid.practiceDefault"),
+      teamPractice: t("dashboard.calendarGrid.teamPracticeDefault"),
+      competition: t("competition.client.competitionFallback"),
+      practiceLog: ({ distance, reps, sets }) =>
+        sets === 1
+          ? t("dashboard.calendarGrid.practiceLogTitle", { distance, reps })
+          : t("dashboard.calendarGrid.practiceLogTitleWithSets", { distance, reps, sets }),
+    });
 
     if (item.type === "team_practice") {
       const teamName = item.metadata?.team?.name || t("teams.mobile.fallbackTeamName");
-      displayTitle = `${teamName} - ${item.title}`;
-    } else if (item.type === "entry" || item.type === "record") {
-      displayTitle = item.metadata?.competition?.title || item.title || t("competition.client.competitionFallback");
+      return `${teamName} - ${baseTitle}`;
     }
-
-    return displayTitle;
+    return baseTitle;
   };
 
   // 表示するエントリー（最大2件）
@@ -217,8 +224,9 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
             );
           })}
           {remainingCount > 0 && (
-            <Text style={styles.moreEntriesText}>
-              +{remainingCount}{t("common.units.items")}
+            // セルが狭いので短い表記にし、1行に収める (ドイツ語の「+2Einträge」が折り返して切れていた)
+            <Text style={styles.moreEntriesText} numberOfLines={1}>
+              {t("dashboard.calendarGrid.moreItemsShort", { count: remainingCount })}
             </Text>
           )}
         </View>

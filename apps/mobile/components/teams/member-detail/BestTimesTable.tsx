@@ -316,7 +316,10 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gende
           {/* ヘッダー */}
           <View style={styles.tableHeader}>
             <View style={[styles.headerCell, styles.distanceCell]}>
-              <Text style={styles.headerText}>{t("teams.memberDetail.bestTimesTable.distanceHeader")}</Text>
+              {/* 列幅が狭いので、英語の "Distance" などは1行のまま縮めて収める (単語の途中で折り返さない) */}
+              <Text style={styles.headerText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                {t("teams.memberDetail.bestTimesTable.distanceHeader")}
+              </Text>
             </View>
             {STYLES.map((style) => (
               <View

@@ -203,13 +203,16 @@ export default async function LocaleLayout({
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "SwimHub",
+      alternateName: "スイムハブ",
       url: SITE_URL,
       logo: `${SITE_URL}/favicon.png`,
+      sameAs: ["https://apps.apple.com/jp/app/swimhub/id6756808731"],
     },
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "SwimHub",
+      alternateName: "スイムハブ",
       url: SITE_URL,
     },
   ];

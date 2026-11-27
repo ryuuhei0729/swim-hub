@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, RefreshControl, Alert } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
+import { useRecordFeedbackSummariesQuery } from "@apps/shared/hooks/queries/recordFeedbacks";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
@@ -37,7 +38,7 @@ import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { DayDetailModal } from "@/components/calendar";
 import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
-import type { MainStackParamList } from "@/navigation/types";
+import type { MainStackParamList, RecordsOpenRecordRequest } from "@/navigation/types";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -59,12 +60,23 @@ export interface RecordsScreenProps {
    * 取っているので、この画面では上端のインセットを付けない
    */
   embedded?: boolean;
+  /**
+   * 指定された記録の詳細 (カードをタップしたときと同じ画面) を開く要求。
+   * ダッシュボードの FB 受信ポップアップ「記録画面へ」から記録タブ経由で渡される
+   */
+  openRecordRequest?: RecordsOpenRecordRequest;
+  /** openRecordRequest を処理したら呼ぶ (呼び出し側がパラメータを消す) */
+  onOpenRecordRequestHandled?: () => void;
 }
 
 const safeAreaEdges = (embedded?: boolean): Edge[] =>
   embedded ? ["left", "right"] : ["top", "left", "right"];
 
-export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
+export const RecordsScreen: React.FC<RecordsScreenProps> = ({
+  embedded,
+  openRecordRequest,
+  onOpenRecordRequestHandled,
+}) => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
   const { supabase, user } = useAuth();
   const { t, i18n } = useTranslation();
@@ -597,6 +609,34 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
     [t],
   );
 
+  // FB 受信ポップアップの「記録画面へ」: カードをタップしたときと同じ詳細を開く。
+  // 一覧に載っている記録ならその記録で handleRecordPress を呼ぶ (読み込み待ちの間は保留)。
+  // 一覧に無い (読み込み後も見つからない) ときは、要求に含まれる大会情報で DayDetailModal を開く
+  const handledOpenRequestKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openRecordRequest) return;
+    if (handledOpenRequestKeyRef.current === openRecordRequest.requestKey) return;
+    const record = records.find((r) => r.id === openRecordRequest.recordId);
+    if (!record && isLoading) return;
+
+    handledOpenRequestKeyRef.current = openRecordRequest.requestKey;
+    if (record) {
+      handleRecordPress(record);
+    } else if (openRecordRequest.competitionId && openRecordRequest.competitionDate) {
+      const parsedDate = parseISO(openRecordRequest.competitionDate);
+      if (isValid(parsedDate)) {
+        setModalDate(parsedDate);
+        setTargetId(openRecordRequest.competitionId);
+        setTargetRecordId(openRecordRequest.recordId);
+        setTitleOverride(
+          openRecordRequest.competitionTitle || t("competition.client.competitionFallback"),
+        );
+        setShowDayDetail(true);
+      }
+    }
+    onOpenRecordRequestHandled?.();
+  }, [openRecordRequest, records, isLoading, handleRecordPress, onOpenRecordRequestHandled, t]);
+
   // 大会未紐付けレコードの削除（ダッシュボードと同一の Alert.alert 確認、Platform分岐なし）
   const deleteStandaloneRecordMutation = useDeleteRecordMutation(supabase);
   const handleDeleteStandaloneRecord = useCallback(
@@ -650,15 +690,31 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
   // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
   const listEnterEnabled = useListEnterOnce(!isLoading && records.length > 0);
 
+  // 記録カードの「FB n件」表示。FB が付くのはチーム記録 (team_id あり) だけ
+  const teamRecordIds = useMemo(
+    () => records.filter((r) => !!r.team_id).map((r) => r.id),
+    [records],
+  );
+  const { data: feedbackSummaries } = useRecordFeedbackSummariesQuery(
+    supabase,
+    teamRecordIds,
+    user?.id,
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: RecordWithDetails; index: number }) => {
       return (
         <ListItemEnter index={index} enabled={listEnterEnabled}>
-          <RecordItem record={item} onPress={handleRecordPress} />
+          <RecordItem
+            record={item}
+            onPress={handleRecordPress}
+            feedbackCount={feedbackSummaries?.[item.id]?.count ?? 0}
+            feedbackUnreadCount={feedbackSummaries?.[item.id]?.unreadCount ?? 0}
+          />
         </ListItemEnter>
       );
     },
-    [handleRecordPress, listEnterEnabled],
+    [handleRecordPress, listEnterEnabled, feedbackSummaries],
   );
 
   // エントリー済み(記録未登録)セクション(FlashList ListHeaderComponent としてメモ化して渡す)
@@ -717,6 +773,8 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
         contentInsetAdjustmentBehavior="automatic"
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        // FB 件数の取得が終わったら行を描き直す
+        extraData={feedbackSummaries}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={listHeaderComponent}
         refreshControl={

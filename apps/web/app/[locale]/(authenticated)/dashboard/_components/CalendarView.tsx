@@ -48,6 +48,7 @@ export default function CalendarView({
 }) {
   const router = useRouter();
   const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const { supabase, user } = useAuth();
   const userId = propUserId ?? user?.id;
   const { settings: calendarColorSettings } = useCalendarColorSettingsQuery(supabase, userId);
@@ -221,23 +222,23 @@ export default function CalendarView({
               <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              データの読み込みに失敗しました
+              {t("calendarView.loadFailed")}
             </h3>
             <p className="text-gray-600 mb-6 max-w-md">
-              カレンダーデータを取得できませんでした。ネットワーク接続を確認してから再試行してください。
+              {t("calendarView.noData")}
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => refetch()}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
-                再試行
+                {tCommon("retry")}
               </button>
               <button
                 onClick={() => router.refresh()}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
-                ページを更新
+                {t("calendarView.refreshPage")}
               </button>
             </div>
           </div>
@@ -303,7 +304,7 @@ export default function CalendarView({
                             (_, i) => currentYear - 5 + i,
                           ).map((year) => (
                             <option key={year} value={year}>
-                              {year}年
+                              {t("calendarView.yearUnit", { year })}
                             </option>
                           ))}
                         </select>
@@ -328,7 +329,7 @@ export default function CalendarView({
                                 }
                               `}
                             >
-                              {month + 1}月
+                              {t("calendarView.monthUnit", { month: month + 1 })}
                             </button>
                           ))}
                         </div>
@@ -343,7 +344,7 @@ export default function CalendarView({
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={() => setShowMonthSelector(false)}
                 >
-                  キャンセル
+                  {tCommon("cancel")}
                 </button>
               </div>
             </div>

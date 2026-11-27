@@ -9,10 +9,15 @@ import { formatTimeBest } from "@/utils/formatters";
 import type { Record, Competition, Style } from "@apps/shared/types";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
 import BestTimeBadge from "@/components/ui/BestTimeBadge";
+import RecordFeedbackCountBadge from "@/components/record-feedback/RecordFeedbackCountBadge";
 
 export interface CompetitionRecordCardProps {
   record: Record;
   onClick: (record: Record) => void;
+  /** 閲覧できるフィードバックの件数 (0 / 未指定なら「FB n件」を出さない) */
+  feedbackCount?: number;
+  /** 未読のフィードバックがあるか (バッジを強調する) */
+  feedbackHasUnread?: boolean;
 }
 
 /**
@@ -20,7 +25,12 @@ export interface CompetitionRecordCardProps {
  * 1行目=日付+大会名(左) / ベストバッジ(右、大会名と同じ高さ)、
  * 2行目=場所(左) / プール・種目・タイム(右)。
  */
-export default function CompetitionRecordCard({ record, onClick }: CompetitionRecordCardProps) {
+export default function CompetitionRecordCard({
+  record,
+  onClick,
+  feedbackCount,
+  feedbackHasUnread = false,
+}: CompetitionRecordCardProps) {
   const t = useTranslations("competition");
   const tCommon = useTranslations("common");
 
@@ -68,8 +78,9 @@ export default function CompetitionRecordCard({ record, onClick }: CompetitionRe
               {competitionLabel}
             </span>
           </div>
-          {/* ベストバッジ: 1行目右端、内容幅・右寄せ */}
-          <div className="shrink-0">
+          {/* FB 件数 + ベストバッジ: 1行目右端、内容幅・右寄せ */}
+          <div className="shrink-0 flex items-center gap-1">
+            <RecordFeedbackCountBadge count={feedbackCount} hasUnread={feedbackHasUnread} />
             <BestTimeBadge
               recordId={record.id}
               styleId={record.style_id}

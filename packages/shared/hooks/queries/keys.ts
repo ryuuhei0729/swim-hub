@@ -230,6 +230,15 @@ export const practiceLogTemplateKeys = {
 } as const;
 
 /**
+ * フォーカスポイントのクエリキー
+ * 本人の行だけを RLS で返すので userId は含めない (ログアウト時はキャッシュごと消える)
+ */
+export const focusPointKeys = {
+  all: ["focusPoints"] as const,
+  list: () => [...focusPointKeys.all, "list"] as const,
+} as const;
+
+/**
  * 理想LAP (race_pace_models) のクエリキー
  * 全ユーザー共通の参照データなので userId を含めない
  */

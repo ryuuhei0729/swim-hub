@@ -18,6 +18,10 @@ import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
+import {
+  localizeCalendarItemTitle,
+  type CalendarItemTitleLabels,
+} from "@apps/shared/utils/calendarItemTitle";
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -85,23 +89,20 @@ const FittedScrollBody: React.FC<{ maxHeight: number; children: React.ReactNode 
 };
 
 /**
- * エントリーのタイトルを生成
+ * エントリーのタイトルを生成。DB のビューは「練習」「大会」「100m × 4本」を日本語で返すので、
+ * 表示言語の文言で組み立て直してから使う (英語などで日本語が残らないように)
  */
 const buildEntryTitle = (
   item: CalendarItem,
   fallbackTeamName: string,
-  fallbackCompetitionName: string,
+  labels: CalendarItemTitleLabels,
 ): string => {
-  let displayTitle = item.title;
-
+  const baseTitle = localizeCalendarItemTitle(item, labels);
   if (item.type === "team_practice") {
     const teamName = item.metadata?.team?.name || fallbackTeamName;
-    displayTitle = `${teamName} - ${item.title}`;
-  } else if (item.type === "entry" || item.type === "record") {
-    displayTitle = item.metadata?.competition?.title || item.title || fallbackCompetitionName;
+    return `${teamName} - ${baseTitle}`;
   }
-
-  return displayTitle;
+  return baseTitle;
 };
 
 // 未設定(resolver がデフォルト色を返した)ユーザーの見た目を維持するための、
@@ -220,6 +221,15 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const formattedDate = formatDate(date, "shortWithWeekday", locale);
   const fallbackTeamName = t("teams.mobile.fallbackTeamName");
   const fallbackCompetitionName = t("competition.client.competitionFallback");
+  const titleLabels: CalendarItemTitleLabels = {
+    practice: t("dashboard.calendarGrid.practiceDefault"),
+    teamPractice: t("dashboard.calendarGrid.teamPracticeDefault"),
+    competition: fallbackCompetitionName,
+    practiceLog: ({ distance, reps, sets }) =>
+      sets === 1
+        ? t("dashboard.calendarGrid.practiceLogTitle", { distance, reps })
+        : t("dashboard.calendarGrid.practiceLogTitleWithSets", { distance, reps, sets }),
+  };
 
   // 「記録を追加」チューザー(空状態の大きい2ボタン)のアイコン色。
   // 個人の練習/大会色を resolver で解決し、未カスタマイズ(デフォルト色)ならピクセル一致で
@@ -372,7 +382,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   <View style={styles.entriesContainer}>
                     {/* 記録以外のエントリー */}
                     {otherItems.map((item) => {
-                      const title = buildEntryTitle(item, fallbackTeamName, fallbackCompetitionName);
+                      const title = buildEntryTitle(item, fallbackTeamName, titleLabels);
                       const color = getEntryDisplayColor(item, colorSettings);
                       const typeLabel = t(getEntryTypeLabelKey(item.type));
                       const isPractice = item.type === "practice" || item.type === "team_practice";
@@ -430,7 +440,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                                                        // 各グループは構造的に空にならないが、TS は
                                                        // それを知らないため防御的に扱う
                         const competitionName =
-                          firstEntry.metadata?.competition?.title || firstEntry.title || fallbackCompetitionName;
+                          localizeCalendarItemTitle(firstEntry, titleLabels);
                         const place =
                           firstEntry.place || firstEntry.metadata?.competition?.place || "";
                         // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
@@ -483,7 +493,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                                                        // 各グループは構造的に空にならないが、TS は
                                                        // それを知らないため防御的に扱う
                       const competitionName =
-                        firstRecord.metadata?.competition?.title || firstRecord.title || fallbackCompetitionName;
+                        localizeCalendarItemTitle(firstRecord, titleLabels);
                       const place =
                         firstRecord.place || firstRecord.metadata?.competition?.place || "";
                       const poolType =

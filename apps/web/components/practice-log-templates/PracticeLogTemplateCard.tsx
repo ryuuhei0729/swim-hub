@@ -98,7 +98,7 @@ export function PracticeLogTemplateCard({
               onClick={() => setShowMenu(!showMenu)}
               onKeyDown={handleMenuKeyDown}
               className="p-1 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="メニューを開く"
+              aria-label={t("openMenuAriaLabel")}
               aria-expanded={showMenu}
               aria-haspopup="true"
             >
@@ -114,7 +114,7 @@ export function PracticeLogTemplateCard({
                   onKeyDown={(e) => e.key === "Escape" && setShowMenu(false)}
                   role="button"
                   tabIndex={-1}
-                  aria-label="メニューを閉じる"
+                  aria-label={t("closeMenuAriaLabel")}
                 />
                 <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
                   <button

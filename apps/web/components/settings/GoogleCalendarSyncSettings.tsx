@@ -63,7 +63,7 @@ export default function GoogleCalendarSyncSettings({
 
   // 連携を解除
   const handleDisconnectGoogle = async () => {
-    if (!confirm("Googleカレンダー連携を解除しますか？")) {
+    if (!confirm(t("confirmDisconnect"))) {
       return;
     }
 

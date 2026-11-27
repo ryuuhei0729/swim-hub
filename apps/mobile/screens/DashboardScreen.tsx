@@ -24,6 +24,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@apps/shared/hooks/queries/goals";
+import { recordFeedbackKeys } from "@apps/shared/hooks/queries/recordFeedbacks";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
@@ -36,6 +37,7 @@ import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calend
 import {
   announcementKeys,
   dashboardKeys,
+  focusPointKeys,
   notificationKeys,
   recordKeys,
   userKeys,
@@ -46,6 +48,7 @@ import { DashboardNoticesSection } from "@/components/dashboard/DashboardNotices
 import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
 import { LastPracticeCard } from "@/components/dashboard/LastPracticeCard";
 import { DashboardCardCarousel } from "@/components/dashboard/DashboardCardCarousel";
+import { FocusPointCard } from "@/components/focusPoints/FocusPointCard";
 import {
   useDashboardInitialCard,
   useLastPracticeQuery,
@@ -61,6 +64,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useExpiredGoalCheck } from "@/hooks/useExpiredGoalCheck";
 import { GoalReflectionModal } from "@/components/goals/GoalReflectionModal";
 import { ReflectionModal } from "@/components/goals/ReflectionModal";
+import { RecordFeedbackArrivalHost } from "@/components/record-feedback/RecordFeedbackArrivalHost";
 import type { MainStackParamList } from "@/navigation/types";
 
 // 未設定 (取得前・未カスタマイズ) の色設定。resolver がデフォルト色にフォールバックするための空値。
@@ -292,6 +296,10 @@ export const DashboardScreen: React.FC = () => {
       }),
       // ベストタイム表の WA ポイント・区分記録に使う性別と生年月日
       queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() }),
+      // チーム内フィードバックの未読 (受信ポップアップ)。ダッシュボードを表示するたびに確認する
+      queryClient.invalidateQueries({ queryKey: recordFeedbackKeys.unread(user?.id) }),
+      // カルーセルのフォーカスポイント (別端末・Web での追加・編集を拾う)
+      queryClient.invalidateQueries({ queryKey: focusPointKeys.all }),
     ]);
   }, [refetch, refetchTeams, refetchColorSettings, queryClient, user?.id]);
 
@@ -422,9 +430,12 @@ export const DashboardScreen: React.FC = () => {
             onRetry={() => refetch()}
           />
           <DashboardNoticesSection teams={teams} />
-          {/* 次の大会と前回の練習を横に並べ、スワイプで切り替える。前回の練習が無ければ次の大会だけ。
-              最初に見せるカードは useDashboardInitialCard が選ぶ */}
-          <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
+          {/* 次の大会・前回の練習・フォーカスポイントを横に並べ、スワイプで切り替える。
+              前回の練習が無ければ出さない。最初に見せるカードは useDashboardInitialCard が選ぶ */}
+          <DashboardCardCarousel
+            initialIndex={lastPractice ? initialCard.initialIndex : 0}
+            ready={cardsReady}
+          >
             <NextCompetitionCard
               key="next-competition"
               hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
@@ -439,6 +450,7 @@ export const DashboardScreen: React.FC = () => {
                 style={styles.carouselCard}
               />
             )}
+            <FocusPointCard key="focus-points" style={[styles.carouselCard, styles.focusPointCard]} />
           </DashboardCardCarousel>
           <View style={styles.calendar}>
             <CalendarView
@@ -554,6 +566,11 @@ export const DashboardScreen: React.FC = () => {
           />
         )}
 
+        {/* チーム内フィードバックの受信ポップアップ (振り返り・日付詳細を出している間は重ねない) */}
+        <RecordFeedbackArrivalHost
+          enabled={!expiredGoal && !expiredMilestone && !showDayDetail}
+        />
+
         {/* 日付詳細モーダル */}
         {selectedDate && (
           <DayDetailModal
@@ -602,6 +619,11 @@ const styles = StyleSheet.create({
   },
   carouselCard: {
     flex: 1,
+  },
+  // FocusPointCard は外側の余白を持たないので、カルーセルの他のカードと同じ余白をここで付ける
+  focusPointCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
   },
   calendar: {
     marginTop: 12,

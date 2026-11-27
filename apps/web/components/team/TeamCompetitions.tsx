@@ -900,14 +900,14 @@ export default function TeamCompetitions({
                           <div className="mt-1">
                             <span className="text-sm text-blue-600 flex items-center gap-1">
                               <PencilSquareIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              エントリー: {competition.entries.length}件
+                              {t("competitions.card.entryCount", { count: competition.entries.length })}
                             </span>
                           </div>
                         )}
 
                       <div className="mt-2">
                         <span className="text-xs text-gray-500">
-                          作成者:{" "}
+                          {t("competitions.card.createdBy")}{" "}
                           {competition.users?.name ||
                             competition.created_by_user?.name ||
                             "Unknown"}
@@ -1116,6 +1116,7 @@ export default function TeamCompetitions({
             selectedCompetitionForRecords.title ||
             t("competitions.fallbackTitle")
           }
+          isAdmin={isAdmin}
         />
       )}
 

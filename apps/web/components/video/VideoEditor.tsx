@@ -31,15 +31,16 @@ interface TrimBarProps {
   onSeek: (time: number) => void;
   onRelease: () => void;
   trimmingLabel: string;
+  secondsUnit: string;
 }
 
-function formatSec(t: number): string {
+function formatSec(t: number, secondsUnit: string): string {
   const m = Math.floor(t / 60);
   const s = (t % 60).toFixed(1);
-  return m > 0 ? `${m}:${s.padStart(4, "0")}` : `${s}秒`;
+  return m > 0 ? `${m}:${s.padStart(4, "0")}` : `${s}${secondsUnit}`;
 }
 
-function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, trimmingLabel }: TrimBarProps) {
+function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, trimmingLabel, secondsUnit }: TrimBarProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const getTime = (clientX: number): number => {
@@ -101,8 +102,8 @@ function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, tr
       <div className="flex justify-between items-baseline">
         <span className="text-sm font-medium text-gray-700">{trimmingLabel}</span>
         <span className="text-xs text-gray-500">
-          {formatSec(startTime)} – {formatSec(endTime)}
-          <span className="ml-2 text-blue-600 font-medium">({formatSec(clipDuration)})</span>
+          {formatSec(startTime, secondsUnit)} – {formatSec(endTime, secondsUnit)}
+          <span className="ml-2 text-blue-600 font-medium">({formatSec(clipDuration, secondsUnit)})</span>
         </span>
       </div>
 
@@ -153,9 +154,9 @@ function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, tr
 
       {/* Tick labels */}
       <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
-        <span>0秒</span>
-        <span>{formatSec(duration / 2)}</span>
-        <span>{formatSec(duration)}</span>
+        <span>0{secondsUnit}</span>
+        <span>{formatSec(duration / 2, secondsUnit)}</span>
+        <span>{formatSec(duration, secondsUnit)}</span>
       </div>
     </div>
   );
@@ -508,7 +509,7 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
           {/* Zoom */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              ズーム: {zoom.toFixed(1)}x
+              {t("zoom", { value: zoom.toFixed(1) })}
             </label>
             <input
               type="range"
@@ -531,6 +532,7 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
               onSeek={seekCropperVideo}
               onRelease={playFromStart}
               trimmingLabel={t("trimming")}
+              secondsUnit={t("secondsUnit")}
             />
           )}
 

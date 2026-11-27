@@ -13,6 +13,8 @@ import {
   useLastPracticeQuery,
 } from "@apps/shared/hooks/queries/dashboard";
 import DashboardBestTimesCard from "../_components/DashboardBestTimesCard";
+import RecordFeedbackArrivalPopup from "@/components/record-feedback/RecordFeedbackArrivalPopup";
+import FocusPointsCard from "@/components/focus-points/FocusPointsCard";
 import GoalCreateModal from "@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal";
 import ReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/ReflectionModal";
 import GoalReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/GoalReflectionModal";
@@ -411,22 +413,26 @@ export default function DashboardClient({
 
         {/* 次の大会とベストタイム表は xl 以上で横並び (2026-11-09 ユーザー指定)。
             ベストタイム表の方が横幅が要るので 2:3 で分ける。表の文字サイズはカードの幅で切り替わる
-            (BestTimesTable の @container)。xl 未満は縦に積む */}
+            (BestTimesTable の @container)。xl 未満は縦に積む。
+            フォーカスポイントは次の大会の下 (ベストタイム表の方が縦に長く空いていた所) に置く */}
         <div className="grid grid-cols-1 gap-1.5 lg:gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:items-start">
-          {/* 次の大会と前回の練習を横に並べて切り替える。前回の練習が無ければ次の大会だけ */}
-          <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
-            <NextCompetitionCard
-              key="next-competition"
-              hasTeams={teams.length > 0}
-              openEntryLogForm={openEntryLogForm}
-              onAddCompetition={() => onAddItem(new Date(), "record")}
-              onSetGoal={setGoalCreateTarget}
-              onOpenDay={openDay}
-            />
-            {lastPractice && (
-              <LastPracticeCard key="last-practice" practice={lastPractice} onOpenDay={openDay} />
-            )}
-          </DashboardCardCarousel>
+          <div className="flex min-w-0 flex-col gap-1.5 lg:gap-4">
+            {/* 次の大会と前回の練習を横に並べて切り替える。前回の練習が無ければ次の大会だけ */}
+            <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
+              <NextCompetitionCard
+                key="next-competition"
+                hasTeams={teams.length > 0}
+                openEntryLogForm={openEntryLogForm}
+                onAddCompetition={() => onAddItem(new Date(), "record")}
+                onSetGoal={setGoalCreateTarget}
+                onOpenDay={openDay}
+              />
+              {lastPractice && (
+                <LastPracticeCard key="last-practice" practice={lastPractice} onOpenDay={openDay} />
+              )}
+            </DashboardCardCarousel>
+            <FocusPointsCard />
+          </div>
           <DashboardBestTimesCard />
         </div>
 
@@ -498,6 +504,9 @@ export default function DashboardClient({
             }}
           />
         )}
+
+        {/* 未読フィードバックのお知らせ (期限切れ目標・マイルストーンのモーダルが出ている間は出さない) */}
+        <RecordFeedbackArrivalPopup enabled={!expiredGoal && !expiredMilestone} />
 
         {/* 期限切れマイルストーン内省モーダル */}
         {!expiredGoal && expiredMilestone && (

@@ -8,6 +8,7 @@ import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
 import { DeleteConfirmModal } from "@/components/ui/DeleteConfirmModal";
+import RecordFeedbackSection from "@/components/record-feedback/RecordFeedbackSection";
 import type { Record as RecordType, Style } from "@apps/shared/types";
 
 const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), { ssr: false });
@@ -155,6 +156,9 @@ export default function RecordDetailModal({
                     <div className="text-sm text-gray-700">{record.note}</div>
                   </div>
                 )}
+
+                {/* フィードバック (チーム記録だけが持てる) */}
+                {record.team_id && <RecordFeedbackSection recordId={record.id} className="mt-2" />}
               </div>
             </div>
           </div>

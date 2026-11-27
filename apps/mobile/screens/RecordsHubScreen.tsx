@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -20,8 +20,9 @@ type Props = BottomTabScreenProps<TabParamList, "Records">;
  * 上端のインセットだけこちらが持つ)。表示中でない方はマウントしない
  * (フォーカス時の再取得が両方で走らないように。絞り込みはストアに残るので失われない)。
  * 他画面から開くときは `navigate("MainTabs", { screen: "Records", params: { segment } })`。
+ * `openRecord` を渡すと、大会記録一覧でその記録の詳細 (カードをタップしたときと同じ画面) を開く。
  */
-export const RecordsHubScreen: React.FC<Props> = ({ route }) => {
+export const RecordsHubScreen: React.FC<Props> = ({ route, navigation }) => {
   const { t } = useTranslation();
   const [segment, setSegment] = useState<RecordsSegment>(route.params?.segment ?? "competitions");
 
@@ -29,6 +30,13 @@ export const RecordsHubScreen: React.FC<Props> = ({ route }) => {
   useEffect(() => {
     if (requestedSegment) setSegment(requestedSegment);
   }, [requestedSegment]);
+
+  // ダッシュボードの FB 受信ポップアップ「記録画面へ」から渡される、詳細を開く要求。
+  // 大会記録一覧が処理したらパラメータから消す (タブを開き直したときに再度開かないように)
+  const openRecord = route.params?.openRecord;
+  const handleOpenRecordHandled = useCallback(() => {
+    navigation.setParams({ openRecord: undefined });
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -43,7 +51,15 @@ export const RecordsHubScreen: React.FC<Props> = ({ route }) => {
           ]}
         />
       </View>
-      {segment === "practices" ? <PracticesScreen embedded /> : <CompetitionsScreen embedded />}
+      {segment === "practices" ? (
+        <PracticesScreen embedded />
+      ) : (
+        <CompetitionsScreen
+          embedded
+          openRecordRequest={openRecord}
+          onOpenRecordRequestHandled={handleOpenRecordHandled}
+        />
+      )}
     </SafeAreaView>
   );
 };

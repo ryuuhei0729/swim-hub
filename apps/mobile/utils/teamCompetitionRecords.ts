@@ -40,6 +40,8 @@ export interface StyleInfo {
 export interface RecordEntry {
   id: string;
   user_id: string;
+  /** チーム記録なら所属チーム。フィードバックはチーム記録にだけ付く */
+  team_id?: string | null;
   style_id: number;
   time: number;
   reaction_time: number | null;

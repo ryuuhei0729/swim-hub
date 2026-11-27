@@ -12,17 +12,27 @@ import { formatTime } from "@/utils/formatters";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import BestTimeBadge from "./BestTimeBadge";
+import { RecordFeedbackCountBadge } from "@/components/record-feedback/RecordFeedbackCountBadge";
 
 interface RecordItemProps {
   record: RecordWithDetails;
   onPress?: (record: RecordWithDetails) => void;
+  /** この記録に付いた FB の件数 (チーム記録のみ)。0 なら表示しない */
+  feedbackCount?: number;
+  /** 自分宛ての未読 FB の件数。1 以上なら FB 表示を強調する */
+  feedbackUnreadCount?: number;
 }
 
 /**
  * 大会記録アイテムコンポーネント
  * 大会記録の1件を表示
  */
-const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => {
+const RecordItemComponent: React.FC<RecordItemProps> = ({
+  record,
+  onPress,
+  feedbackCount = 0,
+  feedbackUnreadCount = 0,
+}) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
   // 大会未紐付けレコード（一括入力）かどうか
@@ -87,6 +97,7 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
           >
             {competitionName}
           </Text>
+          <RecordFeedbackCountBadge count={feedbackCount} hasUnread={feedbackUnreadCount > 0} />
           <BestTimeBadge
             recordId={record.id}
             styleId={record.style_id}
@@ -219,6 +230,8 @@ export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps)
     prevStyle?.id === nextStyle?.id &&
     prevStyle?.name_jp === nextStyle?.name_jp &&
     prevStyle?.distance === nextStyle?.distance &&
-    prevProps.onPress === nextProps.onPress
+    prevProps.onPress === nextProps.onPress &&
+    prevProps.feedbackCount === nextProps.feedbackCount &&
+    prevProps.feedbackUnreadCount === nextProps.feedbackUnreadCount
   );
 });

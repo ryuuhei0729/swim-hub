@@ -25,11 +25,25 @@ export type AuthStackParamList = {
 /** 記録タブの中の切り替え (練習記録一覧 / 大会記録一覧) */
 export type RecordsSegment = "practices" | "competitions";
 
+/**
+ * 記録タブ (大会記録一覧) で、記録カードをタップしたときと同じ詳細を開く要求。
+ * ダッシュボードの FB 受信ポップアップの「記録画面へ」から渡す。
+ * requestKey は同じ記録を続けて開く要求を区別するための一意な値。
+ */
+export interface RecordsOpenRecordRequest {
+  recordId: string;
+  competitionId: string | null;
+  competitionTitle: string | null;
+  /** 大会日 (yyyy-MM-dd)。大会に紐づかない記録は null */
+  competitionDate: string | null;
+  requestKey: string;
+}
+
 // タブナビゲーターのパラメータ型
 // iOS 標準のタブバーは 5 つまでしか並ばないため、練習と大会は Records (記録) タブの中で切り替える
 export type TabParamList = {
   Dashboard: undefined;
-  Records: { segment?: RecordsSegment } | undefined;
+  Records: { segment?: RecordsSegment; openRecord?: RecordsOpenRecordRequest } | undefined;
   /**
    * チームタブは最後に開いたチームを表示する。teamId / initialTab を渡すとそのチーム・タブを開く
    * (ホームの出欠未回答・カレンダーの出欠変更・プロフィールの所属チーム・大会保存後の戻り先)
@@ -195,6 +209,8 @@ export type MainStackParamList = {
   GoalForm: { goalId?: string; competitionId?: string; styleId?: number };
   /** milestoneId あり = 編集、なし = 新規作成 */
   MilestoneForm: { goalId: string; milestoneId?: string };
+  /** focusPointId あり = 編集、なし = 新規作成 (ホームのカードと目標タブの両方から開く) */
+  FocusPointForm: { focusPointId?: string } | undefined;
   Paywall: undefined;
 };
 
