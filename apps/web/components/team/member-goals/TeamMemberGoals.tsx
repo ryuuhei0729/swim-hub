@@ -15,6 +15,7 @@ import type { TeamMemberGoal } from "@apps/shared/types/teamMemberGoals";
 import { buildSwimStyleLabel, styleIdToCodeKey } from "@/utils/swimStyle";
 import { useMembers } from "../member-management/hooks/useMembers";
 import MemberGoalCard from "./MemberGoalCard";
+import MemberFocusPoints from "./MemberFocusPoints";
 
 interface TeamMemberGoalsProps {
   teamId: string;
@@ -27,7 +28,7 @@ function sectionOf(goal: TeamMemberGoal): SectionKey {
 }
 
 /**
- * 管理者向け「目標」タブ。メンバーを1人選ぶと、その目標とマイルストーンを
+ * 管理者向け「目標」タブ。メンバーを1人選ぶと、そのフォーカスポイント・目標・マイルストーンを
  * 読み取り専用で表示する。書き込み系 API・達成判定は一切呼ばない。
  */
 export default function TeamMemberGoals({ teamId }: TeamMemberGoalsProps) {
@@ -185,6 +186,12 @@ export default function TeamMemberGoals({ teamId }: TeamMemberGoalsProps) {
             ))}
           </select>
           <p className="mt-2 text-[11px] text-gray-500">{t("snapshotNote")}</p>
+          {/* 大会目標の上に、そのメンバーのフォーカスポイント (泳ぎで意識していること) を出す */}
+          {activeMemberId && (
+            <div className="mt-4">
+              <MemberFocusPoints teamId={teamId} memberId={activeMemberId} />
+            </div>
+          )}
           <div className="mt-4">{renderBody()}</div>
         </>
       )}

@@ -985,7 +985,12 @@
       "addRecord": "Add record",
       "moreItems": "+{count} more",
       "teamDefault": "Team",
-      "competitionDefault": "Competition"
+      "competitionDefault": "Competition",
+      "practiceDefault": "Practice",
+      "teamPracticeDefault": "Team practice",
+      "practiceLogTitle": "{distance}m × {reps}",
+      "practiceLogTitleWithSets": "{distance}m × {reps} × {sets}",
+      "moreItemsShort": "+{count}"
     },
     "attendance": {
       "title": "Attendance",
@@ -2533,6 +2538,14 @@
         "achieved": "Achieved",
         "expired": "Expired"
       }
+    },
+    "focusPoints": {
+      "title": "Focus points",
+      "empty": "No focus points yet",
+      "loadError": "Couldn't load focus points",
+      "activeCount": "Working on {count}",
+      "masteredTitle": "Mastered ({count})",
+      "masteredOn": "Mastered on {date}"
     }
   },
   "teams": {
@@ -4842,6 +4855,43 @@
         "security": "Email, password, login methods, and account deletion"
       },
       "loadError": "A problem occurred while loading the account page."
+    }
+  },
+  "focusPoints": {
+    "title": "Focus points",
+    "count": "{count} / {max}",
+    "add": "+ Add",
+    "addAria": "Add a focus point",
+    "editAria": "Edit \"{title}\"",
+    "emptyTitle": "Write down what you want to focus on",
+    "emptyDescription": "e.g. Reach further on the right-hand entry / Time the kick with the pull / Keep the hips high",
+    "loadError": "Couldn't load your focus points",
+    "limitError": "You can have up to {max} focus points at a time. Mark one as mastered or delete it first.",
+    "masteredTitle": "Mastered ({count})",
+    "masteredOn": "Mastered on {date}",
+    "form": {
+      "createTitle": "Add focus point",
+      "editTitle": "Edit focus point",
+      "titleLabel": "What to focus on",
+      "titlePlaceholder": "e.g. Reach further on the right-hand entry",
+      "titleRequired": "Enter what you want to focus on",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "What your coach said, tips that worked, etc.",
+      "create": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveFailed": "Couldn't save. Please try again later",
+      "markMastered": "Mastered",
+      "reactivate": "Work on it again",
+      "statusFailed": "Couldn't update. Please try again later",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete focus point",
+      "deleteConfirmMessage": "\"{title}\" will be deleted. This can't be undone.",
+      "deleteFailed": "Couldn't delete. Please try again later",
+      "notFound": "This focus point couldn't be found",
+      "masteredConfirmTitle": "Mastered?",
+      "masteredConfirmMessage": "\"{title}\" will be marked as mastered and moved from your current focus points to the mastered list.",
+      "reactivateUnavailable": "You already have {max} focus points, so you can't work on this one again yet. Mark one as mastered or delete it first."
     }
   }
 }

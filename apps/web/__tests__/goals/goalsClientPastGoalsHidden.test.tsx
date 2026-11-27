@@ -61,6 +61,8 @@ vi.mock("../../app/[locale]/(authenticated)/goals/_components/GoalDetail", () =>
 vi.mock("../../app/[locale]/(authenticated)/goals/_components/GoalCreateModal", () => ({
   default: () => null,
 }));
+// フォーカスポイントのカードは自前のクエリを持つので、この一覧のテストでは描かない
+vi.mock("@/components/focus-points/FocusPointsCard", () => ({ __esModule: true, default: () => null }));
 vi.mock("../../app/[locale]/(authenticated)/goals/_components/GoalEditModal", () => ({
   default: () => null,
 }));

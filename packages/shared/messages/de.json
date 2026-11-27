@@ -988,7 +988,12 @@
       "addRecord": "Eintrag hinzufügen",
       "moreItems": "+{count} weitere",
       "teamDefault": "Team",
-      "competitionDefault": "Wettkampf"
+      "competitionDefault": "Wettkampf",
+      "practiceDefault": "Training",
+      "teamPracticeDefault": "Teamtraining",
+      "practiceLogTitle": "{distance}m × {reps}",
+      "practiceLogTitleWithSets": "{distance}m × {reps} × {sets}",
+      "moreItemsShort": "+{count}"
     },
     "attendance": {
       "title": "Anwesenheit",
@@ -2536,6 +2541,14 @@
         "achieved": "Erreicht",
         "expired": "Abgelaufen"
       }
+    },
+    "focusPoints": {
+      "title": "Fokuspunkte",
+      "empty": "Noch keine Fokuspunkte",
+      "loadError": "Fokuspunkte konnten nicht geladen werden",
+      "activeCount": "In Arbeit: {count}",
+      "masteredTitle": "Verinnerlicht ({count})",
+      "masteredOn": "Verinnerlicht am {date}"
     }
   },
   "teams": {
@@ -4845,6 +4858,43 @@
         "security": "E-Mail, Passwort, Anmeldemethoden und Kontolöschung"
       },
       "loadError": "Beim Laden der Kontoseite ist ein Problem aufgetreten."
+    }
+  },
+  "focusPoints": {
+    "title": "Fokuspunkte",
+    "count": "{count} / {max}",
+    "add": "+ Hinzufügen",
+    "addAria": "Fokuspunkt hinzufügen",
+    "editAria": "„{title}“ bearbeiten",
+    "emptyTitle": "Notiere, worauf du beim Schwimmen achten willst",
+    "emptyDescription": "z. B. Rechte Hand weiter vorne eintauchen / Beinschlag und Zug abstimmen / Hüfte hoch halten",
+    "loadError": "Fokuspunkte konnten nicht geladen werden",
+    "limitError": "Du kannst höchstens {max} Fokuspunkte gleichzeitig haben. Markiere zuerst einen als verinnerlicht oder lösche ihn.",
+    "masteredTitle": "Verinnerlicht ({count})",
+    "masteredOn": "Verinnerlicht am {date}",
+    "form": {
+      "createTitle": "Fokuspunkt hinzufügen",
+      "editTitle": "Fokuspunkt bearbeiten",
+      "titleLabel": "Worauf du achten willst",
+      "titlePlaceholder": "z. B. Rechte Hand weiter vorne eintauchen",
+      "titleRequired": "Gib ein, worauf du achten willst",
+      "noteLabel": "Notiz (optional)",
+      "notePlaceholder": "Was dein Trainer gesagt hat, Tipps, die geholfen haben usw.",
+      "create": "Hinzufügen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es später erneut",
+      "markMastered": "Verinnerlicht",
+      "reactivate": "Wieder daran arbeiten",
+      "statusFailed": "Ändern fehlgeschlagen. Bitte versuche es später erneut",
+      "delete": "Löschen",
+      "deleteConfirmTitle": "Fokuspunkt löschen",
+      "deleteConfirmMessage": "„{title}“ wird gelöscht. Das kann nicht rückgängig gemacht werden.",
+      "deleteFailed": "Löschen fehlgeschlagen. Bitte versuche es später erneut",
+      "notFound": "Dieser Fokuspunkt wurde nicht gefunden",
+      "masteredConfirmTitle": "Verinnerlicht?",
+      "masteredConfirmMessage": "„{title}“ wird als verinnerlicht markiert und aus deinen aktuellen Fokuspunkten in die Liste der verinnerlichten verschoben.",
+      "reactivateUnavailable": "Du hast bereits {max} Fokuspunkte und kannst diesen deshalb noch nicht wieder aufnehmen. Markiere zuerst einen als verinnerlicht oder lösche ihn."
     }
   }
 }

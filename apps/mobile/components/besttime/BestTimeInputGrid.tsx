@@ -152,7 +152,8 @@ export const BestTimeInputGrid: React.FC<BestTimeInputGridProps> = ({
       <View style={styles.table} testID="best-time-input-grid">
         <View style={styles.row}>
           <View style={[styles.headerCell, styles.distanceCell]}>
-            <Text style={styles.headerText}>
+            {/* 列幅が狭いので、英語の "Distance" などは1行のまま縮めて収める (単語の途中で折り返さない) */}
+            <Text style={styles.headerText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
               {t("mypage.bestTimesTable.distanceHeader")}
             </Text>
           </View>

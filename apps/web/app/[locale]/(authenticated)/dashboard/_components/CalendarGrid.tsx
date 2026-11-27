@@ -8,6 +8,10 @@ import { isHoliday } from "@apps/shared/utils/holiday";
 import { hexToRgba, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import {
+  localizeCalendarItemTitle,
+  type CalendarItemTitleLabels,
+} from "@apps/shared/utils/calendarItemTitle";
 
 // 旧実装(記録色カスタマイズ導入前)の種目別 Tailwind クラス。
 // 未カスタマイズ(resolver がデフォルト色を返した)ユーザーはこのクラスをそのまま使い、
@@ -61,6 +65,15 @@ export default function CalendarGrid({
 }: CalendarGridProps) {
   const tDatePicker = useTranslations("common.datePicker");
   const tCalendarGrid = useTranslations("dashboard.calendarGrid");
+  const titleLabels: CalendarItemTitleLabels = {
+    practice: tCalendarGrid("practiceDefault"),
+    teamPractice: tCalendarGrid("teamPracticeDefault"),
+    competition: tCalendarGrid("competitionDefault"),
+    practiceLog: ({ distance, reps, sets }) =>
+      sets === 1
+        ? tCalendarGrid("practiceLogTitle", { distance, reps })
+        : tCalendarGrid("practiceLogTitleWithSets", { distance, reps, sets }),
+  };
   const WEEKDAYS = useMemo(() => tDatePicker.raw("weekdays") as string[], [tDatePicker]);
 
   // SSR/CSR タイムゾーン差による hydration mismatch を防ぐため、
@@ -176,21 +189,14 @@ export default function CalendarGrid({
                                 ? "entry-mark"
                                 : undefined;
 
-                      // タイトルを生成
-                      // calendar_viewで既にCOALESCEでデフォルト値（「練習」「大会」）が設定されているため、
-                      // item.titleをそのまま使用する
-                      let displayTitle = item.title;
+                      // タイトルを生成。calendar_view は「練習」「大会」「100m × 4本」を日本語で返すので、
+                      // 表示言語の文言で組み立て直す (英語などで日本語が残らないように)
+                      let displayTitle = localizeCalendarItemTitle(item, titleLabels);
 
                       if (item.type === "team_practice") {
                         // TeamPractice: チーム名 - タイトル（metadataから動的に取得）
                         const teamName = item.metadata?.team?.name || tCalendarGrid("teamDefault");
-                        displayTitle = `${teamName} - ${item.title}`;
-                      } else if (item.type === "entry") {
-                        // Entry: 大会の名前（metadataから取得、なければtitleを使用、それもなければ「大会」）
-                        displayTitle = item.metadata?.competition?.title || item.title || tCalendarGrid("competitionDefault");
-                      } else if (item.type === "record") {
-                        // Record: 大会の名前（metadataから取得、なければtitleを使用、それもなければ「大会」）
-                        displayTitle = item.metadata?.competition?.title || item.title || tCalendarGrid("competitionDefault");
+                        displayTitle = `${teamName} - ${displayTitle}`;
                       }
 
                       // 表示色はユーザーのカスタム設定(個人/チーム別)から解決する。

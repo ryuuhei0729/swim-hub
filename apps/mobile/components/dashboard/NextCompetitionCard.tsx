@@ -1,5 +1,13 @@
 import React, { useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,6 +34,8 @@ interface NextCompetitionCardProps {
   hasTeams: boolean;
   /** カード上部 (見出し・大会名・日数) を押したとき、その大会日の詳細を開く */
   onOpenDay: (date: string) => void;
+  /** カードの外側の余白などを置き場所から上書きする (ホームのカルーセルでは余白を外す) */
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -34,7 +44,11 @@ interface NextCompetitionCardProps {
  * entries のときは種目ごとにベストと目標までの差を出す。目標が無い種目は「＋ 目標」に置き換え、
  * 押すとその大会・種目を選んだ状態で目標フォームを開く。
  */
-export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTeams, onOpenDay }) => {
+export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({
+  hasTeams,
+  onOpenDay,
+  style,
+}) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -54,7 +68,7 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
 
   if (isLoading) {
     return (
-      <View style={[styles.card, styles.loading]} testID="next-competition-loading">
+      <View style={[styles.card, styles.loading, style]} testID="next-competition-loading">
         <ActivityIndicator color="#2563EB" />
       </View>
     );
@@ -62,7 +76,7 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
 
   if (isError) {
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, style]}>
         <Text style={styles.kicker}>{t("dashboard.nextCompetition.title")}</Text>
         <Text style={styles.errorText}>{t("dashboard.nextCompetition.loadError")}</Text>
       </View>
@@ -73,7 +87,7 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
 
   if (state === "none" || !data) {
     return (
-      <View style={styles.card} testID="next-competition-none">
+      <View style={[styles.card, style]} testID="next-competition-none">
         <Text style={styles.kicker}>{t("dashboard.nextCompetition.title")}</Text>
         <View style={styles.none}>
           <View style={styles.noneIcon}>
@@ -128,7 +142,7 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
     // accessible={false}: カード全体を1つの読み上げ要素にすると、中のボタンが VoiceOver から
     // 個別に選べなくなる (iOS は accessible な要素の子を読み上げツリーから外す) ため
     <Pressable
-      style={styles.card}
+      style={[styles.card, style]}
       testID={`next-competition-${state}`}
       onPress={() => onOpenDay(competition.date)}
       accessible={false}
