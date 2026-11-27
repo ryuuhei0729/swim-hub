@@ -316,8 +316,8 @@ importers:
         specifier: ^4.3.2
         version: 4.3.2(react-native-nitro-modules@0.36.5(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       react-native-purchases:
-        specifier: ^9.15.0
-        version: 9.15.0(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        specifier: ^10.16.0
+        version: 10.16.0(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       react-native-reanimated:
         specifier: ~4.2.1
         version: 4.2.1(react-native-worklets@0.7.4(@babel/core@7.29.7)(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -2711,14 +2711,14 @@ packages:
   '@react-navigation/routers@7.6.5':
     resolution: {integrity: sha512-hpvpVFt6wu3U014F/0Qy45VZCErlUvIV8kN1L6HovN5P9OpbXAzFTaRQmG7VW6czg2tSkUL5S3dZA0HIu5QirQ==}
 
-  '@revenuecat/purchases-js-hybrid-mappings@17.53.0':
-    resolution: {integrity: sha512-Cq4cpN7w+boIhsc1o9jftmn36pg+eJzNmhOBQlc4WEl22Djx3QGcqj449LBvMtOAsS7qxq/sggmuUP+4MVsSCg==}
+  '@revenuecat/purchases-js-hybrid-mappings@19.17.0':
+    resolution: {integrity: sha512-yKJVxG4rXkEJqF+42RvBOT87XfW+qKuwquYrvoQno2/ZYUWFalEzMxRC2d1/U9fie1Fqr2Yg+BwGCgVm4rHotA==}
 
-  '@revenuecat/purchases-js@1.29.0':
-    resolution: {integrity: sha512-0nZ+YhT8949jx9gyoxnAly7xXmuxWXLozZ1cdImZxHHY0IpYNR8QOme0AdPXT8HTf0vW04zQjVAsxVUlIS7vqA==}
+  '@revenuecat/purchases-js@1.73.1':
+    resolution: {integrity: sha512-TAwDzTqFfNCcIkbWOpxfYhvrUbnyW1XhgO78pp78InRRovBdMiXRgyrDT0ELYyCKjPZxtiSjzmHshIXIJ/H0dQ==}
 
-  '@revenuecat/purchases-typescript-internal@17.53.0':
-    resolution: {integrity: sha512-jAZ7vOgSE5PSDJZqLRoUBVUnqsMcDx+SDXB8E6qZf+mgHIfLeb4vlKqdGaiAXSF9d7R0qbqL8U/PT/r9b/b0Yw==}
+  '@revenuecat/purchases-typescript-internal@19.17.0':
+    resolution: {integrity: sha512-v3cfqEDQDlejOV7QM3gku3WHdXp9MUtuFwXq3y5fla3khCMNVjxniV1dgKhl9jzsMsRmf7IWFxdb25HJeaQzJQ==}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -3028,6 +3028,9 @@ packages:
   '@smithy/smithy-client@4.12.7':
     resolution: {integrity: sha512-q3gqnwml60G44FECaEEsdQMplYhDMZYCtYhMCzadCnRnnHIobZJjegmdoUo6ieLQlPUzvrMdIJUpx6DoPmzANQ==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with
+        this version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/types@4.13.1':
     resolution: {integrity: sha512-787F3yzE2UiJIQ+wYW1CVg2odHjmaWLGksnKQHUrK/lYZSEcy1msuLVvxaR/sI2/aDe9U+TBuLsXnr3vod1g0g==}
@@ -6809,8 +6812,8 @@ packages:
       react: 19.2.4
       react-native: '*'
 
-  react-native-purchases@9.15.0:
-    resolution: {integrity: sha512-0O5JBefbbCLkP3VVP9y3g4ETCupP3+ka5eVAUkefcf//7j3S7s3pUw5IvwicUR2AMVthykZlma2QKkvd1DGw3w==}
+  react-native-purchases@10.16.0:
+    resolution: {integrity: sha512-Rcoy4A7uaaY4Fbgw6aaw5ummkyMPZuA/T1bC7IKHIQCxqoNo/L75PxzZ/8mEMpjhisbHERWl1mXmt0KTfllcDg==}
     peerDependencies:
       react: 19.2.4
       react-native: '>= 0.73.0'
@@ -10763,13 +10766,13 @@ snapshots:
     dependencies:
       nanoid: 3.3.18
 
-  '@revenuecat/purchases-js-hybrid-mappings@17.53.0':
+  '@revenuecat/purchases-js-hybrid-mappings@19.17.0':
     dependencies:
-      '@revenuecat/purchases-js': 1.29.0
+      '@revenuecat/purchases-js': 1.73.1
 
-  '@revenuecat/purchases-js@1.29.0': {}
+  '@revenuecat/purchases-js@1.73.1': {}
 
-  '@revenuecat/purchases-typescript-internal@17.53.0': {}
+  '@revenuecat/purchases-typescript-internal@19.17.0': {}
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
@@ -12913,7 +12916,7 @@ snapshots:
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-react-hooks: 7.1.1(eslint@9.39.4(jiti@2.6.1))
@@ -12946,7 +12949,7 @@ snapshots:
       tinyglobby: 0.2.17
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -12960,7 +12963,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1)):
+  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -15307,10 +15310,10 @@ snapshots:
       react: 19.2.4
       react-native: 0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4)
 
-  react-native-purchases@9.15.0(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
+  react-native-purchases@10.16.0(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
     dependencies:
-      '@revenuecat/purchases-js-hybrid-mappings': 17.53.0
-      '@revenuecat/purchases-typescript-internal': 17.53.0
+      '@revenuecat/purchases-js-hybrid-mappings': 19.17.0
+      '@revenuecat/purchases-typescript-internal': 19.17.0
       react: 19.2.4
       react-native: 0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4)
     optionalDependencies:

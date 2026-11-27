@@ -29,7 +29,8 @@
         }
       ],
       "./plugins/withAndroidCamera",
-      "./plugins/withAndroidLintFix"
+      "./plugins/withAndroidLintFix",
+      "./plugins/withIosPodsDeploymentTarget"
     ],
     "splash": {
       "image": "./assets/splash/splash.png",
