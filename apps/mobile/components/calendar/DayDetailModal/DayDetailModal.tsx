@@ -1,11 +1,20 @@
-import React, { useMemo } from "react";
-import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  View,
+  Text,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { format, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
@@ -15,6 +24,65 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { filterEntriesByScope, filterEntriesByTargetId, getCompetitionId } from "./domainFilter";
 import type { DayDetailModalProps } from "./types";
+
+/** カードとシステムバー(または画面端)の間に空ける上下の余白。 */
+const OVERLAY_VERTICAL_MARGIN = 20;
+
+/** 本文の高さが変わるときの伸縮にかける時間(ms)。 */
+const BODY_RESIZE_DURATION = 200;
+
+/**
+ * 本文のスクロール領域。高さは中身なりで、カードの上限に達したら中だけスクロールする。
+ *
+ * 各カードの詳細は開いた後に非同期で読み込まれ、そのたびに中身の高さが変わる。
+ * 何もしないと中央寄せのカードが上下に一瞬で跳ねるので、中身の実測高さ
+ * (onContentSizeChange) を枠の高さとして与え、その値をアニメーションさせる。
+ * 最初の採寸だけは即時反映する(開いた瞬間に 0 から伸びて見えるのを防ぐ)。
+ *
+ * RN の Modal は閉じると子をアンマウントするので、開くたびに採寸し直される。
+ */
+const FittedScrollBody: React.FC<{ maxHeight: number; children: React.ReactNode }> = ({
+  maxHeight,
+  children,
+}) => {
+  const [height] = useState(() => new Animated.Value(0));
+  const lastTargetRef = useRef<number | null>(null);
+  const [measured, setMeasured] = useState(false);
+
+  const handleContentSizeChange = useCallback(
+    (_width: number, contentHeight: number) => {
+      // 上限より先は枠が flexShrink で止まるので、そこまでを目標にする
+      // (見えない範囲まで伸ばすと、伸縮が途中で打ち切られたように見える)。
+      const target = Math.min(contentHeight, maxHeight);
+      if (lastTargetRef.current === target) return;
+      if (lastTargetRef.current === null) {
+        height.setValue(target);
+        setMeasured(true);
+      } else {
+        Animated.timing(height, {
+          toValue: target,
+          duration: BODY_RESIZE_DURATION,
+          useNativeDriver: false,
+        }).start();
+      }
+      lastTargetRef.current = target;
+    },
+    [height, maxHeight],
+  );
+
+  return (
+    <Animated.View style={[styles.bodyFrame, measured && { height }]}>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        nestedScrollEnabled={true}
+        onContentSizeChange={handleContentSizeChange}
+      >
+        {children}
+      </ScrollView>
+    </Animated.View>
+  );
+};
 
 /**
  * エントリーのタイトルを生成
@@ -143,6 +211,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
+  // カードの上限 = 画面 − システムバー − 上下の余白。% 指定だと高さを持たない親に対して
+  // 解決されず、RN Modal は insets も自動で避けないので、px で自分で計算する。
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeInsets();
+  const maxCardHeight =
+    windowHeight - insets.top - insets.bottom - OVERLAY_VERTICAL_MARGIN * 2;
   const formattedDate = formatDate(date, "shortWithWeekday", locale);
   const fallbackTeamName = t("teams.mobile.fallbackTeamName");
   const fallbackCompetitionName = t("competition.client.competitionFallback");
@@ -222,10 +296,18 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: insets.top + OVERLAY_VERTICAL_MARGIN,
+            paddingBottom: insets.bottom + OVERLAY_VERTICAL_MARGIN,
+          },
+        ]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <SafeAreaView edges={["bottom"]} style={styles.safeAreaContainer} pointerEvents="box-none">
-          <View style={styles.modalContent}>
+        <View style={styles.cardContainer} pointerEvents="box-none">
+          <View style={[styles.modalContent, { maxHeight: maxCardHeight }]}>
             {/* ヘッダー */}
             <View style={styles.header}>
               <Text style={styles.title} numberOfLines={titleOverride ? 1 : undefined}>
@@ -236,11 +318,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               </Pressable>
             </View>
 
-            <ScrollView
-              style={styles.body}
-              contentContainerStyle={styles.bodyContent}
-              nestedScrollEnabled={true}
-            >
+            <FittedScrollBody maxHeight={maxCardHeight}>
               {/* エントリーがない場合(ロード中/エラー中を含む) */}
               {scopedEntries.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -482,57 +560,57 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     })}
                   </View>
 
-                  {/* 記録追加セクション */}
-                  {scope === "day" && (
-                    <View style={styles.addRecordSection}>
-                      <View style={styles.addRecordButtonContainer}>
-                        {onAddRecord && (
-                          <Pressable
-                            style={styles.addRecordButtonRow}
-                            onPress={() => {
-                              onAddRecord(date);
-                              onClose();
-                            }}
-                          >
-                            <Feather name="droplet" size={20} color={chooserRecordIconColor} />
-                            <Text
-                              style={styles.addRecordButtonText}
-                              numberOfLines={1}
-                              adjustsFontSizeToFit
-                              minimumFontScale={0.8}
-                            >
-                              {t("dashboard.dayDetail.addRecord")}
-                            </Text>
-                          </Pressable>
-                        )}
-                        {onAddPractice && (
-                          <Pressable
-                            style={styles.addRecordButtonRow}
-                            onPress={() => {
-                              onAddPractice(date);
-                              onClose();
-                            }}
-                          >
-                            <Feather name="activity" size={20} color={chooserPracticeIconColor} />
-                            <Text
-                              style={styles.addRecordButtonText}
-                              numberOfLines={1}
-                              adjustsFontSizeToFit
-                              minimumFontScale={0.8}
-                            >
-                              {t("dashboard.dayDetail.addPractice")}
-                            </Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    </View>
-                  )}
                 </>
               )}
-            </ScrollView>
+            </FittedScrollBody>
+            {/* 記録追加セクション (固定): 記録が多い日でも、スクロールせずに追加できる */}
+            {scopedEntries.length > 0 && scope === "day" && (
+              <View style={styles.addRecordSection}>
+                <View style={styles.addRecordButtonContainer}>
+                  {onAddRecord && (
+                    <Pressable
+                      style={styles.addRecordButtonRow}
+                      onPress={() => {
+                        onAddRecord(date);
+                        onClose();
+                      }}
+                    >
+                      <Feather name="droplet" size={20} color={chooserRecordIconColor} />
+                      <Text
+                        style={styles.addRecordButtonText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        {t("dashboard.dayDetail.addRecord")}
+                      </Text>
+                    </Pressable>
+                  )}
+                  {onAddPractice && (
+                    <Pressable
+                      style={styles.addRecordButtonRow}
+                      onPress={() => {
+                        onAddPractice(date);
+                        onClose();
+                      }}
+                    >
+                      <Feather name="activity" size={20} color={chooserPracticeIconColor} />
+                      <Text
+                        style={styles.addRecordButtonText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        {t("dashboard.dayDetail.addPractice")}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            )}
             {isDeleting && <LoadingSpinner fullScreen message={t("dashboard.dayDetail.deletingMessage")} />}
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );

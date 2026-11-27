@@ -68,10 +68,10 @@ export const StandaloneRecordDetailModal: React.FC<StandaloneRecordDetailModalPr
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <SafeAreaView
           edges={["bottom"]}
-          style={dayDetailStyles.safeAreaContainer}
+          style={dayDetailStyles.cardContainer}
           pointerEvents="box-none"
         >
-          <View style={dayDetailStyles.modalContent}>
+          <View style={[dayDetailStyles.modalContent, localStyles.cardMaxHeight]}>
             <View style={dayDetailStyles.header}>
               <View style={localStyles.headerTitleRow}>
                 <Text style={dayDetailStyles.title} numberOfLines={1}>
@@ -111,6 +111,11 @@ export const StandaloneRecordDetailModal: React.FC<StandaloneRecordDetailModalPr
 };
 
 const localStyles = StyleSheet.create({
+  // 以前は共有の modalContent が持っていた上限。日付詳細モーダル側が px 計算に移ったため、
+  // こちらは従来どおりの値を自前で持つ。
+  cardMaxHeight: {
+    maxHeight: "90%",
+  },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "baseline",

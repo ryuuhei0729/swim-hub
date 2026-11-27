@@ -208,7 +208,7 @@ export function CompetitionDetails({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span
-                className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
+                className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
                   isDefaultColor
                     ? isTeamCompetition
                       ? "text-violet-800 bg-violet-200"
@@ -228,7 +228,7 @@ export function CompetitionDetails({
                 }
                 data-testid="competition-title-display"
               >
-                <TrophyIcon className="h-5 w-5" />
+                <TrophyIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 {competitionName || t("competition.defaultName")}
                 {isTeamCompetition && teamName && (
                   <span className="text-sm">({teamName})</span>
