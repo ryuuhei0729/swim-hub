@@ -1,7 +1,7 @@
 -- =============================================================================
 -- pgTAP: record_feedbacks (チーム内フィードバック)
 --
--- 対象 migration: 20261126000000_add_record_feedbacks.sql
+-- 対象 migration: 20261128000000_add_record_feedbacks.sql
 -- 仕様: docs/specs/record-feedback.md
 --
 -- 実行: `supabase test db` (全フィクスチャは rollback で消える)。
