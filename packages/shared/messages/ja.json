@@ -156,6 +156,7 @@
     },
     "upload": {
       "imageLabel": "画像",
+      "imageCount": "{current} / {max}枚",
       "imageOnlyError": "画像ファイルを選択してください",
       "imageSizeError": "画像サイズは{maxMb}MB以下にしてください",
       "imageLoadFailed": "画像の読み込みに失敗しました",

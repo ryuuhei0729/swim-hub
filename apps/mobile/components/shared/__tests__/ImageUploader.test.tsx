@@ -251,6 +251,17 @@ describe("ImageUploader — Android Photo Picker (権限撤去・JPEG再エン�
     );
     expect(screen.queryByText("追加")).toBeNull();
   });
+
+  it("枚数は翻訳ファイルの文言で出す (英語画面に「枚」が残らないように)", () => {
+    render(
+      <ImageUploader
+        {...BASE_PROPS}
+        maxImages={3}
+        existingImages={[{ id: "img-1", url: "https://example.com/1.jpg" }]}
+      />,
+    );
+    expect(screen.getByText("1 / 3枚")).toBeTruthy();
+  });
 });
 
 describe("ImageUploader — iOS legacy Picker (回帰: getFileExtensionFromAsset 経由を維持)", () => {

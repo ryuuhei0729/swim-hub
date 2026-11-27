@@ -156,6 +156,7 @@
     },
     "upload": {
       "imageLabel": "图片",
+      "imageCount": "{current} / {max} 张",
       "imageOnlyError": "请选择图片文件",
       "imageSizeError": "图片大小请控制在 {maxMb}MB 以内",
       "imageLoadFailed": "图片加载失败",

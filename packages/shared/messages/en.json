@@ -153,6 +153,7 @@
     },
     "upload": {
       "imageLabel": "Image",
+      "imageCount": "{current} / {max}",
       "imageOnlyError": "Please select an image file",
       "imageSizeError": "Image must be smaller than {maxMb}MB",
       "imageLoadFailed": "Failed to load image",

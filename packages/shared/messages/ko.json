@@ -156,6 +156,7 @@
     },
     "upload": {
       "imageLabel": "이미지",
+      "imageCount": "{current} / {max}장",
       "imageOnlyError": "이미지 파일을 선택해 주세요",
       "imageSizeError": "이미지 크기는 {maxMb}MB 이하로 해주세요",
       "imageLoadFailed": "이미지를 불러오지 못했습니다",
