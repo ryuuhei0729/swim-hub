@@ -50,7 +50,7 @@ const EXPECTED_JA_TOOLTIP_TEXT =
   "WAポイントは World Aquatics（世界水泳連盟）の公式ポイント制度です。世界記録級の基準タイムを1000点とし、「1000×(基準タイム÷記録)³」で算出します。種目やコースが異なっても泳力を比較できる指標です。";
 
 const EXPECTED_EN_TOOLTIP_TEXT =
-  "WA Points is World Aquatics' official points system. A world-record-level base time is set to 1000 points, calculated as \"1000 x (base time / your time)^3\", letting you compare swimming performance across events and courses.";
+  "WA Points is World Aquatics' official points system. A world-record-level base time scores 1000 points, calculated as \"1000×(base time ÷ your time)³\", so performances can be compared across events and courses.";
 
 type Locale = "ja" | "en";
 const MESSAGES: Record<Locale, AbstractIntlMessages> = {

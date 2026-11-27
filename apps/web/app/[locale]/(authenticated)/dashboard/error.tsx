@@ -15,6 +15,7 @@ interface ErrorProps {
  */
 export default function DashboardError({ error, reset }: ErrorProps) {
   const t = useTranslations("dashboard.error");
+  const tCommon = useTranslations("common.errorBoundary");
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
@@ -46,20 +47,20 @@ export default function DashboardError({ error, reset }: ErrorProps) {
               onClick={reset}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              再試行
+              {tCommon("retry")}
             </button>
             <button
               onClick={() => (window.location.href = "/dashboard")}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              ページを再読み込み
+              {tCommon("reload")}
             </button>
           </div>
 
           {/* ヘルプ情報 */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。
+              {tCommon("helpText")}
             </p>
           </div>
         </div>

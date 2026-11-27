@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import {
   format,
   parseISO,
@@ -76,6 +77,7 @@ export default function DatePicker({
   "data-testid": dataTestId,
 }: DatePickerProps) {
   const t = useTranslations("common");
+  const locale = useLocale() as SupportedLocale;
   const resolvedPlaceholder = placeholder ?? t("datePicker.placeholder");
   const weekdays = t.raw("datePicker.weekdays") as string[];
   const [isOpen, setIsOpen] = useState(false);
@@ -329,7 +331,7 @@ export default function DatePicker({
             </button>
 
             <span className="text-sm font-semibold text-gray-900">
-              {format(currentMonth, "yyyy年 M月", { locale: ja })}
+              {formatDate(currentMonth, "yearMonth", locale)}
             </span>
 
             <button
@@ -405,14 +407,14 @@ export default function DatePicker({
               onClick={handleToday}
               className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
-              今日
+              {t("datePicker.today")}
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
               className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             >
-              閉じる
+              {t("datePicker.close")}
             </button>
           </div>
         </div>

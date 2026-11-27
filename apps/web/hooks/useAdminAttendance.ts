@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { AttendanceStatusType, TeamEvent } from "@swim-hub/shared/types";
@@ -7,6 +8,7 @@ import type { EventStatusEditState } from "@/types/admin-attendance";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
+  const t = useTranslations("teams.adminAttendanceHook");
   const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
 
   const [events, setEvents] = useState<TeamEvent[]>([]);
@@ -62,11 +64,11 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
       setEditStates(initialEditStates);
     } catch (err) {
       console.error("イベント情報の取得に失敗:", err);
-      setError(toUserFacingMessage(err, "イベント情報の取得に失敗しました"));
+      setError(toUserFacingMessage(err, t("loadEventsError")));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase]);
+  }, [teamId, supabase, t]);
 
   const handleStatusChange = useCallback((eventId: string, status: AttendanceStatusType | null) => {
     setEditStates((prev) => ({
@@ -117,7 +119,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         }));
       } catch (err) {
         console.error("出欠ステータスの保存に失敗:", err);
-        setError(toUserFacingMessage(err, "出欠ステータスの保存に失敗しました"));
+        setError(toUserFacingMessage(err, t("saveError")));
       } finally {
         setSavingEventIds((prev) => {
           const next = new Set(prev);
@@ -126,7 +128,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         });
       }
     },
-    [events, editStates, attendancesAPI],
+    [events, editStates, attendancesAPI, t],
   );
 
   const handleBulkUpdate = useCallback(
@@ -173,10 +175,10 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         await loadFutureEvents();
       } catch (err) {
         console.error("一括更新に失敗:", err);
-        setError(toUserFacingMessage(err, "一括更新に失敗しました"));
+        setError(toUserFacingMessage(err, t("bulkUpdateError")));
       }
     },
-    [events, attendancesAPI, loadFutureEvents],
+    [events, attendancesAPI, loadFutureEvents, t],
   );
 
   return {

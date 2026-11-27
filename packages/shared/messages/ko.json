@@ -44,7 +44,7 @@
       "스위밍",
       "연습 기록",
       "대회 기록",
-      "수영 기록",
+      "타임 관리",
       "SwimHub",
       "수영 선수",
       "마스터즈 스위머"
@@ -140,14 +140,21 @@
     },
     "pagination": {
       "prev": "이전",
-      "next": "다음"
+      "next": "다음",
+      "summary": "{total}건 중 {start}~{end}건"
     },
     "errorBoundary": {
       "title": "오류가 발생했습니다",
       "unknownError": "알 수 없는 오류",
       "retry": "다시 시도",
       "reload": "페이지 새로고침",
-      "helpText": "문제가 해결되지 않으면 페이지를 새로고침하거나 고객 지원에 문의해 주세요."
+      "helpText": "문제가 해결되지 않으면 페이지를 새로고침하거나 고객지원에 문의해 주세요.",
+      "appDescriptionLine1": "죄송합니다. 예기치 않은 오류가 발생했습니다.",
+      "appDescriptionLine2": "페이지를 새로고침하거나 잠시 후 다시 시도해 주세요.",
+      "devDetails": "오류 상세 (개발 모드)",
+      "backToDashboard": "대시보드로 돌아가기",
+      "supportHint": "문제가 계속되면 <link>고객 지원</link>에 문의해 주세요.",
+      "supportHintWithCode": "문제가 계속되면 오류 코드 <chip>{code}</chip>와 함께 <link>고객 지원</link>에 문의해 주세요."
     },
     "video": {
       "loading": "동영상을 불러오는 중...",
@@ -157,7 +164,7 @@
     "upload": {
       "imageLabel": "이미지",
       "imageOnlyError": "이미지 파일을 선택해 주세요",
-      "imageSizeError": "이미지 크기는 {maxMb}MB 이하로 해주세요",
+      "imageSizeError": "이미지 크기는 {maxMb}MB 이하로 해 주세요",
       "imageLoadFailed": "이미지를 불러오지 못했습니다",
       "imageDataFetchFailed": "이미지 데이터를 가져오지 못했습니다",
       "imageSelectFailed": "이미지 선택에 실패했습니다",
@@ -261,7 +268,9 @@
       "cancelPending": "취소",
       "deleteVideo": "동영상 삭제",
       "addVideo": "동영상 추가",
-      "deleteVideoAriaLabel": "동영상 삭제"
+      "deleteVideoAriaLabel": "동영상 삭제",
+      "selectForUser": "{name}의 동영상 선택",
+      "selectDescription": "동영상 파일을 선택하여 편집·미리보기를 할 수 있습니다"
     },
     "videoPlayer": {
       "loading": "동영상을 불러오는 중...",
@@ -292,8 +301,9 @@
       "share": "공유",
       "competitionTitle": "기록 공유",
       "practiceTitle": "연습 메뉴 공유",
-      "competitionShareText": "【Swimhub】\n대회 기록을 공유했습니다!\n\n수영 기록 관리 앱 「SwimHub」로 기록을 관리하세요!\nhttps://swim-hub.app",
-      "practiceShareText": "【Swimhub】\n연습 기록을 공유했습니다!\n\n수영 기록 관리 앱 「SwimHub」로 연습을 기록하세요!\nhttps://swim-hub.app"
+      "competitionShareText": "【SwimHub】\n대회 기록을 공유했습니다!\n\n수영 기록 관리 앱 ‘SwimHub’로 기록을 관리하세요!\nhttps://swim-hub.app",
+      "practiceShareText": "【SwimHub】\n연습 기록을 공유했습니다!\n\n수영 기록 관리 앱 ‘SwimHub’로 연습을 기록하세요!\nhttps://swim-hub.app",
+      "splitHeader": "스플릿"
     },
     "discardTitle": "입력 내용이 저장되지 않았습니다",
     "discardMessage": "입력 내용이 저장되지 않았습니다. 이대로 닫으시겠습니까?",
@@ -311,7 +321,7 @@
     },
     "loadMore": {
       "button": "더 보기",
-      "remaining": "{n}건 더 보기"
+      "remaining": "{n}건 남음"
     },
     "bestBadge": {
       "first": "첫 기록"
@@ -347,15 +357,15 @@
       "comingSoon": "Coming Soon"
     },
     "features": {
-      "feature1Title": "연습 기록·기록 관리",
+      "feature1Title": "연습 기록·타임 관리",
       "feature1Badge": "기능 1",
-      "feature1Desc": "서클·횟수·세트 수, 기록을 누적해 보세요. 다음엔 한 번 더 돌기, 서클을 5초 단축하기, 평균 기록 올리기 등 다음 연습 목표를 세우기 쉽게 해줍니다.",
-      "feature1Item1": "서클·횟수·세트 수 기록",
+      "feature1Desc": "사이클·횟수·세트 수, 기록을 누적해 보세요. 다음엔 한 번 더 돌기, 사이클을 5초 단축하기, 평균 기록 올리기 등 다음 연습 목표를 세우기 쉽게 해 줍니다.",
+      "feature1Item1": "사이클·횟수·세트 수 기록",
       "feature1Item2": "평균 기록도 자동 계산",
       "feature1Item3": "태그로 필터링 가능",
       "feature2Title": "레이스 결과 기록",
       "feature2Badge": "기능 2",
-      "feature2Desc": "종목, 기록, 장수로/단수로, 구간 기록 등을 기록. 기록에 맞춰 베스트 타임 표도 자동 업데이트. 단수로/장수로, 인계 있음/없음까지 데이터에 반영됩니다.",
+      "feature2Desc": "종목, 기록, 장수로/단수로, 구간 기록 등을 기록. 기록에 맞춰 베스트 타임 표도 자동 업데이트. 단수로/장수로, 이어받기 있음/없음까지 데이터에 반영됩니다.",
       "feature2Item1": "구간 기록으로 랩을 자동 계산",
       "feature2Item2": "베스트 타임 표 자동 업데이트",
       "feature2Item3": "대회 엔트리도 관리 가능",
@@ -369,7 +379,7 @@
       "scannerDesc": "손으로 쓴 연습 기록을 AI로 분석. 입력 수고를 크게 덜어줍니다.",
       "scannerLongDesc1": "연습이 끝난 후의 기록 입력, 번거롭죠. SwimHub Scanner라면 손으로 쓴 연습표를 스마트폰으로 촬영하기만 하면 AI가 내용을 읽어 자동으로 데이터화합니다.",
       "scannerLongDesc2": "코치가 배포하는 연습표나 직접 메모한 기록도 그대로 가져올 수 있어 입력 수고를 크게 줄일 수 있습니다.",
-      "scannerCta": "SwimHub Scanner 사용해보기",
+      "scannerCta": "SwimHub Scanner 사용해 보기",
       "altPractice": "연습 기록 화면 스크린샷",
       "altCompetition": "대회 기록 화면 스크린샷",
       "altProxy": "팀 관리·대리 입력 화면 스크린샷",
@@ -388,7 +398,7 @@
     "family": {
       "title": "SwimHub 서비스 목록",
       "subtitle": "수영을 더 편리하게 만드는 도구 모음",
-      "tryIt": "사용해보기",
+      "tryIt": "사용해 보기",
       "timerTagline": "동영상에 기록을 오버레이",
       "timerDesc": "수영 동영상에 스톱워치를 겹쳐 재생할 수 있는 서비스입니다. 폼 분석이나 랩 확인에 최적.",
       "scannerTagline": "손으로 쓴 기록표를 AI로 분석",
@@ -397,7 +407,7 @@
     "footer": {
       "tagline": "경영 선수를 위한 기록 관리 플랫폼",
       "terms": "이용약관",
-      "privacy": "개인정보처리방침",
+      "privacy": "개인정보 처리방침",
       "about": "운영자 정보"
     },
     "deviceMockup": {
@@ -408,17 +418,20 @@
     },
     "v42": {
       "nav": {
-        "practice": "훈련 기록",
+        "practice": "연습 기록",
         "competition": "대회 기록",
         "proxy": "대리 입력",
-        "pricing": "요금제"
+        "pricing": "요금제",
+        "mainNavAria": "메인 내비게이션",
+        "mobileNavAria": "모바일 내비게이션",
+        "openMenuAria": "메뉴 열기"
       },
       "hero": {
         "ghostText": "SWIMHUB",
         "h1Line1": "개인도 팀도,",
         "h1Line2": "수영 기록 관리를",
         "h1Line3": "이것 하나로.",
-        "lead": "훈련 기록, 대회 성적, 대리 입력, 엔트리 수집까지 한 번에 관리. 스마트폰이나 브라우저에서 바로 시작할 수 있습니다.",
+        "lead": "연습 기록, 대회 기록, 대리 입력, 엔트리 수집까지 한 번에 관리. 스마트폰이나 브라우저에서 바로 시작할 수 있습니다.",
         "badge": "스마트폰으로 간편한 팀 관리",
         "cta": {
           "signup": "무료 가입",
@@ -432,7 +445,9 @@
         "deviceCaption": "SwimHub App ◆ PC & Mobile",
         "h1Line3Blue": "이것 하나로",
         "h1Line3Suffix": ".",
-        "downloadOn": "다운로드"
+        "downloadOn": "다운로드",
+        "altPc": "SwimHub 대시보드 화면 (PC)",
+        "altMobile": "SwimHub 대시보드 화면 (스마트폰)"
       },
       "marquee": {
         "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
@@ -440,43 +455,47 @@
       "features": {
         "f1": {
           "label": "Practice Log",
-          "title": "훈련 기록 & 타임 관리",
-          "desc": "사이클, 횟수, 세트, 타임을 기록해 훈련 이력을 쌓으세요. 다음 훈련 목표를 세우기 쉬워집니다.",
+          "title": "연습 기록·타임 관리",
+          "desc": "사이클, 횟수, 세트, 타임을 기록해 연습 이력을 쌓으세요. 다음 연습 목표를 세우기 쉬워집니다.",
           "items": [
             "사이클·횟수·세트 기록",
             "평균 타임 자동 계산",
             "태그로 필터링 가능"
-          ]
+          ],
+          "caption": "Practice — 연습 기록"
         },
         "f2": {
           "label": "Race Result",
           "title": "레이스 결과 기록",
-          "desc": "종목, 타임, 수영장 길이, 분할 타임 등을 기록. 베스트 타임표가 자동 업데이트됩니다.",
+          "desc": "종목, 타임, 수영장 길이, 구간 기록 등을 기록. 베스트 타임표가 자동 업데이트됩니다.",
           "items": [
             "중간 타임으로 랩 자동 계산",
             "베스트 타임표 자동 업데이트",
             "대회 엔트리 관리 가능"
-          ]
+          ],
+          "caption": "Competition — 대회 기록"
         },
         "f3": {
           "label": "Team / Coach",
           "title": "코치·매니저가 대리로 기록 입력",
-          "desc": "훈련·대회 기록을 선수 본인뿐만 아니라 코치나 매니저가 일괄 등록할 수 있습니다. 기록은 개인에게 귀속되어 팀을 떠난 후에도 계속 축적됩니다.",
+          "desc": "연습·대회 기록을 선수 본인뿐만 아니라 코치나 매니저가 일괄 등록할 수 있습니다. 기록은 개인에게 귀속되어 팀을 떠난 후에도 계속 축적됩니다.",
           "items": [
             "코치·매니저가 일괄 등록",
             "기록은 개인에게 귀속",
             "평생 사용하는 앱"
-          ]
+          ],
+          "caption": "Team — 대리 입력"
         },
         "introLabel": "Features",
         "introH2": "기록을 자산으로 바꾸는 세 가지 기능"
       },
       "scanner": {
         "label": "추천 기능 — Scanner",
-        "h2": "손으로 쓴 훈련 기록을 AI로 분석.",
-        "desc1": "훈련 후 기록 입력이 번거롭지 않으신가요? SwimHub Scanner는 손으로 쓴 연습표를 스마트폰으로 촬영하기만 하면 AI가 내용을 읽어 자동으로 디지털 데이터로 변환합니다.",
+        "h2": "손으로 쓴 연습 기록을 AI로 분석.",
+        "desc1": "연습 후 기록 입력이 번거롭지 않으신가요? SwimHub Scanner는 손으로 쓴 연습표를 스마트폰으로 촬영하기만 하면 AI가 내용을 읽어 자동으로 디지털 데이터로 변환합니다.",
         "desc2": "코치가 배포하는 연습표나 본인이 메모한 기록도 그대로 가져올 수 있어 입력 수고를 크게 줄일 수 있습니다.",
-        "cta": "SwimHub Scanner 시도하기"
+        "cta": "SwimHub Scanner 사용해 보기",
+        "caption": "Scanner — 손글씨 분석"
       },
       "pricing": {
         "label": "Pricing",
@@ -490,7 +509,7 @@
           "items": [
             "연습 기록·대회 기록",
             "Split-time: 기록당 최대 3개",
-            "PracticeTime: 훈련 로그당 최대 18개",
+            "PracticeTime: 연습 로그당 최대 18개",
             "이미지 업로드 (동영상 불가)"
           ],
           "cta": "무료로 시작하기"
@@ -512,7 +531,7 @@
       },
       "services": {
         "label": "SwimHub Services",
-        "h2": "SwimHub 서비스 일람",
+        "h2": "SwimHub 서비스 목록",
         "lead": "수영을 더 편리하게 하는 도구 모음",
         "timer": {
           "name": "SwimHub Timer",
@@ -523,7 +542,7 @@
         "scanner": {
           "name": "SwimHub Scanner",
           "tagline": "AI로 손글씨 기록 분석",
-          "desc": "손으로 쓴 훈련 기록을 AI가 읽어 디지털 데이터로 변환합니다. 입력 수고를 크게 줄여줍니다.",
+          "desc": "손으로 쓴 연습 기록을 AI가 읽어 디지털 데이터로 변환합니다. 입력 수고를 크게 줄여줍니다.",
           "cta": "사용해 보기 →"
         }
       },
@@ -535,7 +554,8 @@
       "footer": {
         "tagline": "경영 선수를 위한 기록 관리 플랫폼",
         "copyright": "© 2025 SwimHub. All rights reserved.",
-        "slogan": "Records for Life"
+        "slogan": "Records for Life",
+        "navAria": "푸터 내비게이션"
       },
       "stopwatch": {
         "ariaLabel": "페이지 체류 타이머"
@@ -555,7 +575,7 @@
       "loadingMessage": "인증 정보를 확인하는 중...",
       "errorTitle": "인증 오류가 발생했습니다",
       "emailMethodTitle": "이메일로 로그인",
-      "emailMethodButton": "Email로 로그인",
+      "emailMethodButton": "이메일로 로그인",
       "emailPageTitle": "이메일로 로그인",
       "emailPageSubtitle": "이메일 주소와 비밀번호를 입력해 주세요",
       "otherMethods": "다른 로그인 방법",
@@ -566,7 +586,7 @@
       "subtitle": "새 계정 만들기",
       "submitButton": "계정 만들기",
       "emailMethodTitle": "이메일로 가입",
-      "emailMethodButton": "Email로 만들기",
+      "emailMethodButton": "이메일로 가입",
       "welcomeTagline": "SwimHub를 시작해 보세요",
       "startButton": "바로 시작하기",
       "continueWithEmail": "이메일로 회원가입",
@@ -746,7 +766,7 @@
   "pricing": {
     "metaTitle": "요금제 | SwimHub",
     "metaDesc": "SwimHub의 요금제를 확인해 보세요. 무료 플랜으로도 기본 기능을 사용할 수 있습니다. Premium 플랜은 월 ¥500, 연 ¥5,000으로 모든 기능을 무제한으로. 7일 무료 체험 포함.",
-    "ogDescription": "SwimHub의 요금제. 무료로 시작하고 Premium으로 모든 기능을 해제하세요. 월 ¥500 / 연 ¥5,000.",
+    "ogDescription": "SwimHub의 요금제. 무료로 시작하고 Premium으로 모든 기능을 잠금 해제하세요. 월 ¥500 / 연 ¥5,000.",
     "title": "요금제",
     "subtitle": "먼저 무료로 시작하고 필요에 따라 Premium으로 업그레이드하세요. 7일 무료 체험으로 모든 기능을 사용해 보실 수 있습니다.",
     "monthSuffix": "/월",
@@ -783,10 +803,10 @@
       "rowVideoUpload": "동영상 업로드",
       "rowAiAnalysis": "AI 메뉴 분석",
       "rowAds": "광고",
-      "valueSplit3PerRecord": "3개/레코드",
-      "value18PerLog": "18개/로그",
+      "valueSplit3PerRecord": "기록당 3개",
+      "value18PerLog": "로그당 18개",
       "valueUnlimited": "무제한",
-      "valueOncePerDay": "1회/일"
+      "valueOncePerDay": "하루 1회"
     },
     "comparison": {
       "title": "기능 비교",
@@ -843,7 +863,7 @@
     "submitting": "전송 중...",
     "successMessage": "문의가 접수되었습니다. 감사합니다.",
     "errorMessage": "전송에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-    "appLabel": "이용 앱",
+    "appLabel": "사용 중인 앱",
     "appOptions": {
       "swimhub": "SwimHub",
       "timer": "SwimHub Timer",
@@ -906,7 +926,7 @@
     "announcements": {
       "title": "님의 알림",
       "adminRole": "관리자",
-      "unansweredAttendance": "출결이 미응답인 이벤트가 있습니다. ({count}건)",
+      "unansweredAttendance": "출결에 응답하지 않은 이벤트가 있습니다 ({count}건)",
       "unsubmittedEntry": "{name} ({date}) 엔트리가 미제출입니다."
     },
     "dayDetail": {
@@ -1043,7 +1063,7 @@
       "entrySubmitFailed": "엔트리 등록에 실패했습니다",
       "competitionCreatedButImageFailed": "대회는 생성되었지만 이미지 업로드에 실패했습니다",
       "unknownStyle": "알 수 없음",
-      "styleAlreadyEntered": "종목 '{name}'은(는) 이미 엔트리되었습니다",
+      "styleAlreadyEntered": "종목 ‘{name}’은(는) 이미 엔트리되었습니다",
       "fetchCompetitionInfoFailed": "대회 정보를 불러오지 못했습니다",
       "competitionSaveBlockedUnresolved": "대회 정보를 확인할 수 없어 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.",
       "competitionSaveBlockedDateInvalid": "날짜 정합성을 확인할 수 없어 저장을 중단했습니다. 시작일과 종료일을 확인한 후 다시 시도해 주세요.",
@@ -1055,14 +1075,14 @@
     },
     "notices": {
       "title": "알림",
-      "unansweredAttendance": "미응답 출석 있음  {count}건",
+      "unansweredAttendance": "미응답 출결 있음  {count}건",
       "todoCount": "할 일 {count}",
       "teamTitle": "{teamName} 공지",
       "showAll": "모두 보기 ({count})",
       "showLess": "접기"
     },
     "actionItems": {
-      "title": "확인이 필요한 일",
+      "title": "처리가 필요한 항목",
       "count": "{count}건",
       "open": "펼치기",
       "close": "접기",
@@ -1085,7 +1105,7 @@
       "setGoal": "+ 목표 설정",
       "setGoalShort": "+ 목표",
       "achieved": "달성",
-      "firstTime": "첫",
+      "firstTime": "첫 출전",
       "noEntriesTitle": "아직 엔트리하지 않았습니다",
       "entryOpen": "엔트리 접수 중",
       "entryBefore": "엔트리 접수가 아직 시작되지 않았습니다",
@@ -1111,7 +1131,7 @@
       "title": "오류가 발생했습니다",
       "description": "연습 기록 페이지를 불러오는 중 문제가 발생했습니다.",
       "unknownError": "알 수 없는 오류",
-      "retry": "재시도",
+      "retry": "다시 시도",
       "reload": "페이지 새로고침",
       "helpText": "문제가 해결되지 않으면 페이지를 새로고침하거나 고객지원에 문의해 주세요."
     },
@@ -1133,12 +1153,12 @@
       "content": "연습 내용",
       "memo": "메모",
       "time": "기록",
-      "setLabel": "{n}세트째",
+      "setLabel": "{n}번째 세트",
       "repLabel": "{n}번째",
       "setAverage": "세트 평균",
       "overallAverage": "전체 평균",
       "overallFastest": "전체 최고",
-      "reaction": "리액션",
+      "reaction": "반응 시간",
       "recordNotFound": "기록 상세를 찾을 수 없습니다",
       "addPracticeMenu": "연습 메뉴 추가",
       "noPracticeMenus": "연습 메뉴가 없습니다"
@@ -1163,7 +1183,8 @@
       "noMatchTitle": "해당하는 기록이 없습니다",
       "noMatchDesc": "선택한 조건에 일치하는 연습 기록이 없습니다.",
       "sortOptionDateDesc": "날짜(최신순)",
-      "sortOptionDateAsc": "날짜(오래된순)"
+      "sortOptionDateAsc": "날짜(오래된 순)",
+      "distanceFormatNoSets": "{distance}m × {reps}회"
     },
     "details": {
       "badge": "연습 기록",
@@ -1172,7 +1193,7 @@
       "addMenu": "메뉴 추가",
       "contentLabel": "연습 내용",
       "timeLabel": "기록",
-      "setLabel": "{n}세트째",
+      "setLabel": "{n}번째 세트",
       "repLabel": "{n}번째",
       "setAverage": "세트 평균",
       "overallAverage": "전체 평균",
@@ -1206,10 +1227,10 @@
       "dateInvalidFormat": "날짜는 YYYY-MM-DD 형식으로 입력해 주세요",
       "dateInvalid": "유효한 날짜를 입력해 주세요",
       "titleLabel": "제목",
-      "titlePlaceholder": "연습 제목 (선택)",
+      "titlePlaceholder": "예: Swim, AM, 16:00",
       "placeLabel": "장소",
-      "placePlaceholder": "연습 장소 (선택)",
-      "memoPlaceholder": "메모 (선택)",
+      "placePlaceholder": "예: 시립 수영장, 학교 수영장",
+      "memoPlaceholder": "연습 특이 사항 (날씨, 컨디션 등)",
       "imagesLabel": "이미지",
       "videoLabel": "동영상",
       "continueToLog": "이어서 연습 로그 작성",
@@ -1221,15 +1242,15 @@
       "distanceLabel": "거리(m)",
       "repsLabel": "횟수",
       "setsLabel": "세트 수",
-      "circleMinLabel": "써클(분)",
-      "circleSecLabel": "써클(초)",
+      "circleMinLabel": "사이클(분)",
+      "circleSecLabel": "사이클(초)",
       "editTimes": "기록 편집 ({count}건 등록됨)",
       "inputTimes": "기록 입력",
       "registeredTimes": "등록된 기록",
       "timeInputTitle": "기록 입력",
       "timeInputNext": "다음",
       "timeInputDone": "완료",
-      "timeInputHelpBody": "1번째 기록은 숫자 사이를 숫자가 아닌 문자 (. - : 등) 로 구분해서 입력합니다.\n예: 「1.23.4」→ 1:23.4, 「2.00.00」→ 2:00.00, 「31-2」→ 31.2, 「1분12초3」→ 1:12.3.\n\n2번째 기록부터는 직전 기록의 십의 자리가 자동으로 입력됩니다. 이어서 「일의 자리」「소수 첫째 자리」 숫자 2개만 연속으로 입력하면 기록이 완성됩니다.\n예: 직전 기록이 「31.2」였다면 「3」이 자동 입력된 상태에서 「2」「1」을 입력하면 「32.1」이 됩니다.\n십의 자리가 다르면 백스페이스로 지우고 다시 입력하면 됩니다.",
+      "timeInputHelpBody": "1번째 기록은 숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해서 입력합니다.\n예: ‘1.23.4’→ 1:23.4, ‘2.00.00’→ 2:00.00, ‘31-2’→ 31.2, ‘1분12초3’→ 1:12.3.\n\n2번째 기록부터는 직전 기록의 십의 자리가 자동으로 입력됩니다. 이어서 ‘일의 자리’, ‘소수 첫째 자리’ 숫자 2개만 연속으로 입력하면 기록이 완성됩니다.\n예: 직전 기록이 ‘31.2’였다면 ‘3’이 자동 입력된 상태에서 ‘2’, ‘1’을 입력하면 ‘32.1’이 됩니다.\n십의 자리가 다르면 백스페이스로 지우고 다시 입력하면 됩니다.",
       "timeInputSubtitle": "{setCount}세트 × {repCount}번의 기록을 입력해 주세요",
       "setNumberLabel": "세트 {setNumber}",
       "setAverageDetail": "평균: {avg} ({count}번)",
@@ -1400,7 +1421,7 @@
         "relayTag": "이어받기",
         "cellEmpty": "미입력",
         "cellEntered": "입력 {time}",
-        "discardTitle": "입력을 취소할까요?",
+        "discardTitle": "입력을 취소하시겠습니까?",
         "discardMessage": "입력한 {count}건의 타임은 등록되지 않습니다.",
         "discardConfirm": "취소하기",
         "keepEditing": "계속 입력",
@@ -1409,8 +1430,8 @@
       "compareMetricLabel": "비교 지표",
       "compareMetric": {
         "wa": "WA 포인트",
-        "nr": "일본기록 기준",
-        "age": "연령별기록 기준"
+        "nr": "일본 기록 기준",
+        "age": "연령별 기록 기준"
       },
       "ageCategoryLabel": "연령 구분",
       "ageCategoryUnset": "미설정",
@@ -1422,7 +1443,7 @@
         "general": "일반부"
       },
       "compareMetricInfoAriaLabel": "비교 지표란?",
-      "compareMetricInfo": "WA 포인트: World Aquatics(세계수영연맹)의 공식 포인트 제도. 세계기록을 기준으로 한 점수\n일본기록 기준: 일본기록 대비 점수\n연령별기록 기준: 초등·중등·고등·대학·일반 연령별 기록 대비 점수",
+      "compareMetricInfo": "WA 포인트: World Aquatics(세계수영연맹)의 공식 포인트 제도. 세계기록을 기준으로 한 점수\n일본 기록 기준: 일본 기록 대비 점수\n연령별 기록 기준: 초등·중등·고등·대학·일반 연령별 기록 대비 점수",
       "pointsInfoAriaLabel": "점수 산출 방법",
       "pointsInfo": "기준 기록과 동일하면 1000점이 됩니다. 「1000×(기준 기록÷기록)³」으로 산출하므로 종목이나 코스가 달라도 비교할 수 있습니다."
     },
@@ -1441,9 +1462,9 @@
       "startButton": "SwimHub 시작하기",
       "backButton": "뒤로",
       "practiceTitle": "연습 기록하기",
-      "practiceDescription": "대시보드의 '연습 기록'에서 매일의 트레이닝을 기록하세요. 세트·거리·타임을 상세하게 관리할 수 있습니다.",
+      "practiceDescription": "대시보드의 ‘연습 기록’에서 매일의 트레이닝을 기록하세요. 세트·거리·타임을 상세하게 관리할 수 있습니다.",
       "competitionTitle": "대회 기록 관리하기",
-      "competitionDescription": "대회별로 엔트리와 결과를 기록하세요. 자기 베스트의 추이를 그래프로 확인할 수 있습니다.",
+      "competitionDescription": "대회별로 엔트리와 결과를 기록하세요. 베스트 타임 추이를 그래프로 확인할 수 있습니다.",
       "teamTitle": "팀에 참여하기",
       "teamDescription": "코치, 동료와 팀을 만들거나 참여하세요. 공지와 기록을 공유하며 팀 전체가 함께 성장할 수 있습니다.",
       "mypageTitle": "마이페이지에서 확인하기",
@@ -1523,7 +1544,8 @@
       "saving": "저장 중...",
       "nextButton": "다음",
       "skipButton": "건너뛰기",
-      "backButton": "뒤로"
+      "backButton": "뒤로",
+      "emailNameHint": "이메일 주소 형식이 입력되어 있습니다. 이름을 입력해 주세요 (이 단계는 건너뛸 수 없습니다)."
     },
     "step3": {
       "title": "베스트 타임 등록",
@@ -1546,7 +1568,7 @@
       "saving": "등록 중...",
       "completing": "준비 중...",
       "backButton": "뒤로",
-      "inputHintTitle": "반각 숫자로 입력",
+      "inputHintTitle": "숫자로 입력",
       "inputHintBody": "1.23.4 / 2.00.00 / 23.45 / 1:23.45 / 1-23-45 등 자유로운 형식으로 입력할 수 있습니다",
       "notePlaceholder": "날짜, 대회명 등"
     },
@@ -1709,7 +1731,7 @@
       "noCompetitions": "대회가 없습니다",
       "selectCompetition": "대회 선택",
       "deleteConfirmTitle": "삭제 확인",
-      "deleteConfirmMessage": "이 대회 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+      "deleteConfirmMessage": "이 대회 기록을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteConfirmButton": "삭제",
       "fallbackTitle": "대회",
       "videoUploadFailedTitle": "동영상 업로드 실패",
@@ -1757,7 +1779,7 @@
       "continueToRecord": "이어서 대회 기록 작성",
       "selectStyleRequired": "종목을 선택해 주세요",
       "addAtLeastOne": "엔트리를 하나 이상 추가해 주세요",
-      "duplicateStyle": "종목 「{styleName}」은(는) 이미 엔트리되어 있습니다",
+      "duplicateStyle": "종목 ‘{styleName}’은(는) 이미 엔트리되어 있습니다",
       "timeFormatInvalid": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 83.45)",
       "stylesFetchFailed": "종목을 불러오지 못했습니다",
       "entryNotFound": "엔트리를 찾을 수 없습니다",
@@ -1837,14 +1859,14 @@
       "noValidRowsError": "최소 1개 이상의 종목을 선택해 주세요",
       "deleteConflictError": "{detail}은(는) 삭제 대기 중인 종목과 중복됩니다. 먼저 삭제만 저장한 후, 종목 변경을 저장해 주세요.",
       "saveFailedDuplicate": "저장에 실패했습니다. 종목 중복이 원인일 수 있습니다. 페이지를 새로고침하여 최신 상태를 확인한 후 다시 시도해 주세요.",
-      "emptyState": "아직 엔트리가 없습니다. \"대상 멤버 선택\"으로 추가해 주세요."
+      "emptyState": "아직 엔트리가 없습니다. \"대상 멤버 선택\"에서 추가해 주세요."
     },
     "sortSheet": {
       "title": "정렬",
       "dateDesc": "날짜(최신순)",
-      "dateAsc": "날짜(오래된순)",
-      "timeAsc": "기록 빠른순",
-      "timeDesc": "기록 느린순",
+      "dateAsc": "날짜(오래된 순)",
+      "timeAsc": "기록 빠른 순",
+      "timeDesc": "기록 느린 순",
       "competitionNameAsc": "대회명(오름차순)",
       "competitionNameDesc": "대회명(내림차순)",
       "placeAsc": "장소(오름차순)",
@@ -2104,7 +2126,7 @@
     "page": {
       "title": "템플릿 관리"
     },
-    "distanceFormat": "{distance}m × {reps}회 × {sets}세트",
+    "distanceFormat": "{distance}m × {reps}개 × {sets}세트",
     "circleFormat": "사이클 {circle}",
     "list": {
       "savedCount": "저장됨: {count}/{max}",
@@ -2126,7 +2148,7 @@
       "closeMenuAriaLabel": "메뉴 닫기",
       "deleteConfirm": {
         "title": "템플릿 삭제",
-        "message": "「{name}」을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+        "message": "‘{name}’을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
         "confirmLabel": "삭제"
       },
       "deleteFailed": "템플릿을 삭제하지 못했습니다"
@@ -2135,11 +2157,11 @@
       "createTitle": "새 템플릿 만들기",
       "editTitle": "템플릿 편집",
       "nameLabel": "템플릿 이름",
-      "namePlaceholder": "예: 아침 훈련 킥",
+      "namePlaceholder": "예: 아침 연습 킥",
       "styleLabel": "종목",
       "categoryLabel": "카테고리",
       "distanceLabel": "거리 (m)",
-      "repLabel": "횟수",
+      "repLabel": "개수",
       "setLabel": "세트",
       "circleLabel": "사이클",
       "circleMinUnit": "분",
@@ -2182,7 +2204,7 @@
       "distance": "거리",
       "time": "기록",
       "note": "비고",
-      "relay": "인계",
+      "relay": "이어받기",
       "notePlaceholder": "대회명 등"
     },
     "error": {
@@ -2207,9 +2229,9 @@
     "mobile": {
       "description": "종목을 추가하여 베스트 타임을 한꺼번에 등록할 수 있습니다.",
       "successTitle": "등록 완료",
-      "addRelaying": "＋ 인계 기록 추가",
-      "hideRelaying": "인계 기록 숨기기",
-      "relayingLabel": "인계 기록",
+      "addRelaying": "＋ 이어받기 기록 추가",
+      "hideRelaying": "이어받기 기록 숨기기",
+      "relayingLabel": "이어받기 기록",
       "poolToggleLabel": "수영장 종류 선택"
     }
   },
@@ -2241,7 +2263,7 @@
       "loadError": "목표 상세 정보를 불러오지 못했습니다",
       "retry": "다시 불러오기",
       "targetTime": "목표 기록",
-      "notSet": "설정 안 됨",
+      "notSet": "미설정",
       "milestoneSection": "마일스톤",
       "milestoneRatio": "마일스톤 달성률",
       "milestoneAdd": "추가",
@@ -2275,7 +2297,7 @@
     },
     "goalReflection": {
       "title": "대회 목표 돌아보기",
-      "expiredDesc": "다음 대회 목표가 기한에 도달했습니다",
+      "expiredDesc": "다음 대회 목표가 기한이 되었습니다",
       "targetLabel": "목표:",
       "competitionDateLabel": "대회일:",
       "milestoneAchievedText": "마일스톤 달성: {achieved}/{total}",
@@ -2284,13 +2306,13 @@
       "notAchievedButton": "달성하지 못했어요",
       "reflectionLabel": "돌아보기 (선택식)",
       "options": {
-        "goalTooHigh": "목표 기록이 너무 높았다",
+        "goalTooHigh": "목표 기록을 너무 높게 잡았다",
         "periodTooShort": "준비 기간이 짧았다",
         "practiceInsufficient": "연습량이 부족했다",
         "conditionPoor": "컨디션 불량",
         "other": "기타"
       },
-      "otherLabel": "기타 (자유 기술)",
+      "otherLabel": "기타 (직접 입력)",
       "otherPlaceholder": "상세 내용을 입력해 주세요",
       "skipButton": "건너뛰기",
       "saveButton": "저장",
@@ -2313,7 +2335,7 @@
       "deleteFailed": "마일스톤 삭제에 실패했습니다",
       "markComplete": "완료로 표시",
       "markIncomplete": "미완료로 되돌리기",
-      "markIncompleteConfirm": "이 마일스톤을 미완료로 되돌릴까요?",
+      "markIncompleteConfirm": "이 마일스톤을 미완료로 되돌리시겠습니까?",
       "completionFailed": "마일스톤 업데이트에 실패했습니다"
     },
     "milestoneCreate": {
@@ -2336,16 +2358,16 @@
     "goalSetCalculator": {
       "closeAriaLabel": "닫기",
       "title": "골 세트 목표 기록 계산",
-      "autoFetchTitle": "자동 취득 정보",
+      "autoFetchTitle": "자동으로 가져온 정보",
       "targetLabel": "목표:",
-      "poolTypeLabel": "대회 수로:",
+      "poolTypeLabel": "대회 수영장:",
       "ageLabel": "나이:",
       "genderLabel": "성별:",
       "loading": "불러오는 중...",
       "ageNotSetError": "나이가 설정되지 않았습니다. 프로필에서 설정해 주세요.",
       "genderNotSetError": "성별이 설정되지 않았습니다. 프로필에서 설정해 주세요.",
       "profileSettingHint": "프로필 설정에서 생년월일을 입력해 주세요.",
-      "practicePoolTypeLabel": "골 세트 실시 수로",
+      "practicePoolTypeLabel": "골 세트 수영장",
       "poolTypeShort": "단수로 (25m)",
       "poolTypeLong": "장수로 (50m)",
       "resultLabel": "골 세트 목표",
@@ -2365,7 +2387,7 @@
     },
     "reflection": {
       "title": "마일스톤 돌아보기",
-      "expiredDesc": "다음 마일스톤이 기한에 도달했습니다",
+      "expiredDesc": "다음 마일스톤이 기한이 되었습니다",
       "reflectionLabel": "돌아보기 (선택식)",
       "options": {
         "goalTooHigh": "목표가 너무 높았다",
@@ -2374,7 +2396,7 @@
         "conditionPoor": "컨디션 불량",
         "other": "기타"
       },
-      "otherLabel": "기타 (자유 기술)",
+      "otherLabel": "기타 (직접 입력)",
       "otherPlaceholder": "상세 내용을 입력해 주세요",
       "skipButton": "건너뛰기",
       "saveButton": "저장",
@@ -2402,8 +2424,8 @@
     "milestoneForm": {
       "templateLabel": "템플릿 (선택)",
       "templatePlaceholder": "템플릿 선택 (비워두면 수동 입력)",
-      "typeLabel": "타입",
-      "typeAriaLabel": "마일스톤 타입 선택",
+      "typeLabel": "유형",
+      "typeAriaLabel": "마일스톤 유형 선택",
       "type": {
         "time": {
           "label": "기록 목표",
@@ -2414,8 +2436,8 @@
           "description": "개수×세트 수의 평균 기록을 마일스톤으로 설정합니다. 100m 이상 종목에 추천합니다"
         },
         "set": {
-          "label": "서클인 목표",
-          "description": "＠서클로 돌 수 있는 개수, 세트 수를 마일스톤으로 설정합니다. 200m 이상 종목에 추천합니다"
+          "label": "사이클 완주 목표",
+          "description": "＠사이클로 돌 수 있는 개수, 세트 수를 마일스톤으로 설정합니다. 200m 이상 종목에 추천합니다"
         },
         "practiceTime": {
           "label": "연습 기록 목표",
@@ -2426,7 +2448,7 @@
           "description": "근력 운동이나 지상 훈련 등 수영 기록 이외의 목표를 자유롭게 작성합니다. 달성하면 수동으로 완료 처리합니다"
         }
       },
-      "templateAppliedNote": "템플릿 적용 중: 타입은 변경할 수 없습니다",
+      "templateAppliedNote": "템플릿 적용 중: 유형은 변경할 수 없습니다",
       "titleLabel": "제목 (선택, 비워두면 자동 생성)",
       "otherContentLabel": "목표 내용",
       "otherContentPlaceholder": "예: 벤치프레스 100kg×2, 매일 달리기",
@@ -2442,8 +2464,8 @@
       "repsLabel": "개수",
       "setsLabel": "세트 수",
       "averageTimeLabel": "평균 목표 기록",
-      "circleMinLabel": "서클 (분)",
-      "circleSecLabel": "서클 (초)",
+      "circleMinLabel": "사이클 (분)",
+      "circleSecLabel": "사이클 (초)",
       "averageTimeRequired": "평균 목표 기록을 입력해 주세요",
       "paramsInvalid": "입력하지 않았거나 0인 항목이 있습니다. 1 이상의 값을 입력해 주세요"
     },
@@ -2456,14 +2478,14 @@
       "description": "목표 데이터를 불러오는 중 문제가 발생했습니다.",
       "unknownError": "알 수 없는 오류",
       "retry": "다시 시도",
-      "reload": "페이지 다시 불러오기"
+      "reload": "페이지 새로고침"
     },
     "client": {
       "fetchFailed": "목표 상세 정보를 가져오지 못했습니다"
     },
     "template": {
       "timeTrial": "타임 트라이얼",
-      "timeTrialDesc": "연습, 대회에서의 기록 측정을 자동으로 관측",
+      "timeTrialDesc": "연습·대회에서 측정한 기록을 자동으로 추적",
       "goalSet": "골 세트",
       "goalSetDesc": "50m×6개×3세트 (100m 목표 기록에서 역산)"
     },
@@ -2471,8 +2493,8 @@
       "time": "{distance}m: {time}",
       "repsTime": "{distance}m × {reps}개 @{time} 평균",
       "repsTimeWithSets": "{distance}m × {reps}개 × {sets}세트 @{time} 평균",
-      "set": "{distance}m × {reps}개 ({circle} 서클) 완주",
-      "setWithSets": "{distance}m × {reps}개 × {sets}세트 ({circle} 서클) 완주"
+      "set": "{distance}m × {reps}개 ({circle} 사이클) 완주",
+      "setWithSets": "{distance}m × {reps}개 × {sets}세트 ({circle} 사이클) 완주"
     },
     "mobile": {
       "notFound": "목표를 찾을 수 없습니다",
@@ -2480,7 +2502,7 @@
       "noSelectableCompetitions": "선택할 수 있는 대회가 없습니다. 새 대회를 만들어 주세요"
     },
     "achievementPrompt": {
-      "title": "혹시 마일스톤을 달성했나요?",
+      "title": "혹시 마일스톤을 달성하셨나요?",
       "confirm": "달성!",
       "recordTime": "기록: {time}",
       "averageTime": "평균: {time}"
@@ -2612,12 +2634,12 @@
         "memberAttendanceEmpty": "출결 응답이 없습니다",
         "memberAttendanceLoading": "불러오는 중...",
         "bulkChange": {
-          "title": "출석 상태 일괄 변경",
+          "title": "출결 상태 일괄 변경",
           "empty": "이벤트가 없습니다",
           "statusOpen": "접수 중",
           "statusClosed": "마감",
           "statusUnset": "미설정",
-          "competitionLabel": "（대회）",
+          "competitionLabel": "(대회)",
           "selectAll": "전체 선택",
           "openButton": "접수 중으로 변경",
           "closedButton": "마감으로 변경"
@@ -2627,7 +2649,7 @@
         "title": "그룹 관리",
         "subtitle": "멤버를 카테고리별로 그룹화할 수 있습니다",
         "emptyTitle": "아직 그룹이 없습니다",
-        "emptyHint": "'추가'에서 카테고리와 그룹을 만들어 보세요",
+        "emptyHint": "‘추가’에서 카테고리와 그룹을 만들어 보세요",
         "memberCount": "{count}명의 멤버",
         "membersEmpty": "등록된 멤버가 없습니다",
         "groupCount": "({count}개 그룹)",
@@ -2679,7 +2701,7 @@
         "submitButton": "{summary} 등록",
         "submitPractice": "연습 {count}",
         "submitCompetition": "대회 {count}",
-        "confirmTitle": "이 내용으로 등록할까요?",
+        "confirmTitle": "이 내용으로 등록하시겠습니까?",
         "confirmSubmit": "{count}건 등록",
         "registeredToast": "{count}건을 등록했습니다"
       },
@@ -2692,8 +2714,8 @@
       "groupDeleteFailed": "그룹 삭제에 실패했습니다",
       "groupDuplicateError": "같은 카테고리에 동일한 이름의 그룹이 이미 존재합니다",
       "groupCreateFailedSimple": "생성 실패",
-      "groupAlreadyExists": "'{name}'은(는) 이미 존재합니다",
-      "groupCreateError": "'{name}': {message}",
+      "groupAlreadyExists": "‘{name}’은(는) 이미 존재합니다",
+      "groupCreateError": "‘{name}’: {message}",
       "groupMemberFetchFailed": "멤버 정보를 불러오지 못했습니다",
       "groupMemberAssignFailed": "멤버 배정에 실패했습니다",
       "memberListTitle": "멤버",
@@ -2737,7 +2759,7 @@
       "memberRemoveLoading": "삭제 중...",
       "memberRemoveButton": "팀에서 삭제",
       "memberDetailTitle": "멤버 상세",
-      "memberRoleChangeMessage": "{name}님의 권한을 '{role}'(으)로 변경하시겠습니까?",
+      "memberRoleChangeMessage": "{name}님의 권한을 ‘{role}’(으)로 변경하시겠습니까?",
       "memberRemoveMessage": "{name}님을 팀에서 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
       "bestTimeSection": "Best Time",
       "youBadge": "나",
@@ -2751,7 +2773,7 @@
       "groupDisplayLabel": "그룹 표시:",
       "groupAddAria": "그룹 추가",
       "groupConfirmTitle": "확인",
-      "groupDeleteConfirmMessage": "'{name}'을(를) 삭제하시겠습니까?\n그룹에 배정된 멤버 정보도 삭제됩니다.",
+      "groupDeleteConfirmMessage": "‘{name}’을(를) 삭제하시겠습니까?\n그룹에 배정된 멤버 정보도 삭제됩니다.",
       "groupAddTitle": "그룹 추가",
       "groupEditTitle": "그룹 편집",
       "groupCategoryPlaceholder": "예: 학년, 거리, S1",
@@ -2816,14 +2838,14 @@
       "pendingApproveFailed": "승인에 실패했습니다",
       "pendingRejectFailed": "거부에 실패했습니다",
       "pendingLoading": "승인 대기 멤버를 불러오는 중...",
-      "pendingFetchFailed": "승인 대기 멤버를 가져오지 못했습니다",
+      "pendingFetchFailed": "승인 대기 멤버를 불러오지 못했습니다",
       "teamPracticeList": {
-        "title": "팀 훈련 ({count}건)",
-        "addButton": "훈련 추가",
-        "empty": "팀 훈련 기록이 없습니다",
-        "fetchFailed": "훈련 기록을 불러오지 못했습니다",
-        "deleteConfirm": "이 훈련 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
-        "deleteFailed": "훈련 기록 삭제에 실패했습니다",
+        "title": "팀 연습 ({count}건)",
+        "addButton": "연습 추가",
+        "empty": "팀 연습 기록이 없습니다",
+        "fetchFailed": "연습 기록을 불러오지 못했습니다",
+        "deleteConfirm": "이 연습 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+        "deleteFailed": "연습 기록 삭제에 실패했습니다",
         "addLog": "기록 추가",
         "recordBulkButton": "기록 대리 입력"
       },
@@ -2844,7 +2866,7 @@
       "teamCompetitionEntryModal": {
         "styleGroupHeader": "{style} ({count}건)",
         "adminBulkEntryButton": "엔트리 대리 입력",
-        "editEntryAria": "{style} 엔트리 수정",
+        "editEntryAria": "{style} 엔트리 편집",
         "deleteEntryAria": "{style} 엔트리 삭제",
         "deleteConfirmTitle": "엔트리 삭제",
         "deleteConfirmMessage": "이 엔트리를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
@@ -2863,7 +2885,7 @@
         "changeStatusAria": "접수 상태를 {status}(으)로 변경",
         "saveFailed": "접수 상태 변경에 실패했습니다",
         "loading": "엔트리 정보를 불러오는 중...",
-        "fetchFailed": "엔트리 정보를 가져오지 못했습니다",
+        "fetchFailed": "엔트리 정보를 불러오지 못했습니다",
         "emptyNoEntry": "아직 엔트리가 없습니다",
         "emptyOpenHint": "현재 엔트리 접수 중입니다",
         "unknownStyle": "종목 불명",
@@ -2912,22 +2934,22 @@
       "tabSettings": "설정",
       "tabSchedule": "일정",
       "tabOthers": "더보기",
-      "calendarColorDescription": "홈 캘린더에서 이 팀의 훈련과 대회를 표시할 색상을 설정합니다.",
+      "calendarColorDescription": "홈 캘린더에서 이 팀의 연습과 대회를 표시할 색상을 설정합니다.",
       "headerAnnouncements": "공지",
       "headerSettings": "팀 설정",
       "schedule": {
         "filterAll": "전체",
-        "filterPractices": "훈련",
+        "filterPractices": "연습",
         "filterCompetitions": "대회",
         "filterPast": "지난 일정",
         "add": "추가",
         "addMenuTitle": "추가할 일정",
         "emptyUpcoming": "예정된 일정이 없습니다",
         "emptyPast": "지난 일정이 없습니다",
-        "emptyPractices": "예정된 훈련이 없습니다",
+        "emptyPractices": "예정된 연습이 없습니다",
         "emptyCompetitions": "예정된 대회가 없습니다",
         "fetchFailed": "일정을 불러오지 못했습니다",
-        "emptyPastPractices": "지난 훈련이 없습니다",
+        "emptyPastPractices": "지난 연습이 없습니다",
         "emptyPastCompetitions": "지난 대회가 없습니다"
       },
       "others": {
@@ -2941,11 +2963,11 @@
         "unansweredCount": "미응답 {count}건",
         "allAnswered": "모두 응답 완료",
         "savedToast": "출결을 저장했습니다",
-        "statusChangedToast": "{count}건을 '{status}'(으)로 변경했습니다",
+        "statusChangedToast": "{count}건을 ‘{status}’(으)로 변경했습니다",
         "closedTag": "마감",
         "empty": "예정된 연습·대회가 없습니다",
         "rowAria": "{date} {title}의 전체 출결 보기",
-        "answerAria": "{title}에 '{status}'(으)로 응답",
+        "answerAria": "{title}에 ‘{status}’(으)로 응답",
         "statusPillAria": "{title}의 접수 상태 변경 (현재: {status})",
         "selectAria": "{title} 선택",
         "adminHint": "오른쪽 접수 상태를 눌러 변경할 수 있습니다",
@@ -2964,7 +2986,7 @@
         "editMember": "변경",
         "editMemberAria": "{name}의 출결 변경",
         "you": "나",
-        "noteAdd": "＋비고",
+        "noteAdd": "+ 비고",
         "noteEditAria": "{title}의 비고 입력"
       },
       "tabBadgeAria": "{name} (미처리 {count}건)",
@@ -3047,7 +3069,7 @@
       "segmentSwimmer": "선수",
       "segmentNonSwimmer": "비선수",
       "infoAriaLabel": "비선수 설정 안내",
-      "infoText": "'비선수'로 설정하면 멤버 탭의 베스트 기록 목록에서 하단의 '비선수'로 접히고, 대회 출전 및 연습 기록 입력 대상자에 표시되지 않습니다. 출결 확인에는 계속 표시됩니다.",
+      "infoText": "‘비선수’로 설정하면 멤버 탭의 베스트 타임 목록에서 하단의 ‘비선수’로 접히고, 대회 엔트리 및 연습 기록 입력 대상자에 표시되지 않습니다. 출결 확인에는 계속 표시됩니다.",
       "sectionToggle": "비선수 ({count})",
       "updateFailed": "비선수 설정 업데이트에 실패했습니다",
       "confirmTitle": "선수 설정 변경 확인",
@@ -3104,12 +3126,14 @@
         "tapForDetails": "탭하여 상세보기",
         "noRecords": "등록된 기록 없음",
         "addable": "추가 가능",
-        "viewRecordsAriaLabel": "{title}의 기록 보기"
+        "viewRecordsAriaLabel": "{title}의 기록 보기",
+        "entryCount": "엔트리: {count}건",
+        "createdBy": "작성자:"
       },
       "entryStatus": {
         "before": "접수 전",
         "open": "접수 중",
-        "closed": "접수 종료"
+        "closed": "접수 마감"
       },
       "selfRecordButton": "내 기록 추가",
       "selfRecordSaveFailed": "내 기록 저장에 실패했습니다"
@@ -3121,7 +3145,7 @@
       "title": "엔트리",
       "close": "닫기",
       "styleLabel": "종목",
-      "entryTimeLabel": "엔트리 타임 (선택)",
+      "entryTimeLabel": "엔트리 기록 (선택)",
       "registerButton": "엔트리하기",
       "updateButton": "업데이트",
       "deleteButton": "삭제",
@@ -3189,7 +3213,7 @@
       },
       "empty": {
         "noMatchTitle": "해당하는 기록이 없습니다",
-        "noMatchBody": "선택한 종목・거리・수영장 종류・성별에 일치하는 기록을 찾을 수 없습니다. 조건을 변경해 보세요.",
+        "noMatchBody": "선택한 종목·거리·수영장 종류·성별에 일치하는 기록을 찾을 수 없습니다. 조건을 변경해 보세요.",
         "noRecordsTitle": "팀에 대회 기록이 없습니다",
         "noRecordsBody": "멤버가 대회 기록을 등록하면 여기에 랭킹이 표시됩니다."
       },
@@ -3225,7 +3249,7 @@
         },
         "eventLabel": "{distance}m×{legCount} {kind}",
         "legDistanceOption": "{distance}m × {legCount}",
-        "legLabel": "{num}번째 영자",
+        "legLabel": "제{num}영자",
         "legHeader": {
           "swimmer": "영자",
           "style": "종목",
@@ -3238,7 +3262,7 @@
         "noLegs": "이 기록에는 영자 정보가 등록되지 않았습니다",
         "empty": {
           "noMatchTitle": "해당하는 계영 기록이 없습니다",
-          "noMatchBody": "선택한 종류・거리・수영장 종류・성별 구분에 일치하는 계영 기록을 찾을 수 없습니다. 조건을 변경해 보세요.",
+          "noMatchBody": "선택한 종류·거리·수영장 종류·성별 구분에 일치하는 계영 기록을 찾을 수 없습니다. 조건을 변경해 보세요.",
           "noRecordsTitle": "팀에 계영 기록이 없습니다",
           "noRecordsBody": "대회 기록 입력에서 계영 종목을 등록하면 여기에 랭킹이 표시됩니다."
         },
@@ -3249,7 +3273,7 @@
       "hook": {
         "roleChangeFailed": "권한 변경에 실패했습니다",
         "cannotRemoveSelf": "자기 자신을 팀에서 삭제할 수 없습니다",
-        "removeConfirm": "{name}님을 팀에서 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+        "removeConfirm": "{name}님을 팀에서 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
         "removeFailed": "멤버 삭제에 실패했습니다"
       },
       "title": "멤버 상세",
@@ -3280,7 +3304,7 @@
       },
       "roleChange": {
         "title": "권한 변경 확인",
-        "message": "{name}님의 권한을 '{role}'(으)로 변경하시겠습니까?",
+        "message": "{name}님의 권한을 ‘{role}’(으)로 변경하시겠습니까?",
         "roleAdmin": "관리자",
         "roleUser": "사용자",
         "cancel": "취소",
@@ -3311,8 +3335,8 @@
         "compareMetricLabel": "비교 지표",
         "compareMetric": {
           "wa": "WA 포인트",
-          "nr": "일본기록 기준",
-          "age": "연령별기록 기준"
+          "nr": "일본 기록 기준",
+          "age": "연령별 기록 기준"
         },
         "ageCategoryLabel": "연령 구분",
         "ageCategoryUnset": "미설정",
@@ -3324,9 +3348,9 @@
           "general": "일반부"
         },
         "compareMetricInfoAriaLabel": "비교 지표란?",
-        "compareMetricInfo": "WA 포인트: World Aquatics(세계수영연맹)의 공식 포인트 제도. 세계기록을 기준으로 한 점수\n일본기록 기준: 일본기록 대비 점수\n연령별기록 기준: 초등·중등·고등·대학·일반 연령별 기록 대비 점수",
+        "compareMetricInfo": "WA 포인트: World Aquatics(세계수영연맹)의 공식 포인트 제도. 세계 기록을 기준으로 한 점수\n일본 기록 기준: 일본 기록 대비 점수\n연령별 기록 기준: 초등·중등·고등·대학·일반 연령별 기록 대비 점수",
         "pointsInfoAriaLabel": "점수 산출 방법",
-        "pointsInfo": "기준 기록과 동일하면 1000점이 됩니다. 「1000×(기준 기록÷기록)³」으로 산출하므로 종목이나 코스가 달라도 비교할 수 있습니다."
+        "pointsInfo": "기준 기록과 동일하면 1000점이 됩니다. \"1000×(기준 기록÷기록)³\"으로 산출하므로 종목이나 코스가 달라도 비교할 수 있습니다."
       }
     },
     "attendance": {
@@ -3400,7 +3424,7 @@
     },
     "recentAttendance": {
       "title": "최근 출결",
-      "empty": "의 이벤트가 없습니다",
+      "empty": "이벤트가 없습니다",
       "saveButton": "저장",
       "thisMonth": "이번 달",
       "nextMonth": "다음 달",
@@ -3458,20 +3482,20 @@
       "saveSuccess": "저장했습니다",
       "confirmEditAfterDeadline": "제출 마감 후의 편집입니다 ({date}). 비고에 편집 일시가 자동으로 추가됩니다. 저장하시겠습니까?",
       "authRequired": "인증이 필요합니다",
-      "saveError": "출석 정보 저장에 실패했습니다"
+      "saveError": "출결 정보 저장에 실패했습니다"
     },
     "entryCompetitionCard": {
       "placeLabel": "장소:",
       "statusBefore": "접수 전",
       "statusOpen": "접수 중",
-      "statusClosed": "접수 종료"
+      "statusClosed": "접수 마감"
     },
     "entryForm": {
       "editButton": "편집",
       "addButton": "추가",
       "styleLabel": "종목",
       "styleSelectPlaceholder": "선택하세요",
-      "entryTimeLabel": "엔트리 타임 (선택)",
+      "entryTimeLabel": "엔트리 기록 (선택)",
       "entryTimePlaceholder": "2.00.00",
       "timeFormatHint": "형식: 분.초.밀리초 (예: 1.23.4) / 분:초.밀리초 (예: 1:23.45) / 초.밀리초 (예: 65.23)",
       "memoLabel": "메모 (선택)",
@@ -3483,7 +3507,7 @@
       "processing": "전송 중..."
     },
     "entryItem": {
-      "enteredLabel": "엔트리 타임:"
+      "enteredLabel": "엔트리 기록:"
     },
     "entryList": {
       "empty": "엔트리가 없습니다",
@@ -3522,8 +3546,8 @@
       "noMembersSelected": "선택된 멤버가 없습니다",
       "removeMemberConfirmTitle": "선수를 삭제하시겠습니까?",
       "removeMemberConfirmMessage": "{name}의 입력된 데이터가 삭제됩니다.",
-      "removeHeatConfirmTitle": "이 번째 기록을 삭제하시겠습니까?",
-      "removeHeatConfirmMessage": "{n}번째의 입력된 데이터가 삭제됩니다.",
+      "removeHeatConfirmTitle": "이 회차를 삭제하시겠습니까?",
+      "removeHeatConfirmMessage": "{n}번째에 입력된 데이터가 삭제됩니다.",
       "removeHeatButtonLabel": "{n}번째 삭제",
       "relaySwimmerPlaceholder": "선수 선택",
       "totalTime": "합계 타임",
@@ -3548,7 +3572,7 @@
       "confirmSelection": "확정",
       "relayAllMembersRequired": "계영 종목은 멤버 4명 전원을 선택하세요",
       "relayAllTimesRequired": "계영 종목은 모든 선수의 타임을 입력하세요",
-      "relayTimeReversed": "누적 타임이 역전되었습니다. {next}번째 선수의 누적 타임은 {prev}번째 선수보다 큰 값을 입력하세요.",
+      "relayTimeReversed": "누적 타임이 역전되었습니다. 제{next}영자의 누적 타임은 제{prev}영자보다 큰 값을 입력하세요.",
       "noRecordsError": "최소 1개의 기록을 입력하세요",
       "saveFailed": "저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
       "adminBadge": "관리자"
@@ -3570,9 +3594,9 @@
       "createFailed": "팀 연습 기록 생성에 실패했습니다",
       "dateLabel": "연습일",
       "titleLabel": "연습 제목",
-      "titlePlaceholder": "예: 기초 연습, 스프린트 연습 (비워두면 '팀 연습'으로 표시됩니다)",
+      "titlePlaceholder": "예: 기초 연습, 스프린트 연습 (비워두면 ‘팀 연습’으로 표시됩니다)",
       "placeLabel": "연습 장소",
-      "placePlaceholder": "예: 시영 수영장, 학교 수영장",
+      "placePlaceholder": "예: 시립 수영장, 학교 수영장",
       "noteLabel": "메모",
       "notePlaceholder": "연습 내용이나 소감 등",
       "cancelButton": "취소",
@@ -3592,7 +3616,7 @@
       "updateFailed": "팀 대회 수정에 실패했습니다",
       "deleteFailed": "팀 대회 삭제에 실패했습니다",
       "competitionNameLabel": "대회명",
-      "competitionNamePlaceholder": "예: 도 대회 (비워두면 '대회'로 표시됩니다)",
+      "competitionNamePlaceholder": "예: 도 대회 (비워두면 ‘대회’로 표시됩니다)",
       "startDateLabel": "시작일",
       "endDateLabel": "종료일",
       "endDateHelperText": "여러 날일 경우",
@@ -3615,10 +3639,10 @@
       "memoLabel": "메모",
       "noTimeRecorded": "타임 기록 없음",
       "setRepLabel": "{rep}번째",
-      "setHeader": "{set}세트째",
+      "setHeader": "세트 {set}",
       "setAvgLabel": "{set}세트 평균",
       "setAvgSingleLabel": "세트 평균",
-      "overallFastest": "전체 최속",
+      "overallFastest": "전체 최고",
       "overallAverage": "전체 평균",
       "loadError": "연습 상세를 불러오지 못했습니다",
       "dataNotFound": "연습 데이터를 찾을 수 없습니다",
@@ -3651,7 +3675,7 @@
       "styleGroupHeader": "{style} ({count}건)",
       "selfEntryButton": "엔트리 추가",
       "adminBulkEntryButton": "엔트리 대리 입력",
-      "editEntryAria": "{style} 엔트리 수정",
+      "editEntryAria": "{style} 엔트리 편집",
       "deleteEntryAria": "{style} 엔트리 삭제",
       "deleteConfirmTitle": "엔트리 삭제",
       "deleteConfirmMessage": "이 엔트리를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
@@ -3662,7 +3686,7 @@
       "entryStatusLabel": "엔트리 상태",
       "emptyNoEntry": "아직 엔트리가 없습니다",
       "emptyOpenHint": "멤버가 엔트리를 제출하면 여기에 표시됩니다",
-      "entryTimeLabel": "엔트리 타임:",
+      "entryTimeLabel": "엔트리 기록:",
       "close": "닫기",
       "unknownUser": "알 수 없는 사용자",
       "unknownStyle": "종목 알 수 없음",
@@ -3674,7 +3698,7 @@
       "statusChangeFailed": "상태 변경에 실패했습니다"
     },
     "attendanceList": {
-      "outsidePeriod": "현재 출결 제출 기간이 아닙니다. 관리자가 제출 기간을 '제출 접수 중'으로 변경할 때까지 기다려 주세요.",
+      "outsidePeriod": "현재 출결 제출 기간이 아닙니다. 관리자가 제출 기간을 ‘제출 접수 중’으로 변경할 때까지 기다려 주세요.",
       "statsPresent": "출석",
       "statsAbsent": "결석",
       "statsOther": "기타",
@@ -3725,7 +3749,9 @@
     },
     "timeInputModal": {
       "titleWithMenu": "메뉴 {menu}의 팀 타임 입력",
-      "titleDefault": "팀 타임 입력"
+      "titleDefault": "팀 타임 입력",
+      "description": "{sets}세트 × {reps}회 = {total}개의 기록을 입력해 주세요",
+      "average": "평균"
     },
     "actions": {
       "joinFailed": "팀 참가에 실패했습니다",
@@ -3737,35 +3763,40 @@
       "teamInfoTitle": "팀 정보",
       "editTeamInfo": "팀 정보 편집",
       "inviteCodeTitle": "초대 코드",
-      "inviteCodeDescription": "이 코드를 공유하면 다른 사람이 팀에 참여할 수 있습니다.",
+      "inviteCodeDescription": "이 코드를 공유하면 다른 사람이 팀에 참가할 수 있습니다.",
       "copyInviteCode": "초대 코드 복사",
       "copied": "복사했습니다",
       "calendarColorTitle": "이 팀의 기록 색상",
-      "calendarColorDescription": "대시보드 캘린더에서 이 팀의 훈련과 대회를 표시할 색상을 설정합니다.",
+      "calendarColorDescription": "대시보드 캘린더에서 이 팀의 연습과 대회를 표시할 색상을 설정합니다.",
       "teamActionsTitle": "팀 작업",
       "createTeam": "팀 만들기",
-      "joinTeam": "초대 코드로 참여",
+      "joinTeam": "초대 코드로 참가",
       "dangerZoneTitle": "위험한 작업",
       "leaveTeam": "팀 탈퇴",
-      "leaveConfirmTitle": "팀에서 탈퇴할까요?",
-      "leaveConfirmMessage": "“{name}”에서 탈퇴합니다. 팀의 훈련, 대회, 출결이 더 이상 표시되지 않습니다.",
+      "leaveConfirmTitle": "팀에서 탈퇴하시겠습니까?",
+      "leaveConfirmMessage": "‘{name}’에서 탈퇴합니다. 팀의 연습, 대회, 출결이 더 이상 표시되지 않습니다.",
       "leaveFailed": "팀 탈퇴에 실패했습니다",
-      "leaving": "탈퇴하는 중...",
+      "leaving": "탈퇴 중...",
       "lastAdminCannotLeave": "마지막 관리자이므로 탈퇴할 수 없습니다. 먼저 다른 멤버를 관리자로 변경해 주세요.",
       "deleteTeam": "팀 삭제",
-      "deleteConfirmTitle": "팀을 삭제할까요?",
-      "deleteConfirmMessage": "“{name}”을(를) 삭제합니다. 대회, 엔트리, 공지, 멤버 정보는 되돌릴 수 없습니다. 연습 기록과 경기 기록은 개인 기록으로 남지만 대회명은 더 이상 표시되지 않습니다.",
+      "deleteConfirmTitle": "팀을 삭제하시겠습니까?",
+      "deleteConfirmMessage": "‘{name}’을(를) 삭제합니다. 대회, 엔트리, 공지, 멤버 정보는 되돌릴 수 없습니다. 연습 기록과 경기 기록은 개인 기록으로 남지만 대회명은 더 이상 표시되지 않습니다.",
       "deleteFailed": "팀 삭제에 실패했습니다",
-      "deleting": "삭제하는 중...",
+      "deleting": "삭제 중...",
       "deleteErrors": {
         "notAuthorized": "팀 관리자만 팀을 삭제할 수 있습니다.",
         "teamNotFound": "팀을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.",
         "authRequired": "세션이 만료되었습니다. 다시 로그인해 주세요."
       },
-      "leaveDescription": "탈퇴하면 이 팀의 훈련, 대회, 출결이 더 이상 표시되지 않습니다. 다시 참여하려면 초대 코드가 필요합니다. 본인의 연습 기록과 경기 기록은 그대로 남습니다.",
+      "leaveDescription": "탈퇴하면 이 팀의 연습, 대회, 출결이 더 이상 표시되지 않습니다. 다시 참가하려면 초대 코드가 필요합니다. 본인의 연습 기록과 경기 기록은 그대로 남습니다.",
       "leaveButton": "팀에서 탈퇴하기",
       "deleteDescription": "팀을 삭제하면 대회, 엔트리, 공지, 멤버 정보가 완전히 삭제되며 복구할 수 없습니다. 멤버의 연습 기록과 경기 기록은 개인 기록으로 남습니다.",
       "deleteButton": "팀 삭제하기"
+    },
+    "adminAttendanceHook": {
+      "loadEventsError": "이벤트 정보를 불러오지 못했습니다",
+      "saveError": "출결 상태를 저장하지 못했습니다",
+      "bulkUpdateError": "일괄 업데이트에 실패했습니다"
     }
   },
   "teamsAdmin": {
@@ -3790,7 +3821,7 @@
       "inviteCodeLabel": "초대 코드:"
     },
     "tabs": {
-      "attendance": "출석",
+      "attendance": "출결",
       "announcements": "공지사항",
       "members": "멤버",
       "groups": "그룹",
@@ -3896,7 +3927,7 @@
         "sectionTitle": "분석 결과",
         "distanceLabel": "거리:",
         "repsLabel": "개수:",
-        "circleLabel": "서클:",
+        "circleLabel": "사이클:",
         "col": {
           "no": "No",
           "member": "멤버",
@@ -3909,7 +3940,8 @@
         "unassignedWarning": "할당되지 않은 기록은 폐기됩니다",
         "retryButton": "다시 하기",
         "cancelButton": "취소",
-        "applyButton": "양식에 반영"
+        "applyButton": "양식에 반영",
+        "editTimeAria": "{no}번 {n}회차 기록 수정"
       },
       "discardConfirm": {
         "title": "할당되지 않은 기록이 있습니다",
@@ -3927,7 +3959,7 @@
       "loading": "불러오는 중...",
       "error": "데이터를 불러오는 중 오류가 발생했습니다",
       "empty": "예정된 이벤트가 없습니다",
-      "bulkChangeButton": "출석 상태 일괄 변경",
+      "bulkChangeButton": "출결 상태 일괄 변경",
       "eventDefault": {
         "competition": "대회",
         "practice": "연습"
@@ -3939,23 +3971,23 @@
       "description": "멤버를 카테고리별로 그룹으로 나눌 수 있습니다",
       "addButton": "그룹 추가",
       "emptyTitle": "아직 그룹이 없습니다",
-      "emptyDescription": "「그룹 추가」에서 카테고리와 그룹을 만들어 보세요",
+      "emptyDescription": "‘그룹 추가’에서 카테고리와 그룹을 만들어 보세요",
       "memberCount": "{count}명",
       "deleteConfirm": {
         "title": "그룹 삭제",
-        "message": "「{name}」을(를) 삭제하시겠습니까? 그룹에 할당된 멤버 정보도 삭제됩니다.",
+        "message": "‘{name}’을(를) 삭제하시겠습니까? 그룹에 할당된 멤버 정보도 삭제됩니다.",
         "confirmButton": "삭제",
         "cancelButton": "취소"
       },
       "errors": {
-        "fetchFailed": "그룹 정보를 가져오지 못했습니다",
+        "fetchFailed": "그룹 정보를 불러오지 못했습니다",
         "createFailed": "그룹 생성에 실패했습니다",
         "createFailedGeneric": "생성 실패",
         "duplicateName": "같은 카테고리에 동일한 이름의 그룹이 이미 존재합니다",
-        "duplicateNameSpecific": "「{name}」은(는) 이미 존재합니다",
+        "duplicateNameSpecific": "‘{name}’은(는) 이미 존재합니다",
         "updateFailed": "그룹 업데이트에 실패했습니다",
         "deleteFailed": "그룹 삭제에 실패했습니다",
-        "fetchMembersFailed": "멤버 정보를 가져오지 못했습니다",
+        "fetchMembersFailed": "멤버 정보를 불러오지 못했습니다",
         "assignFailed": "멤버 할당에 실패했습니다"
       }
     },
@@ -4021,18 +4053,18 @@
       "saving": "저장 중..."
     },
     "bulkChange": {
-      "title": "출석 상태 일괄 변경",
+      "title": "출결 상태 일괄 변경",
       "empty": "이벤트가 없습니다",
       "statusOpen": "접수 중",
       "statusClosed": "마감",
       "statusUnset": "미설정",
-      "competitionLabel": "（대회）",
+      "competitionLabel": "(대회)",
       "openButton": "접수 중으로 변경",
       "closedButton": "마감으로 변경"
     },
     "attendanceStatus": {
       "loading": "불러오는 중...",
-      "titleSuffix": "의 출석 현황"
+      "titleSuffix": "의 출결 현황"
     },
     "templateDownload": {
       "title": "Excel 템플릿 다운로드",
@@ -4084,14 +4116,16 @@
       "registerButton": " 일괄 등록",
       "registering": "등록 중...",
       "poolShort": "25m",
-      "poolLong": "50m"
+      "poolLong": "50m",
+      "typeData": "{type} 데이터",
+      "errorLocation": "{sheet} 시트 {row}행"
     },
     "practiceLog": {
       "backButton": "연습 목록으로 돌아가기",
       "participantsSection": "대상 사용자",
       "timesSection": "타임 입력",
       "addMenuButton": "메뉴 추가",
-      "addSplitButton": "분할 타임 추가",
+      "addSplitButton": "스플릿 타임 추가",
       "saveButton": "팀 연습 로그 저장",
       "saving": "저장 중...",
       "deleteButton": "삭제",
@@ -4110,8 +4144,8 @@
       "distanceLabel": "거리(m)",
       "repsLabel": "개수",
       "setsLabel": "세트 수",
-      "circleMinLabel": "서클(분)",
-      "circleSecLabel": "서클(초)",
+      "circleMinLabel": "사이클(분)",
+      "circleSecLabel": "사이클(초)",
       "selectUsersButton": "사용자 선택",
       "selectedCount": "{count}명 선택 중",
       "videoLabel": "동영상",
@@ -4121,11 +4155,11 @@
       "memoLabel": "메모",
       "memoPlaceholder": "메뉴의 세부 사항이나 주의점 등",
       "timeInputSummary": "{sets}세트 × {reps}개 = {total}개의 타임 입력",
-      "timeInputOptional": "（타임 입력은 선택 사항입니다）",
+      "timeInputOptional": "(타임 입력은 선택 사항입니다)",
       "timeInputButton": "타임 입력",
       "recordedTimesTitle": "기록된 타임",
       "recordedCount": "{count}개 기록됨",
-      "setRepLabel": "{set}세트-{rep}개",
+      "setRepLabel": "{set}세트-{rep}번째",
       "userSelectModalTitle": "대상 사용자 선택",
       "selectAllButton": "전체 선택",
       "selectPresentButton": "출석자만 ({count}명)",
@@ -4137,7 +4171,7 @@
       "morePeopleCount": "+{count}명",
       "overwriteConfirm": {
         "title": "기존 메뉴 처리",
-        "message": "이미 입력된 메뉴가 있습니다. 덮어쓰시겠습니까? 「추가」를 누르면 기존 메뉴 뒤에 추가됩니다.",
+        "message": "이미 입력된 메뉴가 있습니다. 덮어쓰시겠습니까? ‘추가’를 누르면 기존 메뉴 뒤에 추가됩니다.",
         "confirmLabel": "덮어쓰기",
         "cancelLabel": "취소",
         "tertiaryLabel": "추가"
@@ -4179,7 +4213,7 @@
         "labelTitle": "제목",
         "labelCompetitionName": "대회명",
         "labelPlace": "장소",
-        "labelPoolType": "수로",
+        "labelPoolType": "수영장 종류",
         "labelNote": "비고",
         "poolShort": "단수로 (25m)",
         "poolLong": "장수로 (50m)",
@@ -4204,6 +4238,18 @@
     "common": {
       "close": "닫기",
       "copyTitle": "복사"
+    },
+    "bulkRegisterHook": {
+      "invalidFileType": "Excel 파일(.xlsx 또는 .xls)을 선택해 주세요",
+      "parseErrors": "{count}건의 오류가 발견되었습니다. 미리보기를 확인해 주세요.",
+      "unknownFormat": "파일 형식을 판별할 수 없습니다. 연습 일괄 등록 또는 대회 일괄 등록 템플릿을 사용해 주세요.",
+      "readFailed": "파일을 읽지 못했습니다",
+      "noData": "등록할 데이터가 없습니다",
+      "confirmWithErrors": "{count}건의 오류가 있습니다. 오류가 없는 데이터만 등록하시겠습니까?",
+      "successPractice": "연습 {count}건 등록이 완료되었습니다",
+      "successCompetition": "대회 {count}건 등록이 완료되었습니다",
+      "partialFailure": "일부 등록에 실패했습니다: {errors}",
+      "registerFailed": "일괄 등록에 실패했습니다"
     }
   },
   "paywallMobile": {
@@ -4223,7 +4269,7 @@
     "alreadyPremium": "이미 Premium 플랜을 이용 중입니다",
     "title": "Premium으로 업그레이드",
     "subtitle": "모든 기능을 제한 없이 이용하실 수 있습니다",
-    "trialDaysRemaining": "체험 잔여 {days}일",
+    "trialDaysRemaining": "체험 {days}일 남음",
     "annualPlan": "연간 플랜",
     "monthlyPlan": "월간 플랜",
     "savingsLabel": "{percent}% 할인",
@@ -4262,7 +4308,7 @@
     "filterAllPeriods": "전체 기간",
     "filterYearFormat": "{year}년도",
     "tabAll": "전체",
-    "tabIncludeRelay": "인계 포함",
+    "tabIncludeRelay": "이어받기 포함",
     "buttonReset": "초기화",
     "tabSplit": "거리별 Lap",
     "tabAllLap": "All Lap",
@@ -4280,9 +4326,9 @@
     "editButton": "편집",
     "deleteButton": "삭제",
     "deletingButton": "삭제 중...",
-    "bestTimeAria": "자기 최고 기록 경신",
-    "bestTimeDiffAria": "베스트 기록보다 +{diff} 느림",
-    "dateUnknown": "날짜 불명",
+    "bestTimeAria": "개인 최고 기록 경신",
+    "bestTimeDiffAria": "베스트 타임보다 +{diff} 느림",
+    "dateUnknown": "날짜 알 수 없음",
     "unknownValue": "알 수 없음",
     "recordNumber": "기록 {index}",
     "noRecords": "대회 기록이 없습니다",
@@ -4358,14 +4404,14 @@
       },
       "title_create": "연습 기록 등록",
       "title_edit": "연습 기록 편집",
-      "subtitle_create": "{date}의 연습 예정을 만듭니다",
-      "subtitle_edit": "{date}의 연습 예정을 편집합니다",
+      "subtitle_create": "{date} 연습 일정을 만듭니다",
+      "subtitle_edit": "{date} 연습 일정을 편집합니다",
       "date_label": "연습일",
       "date_placeholder": "연습일 선택",
       "title_field": "연습 제목",
       "title_placeholder": "예: Swim, AM, 16:00",
       "place_label": "연습 장소",
-      "place_placeholder": "예: 시영 수영장, 학교 수영장",
+      "place_placeholder": "예: 시립 수영장, 학교 수영장",
       "note_label": "메모",
       "note_placeholder": "연습 관련 특이사항 (날씨, 컨디션 등)",
       "save": "저장",
@@ -4404,7 +4450,7 @@
       "name_label": "대회명",
       "name_placeholder": "전국대회, 대항전",
       "place_label": "장소",
-      "pool_type_label": "수로",
+      "pool_type_label": "수영장 종류",
       "pool_short": "단수로 (25m)",
       "pool_long": "장수로 (50m)",
       "pool_short_abbrev": "단수로",
@@ -4449,16 +4495,16 @@
       "distanceLabel": "거리 (m)",
       "repsLabel": "개수",
       "setsLabel": "세트 수",
-      "circleMinLabel": "서클 (분)",
-      "circleSecLabel": "서클 (초)",
-      "timeLabel": "연습 기록",
+      "circleMinLabel": "사이클 (분)",
+      "circleSecLabel": "사이클 (초)",
+      "timeLabel": "연습 타임",
       "timeEdit": "기록 편집 ({count}건 등록됨)",
       "timeAdd": "기록 입력",
       "noteLabel": "메모",
       "notePlaceholder": "이 메뉴에 관한 메모",
       "timesHeader": "등록된 기록",
-      "setHeader": "{n}세트째",
-      "repHeader": "{n}개째",
+      "setHeader": "세트 {n}",
+      "repHeader": "{n}번째",
       "avgRow": "평균",
       "overallAvg": "전체 평균",
       "overallFastest": "전체 최고",
@@ -4467,11 +4513,11 @@
       "increase": "늘리기"
     },
     "timeInput": {
-      "title": "메뉴{n}의 기록 입력",
+      "title": "메뉴 {n}의 기록 입력",
       "titleGeneric": "기록 입력",
       "subtitle": "{sets}세트 × {reps}개의 기록을 입력해 주세요",
       "setHeader": "세트 {n}",
-      "repLabel": "{n}개째",
+      "repLabel": "{n}번째",
       "average": "평균:",
       "notEntered": "미입력",
       "overallAvg": "전체 평균:",
@@ -4479,7 +4525,7 @@
       "cancel": "취소",
       "helpTitle": "기록 입력 팁",
       "helpBodyBasic": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.",
-      "helpBody": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.\n\n앞 칸에 \"33-2\"를 입력하면 다음 칸은 \"3-2\"만 입력해도 \"33.2\"로 자동 완성됩니다(십의 자리 인계). 칸을 비우면 인계가 초기화됩니다."
+      "helpBody": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.\n\n앞 칸에 \"33-2\"를 입력하면 다음 칸은 \"3-2\"만 입력해도 \"33.2\"로 자동 완성됩니다(앞 칸의 십의 자리를 이어받음). 칸을 비우면 이어받기가 초기화됩니다."
     },
     "record": {
       "title_create": "기록 추가",
@@ -4510,7 +4556,7 @@
       "distance_placeholder": "거리 (m)",
       "reactionTimeLabel": "반응 시간",
       "relayLabel": "계영",
-      "splitTimeLabel": "스플릿 기록",
+      "splitTimeLabel": "스플릿 타임",
       "splitAdd25m": "추가 (25m마다)",
       "splitAdd50m": "추가 (50m마다)",
       "splitAdd": "추가",
@@ -4544,13 +4590,13 @@
     "recordLog": {
       "eventHeader": "종목 {n}",
       "entryTimeLabel": "엔트리 기록:",
-      "bestTimeLabel": "베스트 기록",
+      "bestTimeLabel": "베스트 타임",
       "goalTargetLabel": "목표",
-      "bestTimeRelay": "베스트 기록 (인계)",
-      "bestTimeLong": "베스트 기록 (장수로)",
-      "bestTimeLongRelay": "베스트 기록 (장수로 인계)",
-      "bestTimeShort": "베스트 기록 (단수로)",
-      "bestTimeShortRelay": "베스트 기록 (단수로 인계)",
+      "bestTimeRelay": "베스트 타임 (이어받기)",
+      "bestTimeLong": "베스트 타임 (장수로)",
+      "bestTimeLongRelay": "베스트 타임 (장수로 이어받기)",
+      "bestTimeShort": "베스트 타임 (단수로)",
+      "bestTimeShortRelay": "베스트 타임 (단수로 이어받기)",
       "styleLabel": "종목",
       "stylePlaceholder": "종목 선택",
       "relayLabel": "계영",
@@ -4560,7 +4606,7 @@
       "distance_placeholder": "거리 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "반응 시간",
-      "splitTimeLabel": "스플릿 기록",
+      "splitTimeLabel": "스플릿 타임",
       "splitAdd25m": "추가 (25m마다)",
       "splitAdd50m": "추가 (50m마다)",
       "splitAdd": "추가",
@@ -4652,7 +4698,7 @@
     "lapTime": {
       "raceLapTab": "거리별 Lap",
       "allLapTab": "All Lap",
-      "noSplits": "스플릿 기록을 입력해 주세요",
+      "noSplits": "스플릿 타임을 입력해 주세요",
       "noStyle": "종목을 선택해 주세요",
       "noLap": "랩 타임을 계산할 수 없습니다",
       "distanceHeader": "거리",
@@ -4689,8 +4735,8 @@
         "cancel": "편집 계속하기"
       },
       "recordFutureGuard": "미래 날짜에는 레이스 기록을 등록할 수 없습니다.",
-      "competitionEditRestricted": "이 대회 정보는 팀 관리자만 수정할 수 있습니다.",
-      "practiceEditRestricted": "이 연습 정보는 팀 관리자만 수정할 수 있습니다.",
+      "competitionEditRestricted": "이 대회 정보는 팀 관리자만 편집할 수 있습니다.",
+      "practiceEditRestricted": "이 연습 정보는 팀 관리자만 편집할 수 있습니다.",
       "permissionCheckFailed": "편집 권한을 확인할 수 없습니다. 통신 상태를 확인한 후 다시 시도해 주세요.",
       "competitionSaveBlockedNoPermission": "편집 권한을 확인할 수 없어 대회 정보를 저장하지 못했습니다. 화면을 다시 열고 시도해 주세요.",
       "practiceSaveBlockedNoPermission": "편집 권한을 확인할 수 없어 연습 정보를 저장하지 못했습니다. 화면을 다시 열고 시도해 주세요."
@@ -4699,8 +4745,8 @@
       "upgradeText": "Premium으로 업그레이드",
       "imageUpload": "이미지 첨부는 Premium 회원 전용입니다",
       "videoUpload": "동영상 첨부는 Premium 회원 전용입니다",
-      "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로",
-      "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로"
+      "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로 등록할 수 있습니다",
+      "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로 등록할 수 있습니다"
     },
     "itemTabs": {
       "removeConfirmTitle": "{label}을(를) 삭제하시겠습니까?",
@@ -4709,9 +4755,9 @@
   },
   "timeLevel": {
     "metaTitle": "타임 레벨 측정 | SwimHub",
-    "metaDesc": "성별・수영장 종류・종목・거리・기록을 입력하면 WA 포인트・도추 포인트・도고 포인트 3가지 지표로 자신의 수영 실력을 확인할 수 있습니다.",
+    "metaDesc": "성별·수영장 종류·종목·거리·기록을 입력하면 WA 포인트·도쿄 중학 포인트·도쿄 고교 포인트 3가지 지표로 자신의 수영 실력을 확인할 수 있습니다.",
     "title": "타임 레벨 측정",
-    "description": "성별・수영장 종류・종목・거리・기록을 입력하면 WA 포인트・도추 포인트・도고 포인트 3가지 지표로 레벨을 확인할 수 있습니다.",
+    "description": "성별·수영장 종류·종목·거리·기록을 입력하면 WA 포인트·도쿄 중학 포인트·도쿄 고교 포인트 3가지 지표로 레벨을 확인할 수 있습니다.",
     "genderLabel": "성별",
     "genderMale": "남성",
     "genderFemale": "여성",
@@ -4721,9 +4767,9 @@
     "timeLabel": "기록",
     "timePlaceholder": "2.00.00",
     "invalidTimeFormat": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 83.45)",
-    "emptyEnterTime": "기록을 입력해주세요",
-    "noStandardTime": "이 종목・거리의 기준 기록이 없습니다",
-    "lcmOnly": "장코스(LCM)에만 대응합니다",
+    "emptyEnterTime": "기록을 입력해 주세요",
+    "noStandardTime": "이 종목·거리의 기준 기록이 없습니다",
+    "lcmOnly": "장수로(50m)만 지원합니다",
     "pointsUnit": "점",
     "baseTimeLabel": "기준 기록",
     "cleared": "돌파",
@@ -4732,12 +4778,12 @@
       "title": "WA 포인트"
     },
     "tochu": {
-      "title": "도추 포인트",
-      "note": "'도추 포인트'는 도쿄도 중학교 체육연맹의 공식 점수 제도가 아닙니다. 도 선수권대회 참가 기준 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+      "title": "도쿄 중학 포인트",
+      "note": "‘도쿄 중학 포인트’는 도쿄도 중학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 선수권대회 참가 기준 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
     },
     "toko": {
-      "title": "도고 포인트",
-      "note": "'도고 포인트'는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+      "title": "도쿄 고교 포인트",
+      "note": "‘도쿄 고교 포인트’는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도쿄도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
     }
   },
   "account": {
@@ -4780,7 +4826,7 @@
         "templates": "연습 로그 템플릿",
         "security": "로그인 및 보안",
         "terms": "이용약관",
-        "privacy": "개인정보처리방침",
+        "privacy": "개인정보 처리방침",
         "logout": "로그아웃"
       },
       "planValue": {
@@ -4797,7 +4843,8 @@
         "calendar": "Google 캘린더 연동과 대시보드 기록 색상",
         "templates": "연습 로그 입력에 사용하는 템플릿 관리",
         "security": "이메일·비밀번호·로그인 방법·계정 삭제"
-      }
+      },
+      "loadError": "계정 화면을 불러오는 중 문제가 발생했습니다."
     }
   }
 }

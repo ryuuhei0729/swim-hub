@@ -35,7 +35,8 @@
  *   の「100m自由形のテーブルを生成する」ケースで既に独立検証済みの計算式
  *   (lapTimes[interval] = 現在の split - 直前の interval の split) を手計算して算出した。
  */
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithI18n } from "../../utils/render";
 import { describe, expect, it } from "vitest";
 import { CompetitionShareCard } from "@/components/share/CompetitionShareCard";
 import type { CompetitionShareData } from "@/components/share/types";
@@ -78,7 +79,7 @@ describe("CompetitionShareCard — DB SplitTime → UI SplitTime 変換 (Stage1 
       ],
     });
 
-    render(<CompetitionShareCard data={data} />);
+    renderWithI18n(<CompetitionShareCard data={data} />);
 
     // distance 列: DB の distance がそのまま distance 列に使われている
     expect(screen.getByText("25m")).toBeTruthy();
@@ -119,7 +120,7 @@ describe("CompetitionShareCard — DB SplitTime → UI SplitTime 変換 (Stage1 
       ],
     });
 
-    render(<CompetitionShareCard data={data} />);
+    renderWithI18n(<CompetitionShareCard data={data} />);
 
     // 有効な split-time が1件も無いため、ラップタイムテーブル自体が描画されない
     expect(screen.queryByText("距離")).toBeNull();
@@ -129,7 +130,7 @@ describe("CompetitionShareCard — DB SplitTime → UI SplitTime 変換 (Stage1 
   it("[V-1-B-異常系] splitTimesがundefinedでもクラッシュせずテーブル無しで描画される", () => {
     const data = makeShareData({ time: 30.0, splitTimes: undefined });
 
-    render(<CompetitionShareCard data={data} />);
+    renderWithI18n(<CompetitionShareCard data={data} />);
 
     expect(screen.queryByText("距離")).toBeNull();
     // 合計タイムは通常通り描画される

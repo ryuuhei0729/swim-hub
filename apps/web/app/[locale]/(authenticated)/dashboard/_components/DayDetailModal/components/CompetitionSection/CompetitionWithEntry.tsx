@@ -229,7 +229,7 @@ export function CompetitionWithEntry({
             </h5>
             {isTeamCompetition && (
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
-                チーム
+                {t("calendarGrid.teamDefault")}
               </span>
             )}
           </div>

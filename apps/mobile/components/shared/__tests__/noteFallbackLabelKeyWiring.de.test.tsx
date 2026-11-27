@@ -14,13 +14,10 @@
 // (`components/teams/__tests__/AdminViewToggle.test.tsx` にも同種の注記あり:
 // 「vitest.setup.tsのi18nモックはja固定のため、他言語はコンポーネント経由で検証できない」)。
 //
-// ドイツ語では bulkEntryNote が名前空間ごとに異なる訳語になっている
-// (mypage/membersTimeTable = "Sammeleintrag" / memberDetail = "Sammeleingabe")。
+// de でも3キーは同じ訳語 ("Sammeleintrag") なので、実訳語の比較ではキーの取り違えを検出できない。
 // このテストファイル限定で react-i18next を de.json 解決の実装に上書きし、
-// 実際に解決された文字列を比較することで、キーの取り違えを実証可能にする。
-//
-// トートロジー防止メモ: 期待文字列 ("Sammeleintrag"/"Sammeleingabe") は
-// packages/shared/messages/de.json から読み込んだものであり、実装ファイルをコピーしていない。
+// 3つの bulkEntryNote だけをキーごとに異なる番兵文字列に差し替えて、
+// 各画面が自分の名前空間のキーを渡していることを実証する。
 // =============================================================================
 
 import React from "react";
@@ -40,9 +37,19 @@ vi.mock("@shopify/flash-list", () => ({
 
 // vitest.setup.ts のグローバル react-i18next モック (ja固定) をこのファイル内限定で
 // de.json 解決に上書きする。ICU風の {var} 補間も同様に処理する。
+const BULK_ENTRY_NOTE_SENTINELS = {
+  mypage: "SENTINEL:mypage.bestTimesTable.bulkEntryNote",
+  memberDetail: "SENTINEL:teams.memberDetail.bestTimesTable.bulkEntryNote",
+  teamList: "SENTINEL:teams.membersTimeTable.bulkEntryNote",
+};
+const testMessages = structuredClone(deMessages);
+testMessages.mypage.bestTimesTable.bulkEntryNote = BULK_ENTRY_NOTE_SENTINELS.mypage;
+testMessages.teams.memberDetail.bestTimesTable.bulkEntryNote = BULK_ENTRY_NOTE_SENTINELS.memberDetail;
+testMessages.teams.membersTimeTable.bulkEntryNote = BULK_ENTRY_NOTE_SENTINELS.teamList;
+
 function resolveDeKey(key: string): string | undefined {
   const parts = key.split(".");
-  let cur: unknown = deMessages;
+  let cur: unknown = testMessages;
   for (const p of parts) {
     if (cur && typeof cur === "object" && p in cur) {
       cur = (cur as Record<string, unknown>)[p];
@@ -130,19 +137,9 @@ import { BestTimesTable as ProfileBestTimesTable } from "@/components/profile/Be
 import { BestTimesTable as MemberDetailBestTimesTable } from "@/components/teams/member-detail/BestTimesTable";
 import { TeamMemberList } from "@/components/teams/TeamMemberList";
 
-// 期待するドイツ語訳: mypage/membersTimeTable は同じ、memberDetail だけ異なる
-const EXPECTED_MYPAGE_DE = deMessages.mypage.bestTimesTable.bulkEntryNote; // "Sammeleintrag"
-const EXPECTED_MEMBER_DETAIL_DE = deMessages.teams.memberDetail.bestTimesTable.bulkEntryNote; // "Sammeleingabe"
-const EXPECTED_TEAM_LIST_DE = deMessages.teams.membersTimeTable.bulkEntryNote; // "Sammeleintrag"
-
-// このテストが無意味化しないための前提チェック (2値が実際に異なっていること)
-if (EXPECTED_MYPAGE_DE === EXPECTED_MEMBER_DETAIL_DE) {
-  throw new Error(
-    "テスト前提が崩れている: de.json の mypage.bestTimesTable.bulkEntryNote と " +
-      "teams.memberDetail.bestTimesTable.bulkEntryNote が同じ値になっている。" +
-      "このテストは両者が異なることを利用してキーの取り違えを検出するため、前提が崩れると無意味化する。",
-  );
-}
+const EXPECTED_MYPAGE_DE = BULK_ENTRY_NOTE_SENTINELS.mypage;
+const EXPECTED_MEMBER_DETAIL_DE = BULK_ENTRY_NOTE_SENTINELS.memberDetail;
+const EXPECTED_TEAM_LIST_DE = BULK_ENTRY_NOTE_SENTINELS.teamList;
 
 const NO_COMPETITION_NO_NOTE = { name_jp: "50m自由形", distance: 50 };
 
@@ -161,7 +158,7 @@ const buildBestTime = (overrides: Partial<BestTime> = {}): BestTime => {
 };
 
 describe("[V-I18N-NOTE] noteFallbackLabel のキー配線 (ドイツ語で名前空間ごとの取り違えを実証)", () => {
-  it("[V-I18N-NOTE-01a] マイページ (profile/BestTimesTable) は Sammeleintrag を表示する (Sammeleingabe は出ない)", () => {
+  it("[V-I18N-NOTE-01a] マイページ (profile/BestTimesTable) は自分の名前空間の bulkEntryNote を表示する (memberDetail のキーは出ない)", () => {
     render(
       <ProfileBestTimesTable
         bestTimes={[buildBestTime({ time: 30.0 })]}
@@ -176,7 +173,7 @@ describe("[V-I18N-NOTE] noteFallbackLabel のキー配線 (ドイツ語で名前
     expect(screen.queryByText(EXPECTED_MEMBER_DETAIL_DE)).toBeNull();
   });
 
-  it("[V-I18N-NOTE-01b] メンバー詳細 (teams/member-detail/BestTimesTable) は Sammeleingabe を表示する (Sammeleintrag は出ない)", () => {
+  it("[V-I18N-NOTE-01b] メンバー詳細 (teams/member-detail/BestTimesTable) は自分の名前空間の bulkEntryNote を表示する (mypage のキーは出ない)", () => {
     render(<MemberDetailBestTimesTable bestTimes={[buildBestTime({ time: 31.0 })]} gender={0} />);
 
     fireEvent.click(screen.getByText("31.00"));
@@ -185,7 +182,7 @@ describe("[V-I18N-NOTE] noteFallbackLabel のキー配線 (ドイツ語で名前
     expect(screen.queryByText(EXPECTED_MYPAGE_DE)).toBeNull();
   });
 
-  it("[V-I18N-NOTE-01c] チーム一覧 (TeamMemberList) は Sammeleintrag を表示する (Sammeleingabe は出ない)", async () => {
+  it("[V-I18N-NOTE-01c] チーム一覧 (TeamMemberList) は自分の名前空間の bulkEntryNote を表示する (memberDetail のキーは出ない)", async () => {
     const member = {
       id: "m-1",
       user_id: "u-1",
@@ -241,5 +238,6 @@ describe("[V-I18N-NOTE] noteFallbackLabel のキー配線 (ドイツ語で名前
 
     expect(await screen.findByText(EXPECTED_TEAM_LIST_DE)).toBeTruthy();
     expect(screen.queryByText(EXPECTED_MEMBER_DETAIL_DE)).toBeNull();
+    expect(screen.queryByText(EXPECTED_MYPAGE_DE)).toBeNull();
   });
 });

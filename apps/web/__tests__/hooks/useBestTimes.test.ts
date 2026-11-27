@@ -23,7 +23,8 @@
  * (他の hook テスト (useTimeInput.test.ts 等) と同様、素の renderHook を使う)。
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import { renderHookWithI18n } from "../utils/render";
 import { describe, expect, it, vi } from "vitest";
 
 import { useBestTimes } from "../../hooks/useBestTimes";
@@ -49,7 +50,7 @@ describe("useBestTimes", () => {
   describe("[V-HOOK-01] select クエリに note 列が含まれる (バグ2回帰防止)", () => {
     it(".select() に渡されるクエリ文字列そのものに note 列が含まれる", async () => {
       const { supabase, mocks } = createMockSupabase([], null);
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");
@@ -83,7 +84,7 @@ describe("useBestTimes", () => {
         ],
         null,
       );
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");
@@ -109,7 +110,7 @@ describe("useBestTimes", () => {
         ],
         null,
       );
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");
@@ -151,7 +152,7 @@ describe("useBestTimes", () => {
         ],
         null,
       );
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");
@@ -190,7 +191,7 @@ describe("useBestTimes", () => {
         ],
         null,
       );
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");
@@ -224,7 +225,7 @@ describe("useBestTimes", () => {
         ],
         null,
       );
-      const { result } = renderHook(() => useBestTimes(supabase as never));
+      const { result } = renderHookWithI18n(() => useBestTimes(supabase as never));
 
       await act(async () => {
         await result.current.loadBestTimes("user-1");

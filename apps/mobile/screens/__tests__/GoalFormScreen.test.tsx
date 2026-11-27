@@ -147,7 +147,7 @@ function renderScreen(existing?: QueryClient) {
 const flush = async () => { for (let i = 0; i < 4; i++) await act(async () => { await new Promise((r) => setTimeout(r, 50)); }); };
 const byLabel = (l: string) => Array.from(document.querySelectorAll(`[accessibilitylabel="${l}"]`)) as HTMLElement[];
 /** 新規大会の大会名欄 (切り出し前: '大会名' / 切り出し後: competition.form.namePlaceholder) */
-const nameInput = () => (Array.from(document.querySelectorAll("input")).find((i) => ["大会名", "例: 全国大会, 対抗戦, タイムトライアル"].includes(i.placeholder)) ?? (() => { throw new Error("大会名欄が無い"); })()) as HTMLInputElement;
+const nameInput = () => (Array.from(document.querySelectorAll("input")).find((i) => ["大会名", "例: 全国大会、対抗戦、タイムトライアル"].includes(i.placeholder)) ?? (() => { throw new Error("大会名欄が無い"); })()) as HTMLInputElement;
 const poolBtn = (long: boolean) => (Array.from(document.querySelectorAll("button")).find((e) => (e.textContent ?? "").trim().startsWith(long ? "長水路" : "短水路")) ?? (() => { throw new Error("水路ボタンが無い"); })()) as HTMLElement;
 const tid = (id: string) => screen.getByTestId(id) as HTMLInputElement;
 const typeInto = (id: string, text: string) => {

@@ -10,6 +10,7 @@ interface LpPricingProps {
     h2: string;
     lead: string;
     detailLink: string;
+    monthSuffix?: string;
     free: {
       name: string;
       price: string;
@@ -170,7 +171,7 @@ export default function LpPricing({ locale, t }: LpPricingProps) {
             >
               {t.free.price}
             </span>
-            <span style={{ fontSize: 12, letterSpacing: "0.16em", color: "var(--lp-dim2)" }}>/月</span>
+            <span style={{ fontSize: 12, letterSpacing: "0.16em", color: "var(--lp-dim2)" }}>{t.monthSuffix}</span>
           </div>
           <div style={{ marginTop: 10, fontSize: 11.5, letterSpacing: "0.1em", color: "var(--lp-dim2)" }}>
             {t.free.note}
@@ -277,7 +278,7 @@ export default function LpPricing({ locale, t }: LpPricingProps) {
             >
               {t.premium.price}
             </span>
-            <span style={{ fontSize: 12, letterSpacing: "0.16em", color: "var(--lp-w-dim)" }}>/月</span>
+            <span style={{ fontSize: 12, letterSpacing: "0.16em", color: "var(--lp-w-dim)" }}>{t.monthSuffix}</span>
           </div>
           <div style={{ marginTop: 10, fontSize: 11.5, letterSpacing: "0.1em", color: "var(--lp-w-dim)" }}>
             {t.premium.annualNote}
