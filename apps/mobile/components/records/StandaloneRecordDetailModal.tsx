@@ -55,6 +55,8 @@ export const StandaloneRecordDetailModal: React.FC<StandaloneRecordDetailModalPr
     styleDistance: record.style?.distance ?? 0,
     videoPath: record.video_path ?? null,
     videoThumbnailPath: record.video_thumbnail_path ?? null,
+    teamId: record.team_id ?? null,
+    userId: record.user_id ?? null,
   };
 
   const splits = (record.split_times || []).map((st) => ({

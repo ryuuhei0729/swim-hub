@@ -309,7 +309,9 @@
     "discardMessage": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
     "discard": "Verwerfen",
     "listToolbar": {
-      "itemCount": "Einträge: {count}",
+      "itemCount": "{count, plural, one {{count} Eintrag} other {{count} Einträge}}",
+      "itemCount_one": "{count} Eintrag",
+      "itemCount_other": "{count} Einträge",
       "sortButton": "Sortieren",
       "filterButton": "Filtern"
     },
@@ -4895,6 +4897,95 @@
       "masteredConfirmTitle": "Verinnerlicht?",
       "masteredConfirmMessage": "„{title}“ wird als verinnerlicht markiert und aus deinen aktuellen Fokuspunkten in die Liste der verinnerlichten verschoben.",
       "reactivateUnavailable": "Du hast bereits {max} Fokuspunkte und kannst diesen deshalb noch nicht wieder aufnehmen. Markiere zuerst einen als verinnerlicht oder lösche ihn."
+    }
+  },
+  "recordFeedback": {
+    "countBadge": "FB {count}",
+    "countBadgeAria": "{count} Feedback",
+    "viewAria": "Feedback anzeigen ({count})",
+    "sectionTitle": "Feedback",
+    "listModalTitle": "Feedback",
+    "unknownAuthor": "Gelöschter Benutzer",
+    "edited": "Bearbeitet",
+    "editAria": "Feedback bearbeiten",
+    "deleteAria": "Feedback löschen",
+    "loading": "Wird geladen...",
+    "loadError": "Feedback konnte nicht geladen werden",
+    "empty": "Noch kein Feedback",
+    "write": "FB schreiben",
+    "writeAria": "Feedback zum Ergebnis von {name} schreiben",
+    "written": "Geschrieben",
+    "deleteFailed": "Feedback konnte nicht gelöscht werden",
+    "form": {
+      "createTitle": "Feedback schreiben",
+      "editTitle": "Feedback bearbeiten",
+      "recipient": "An {name}",
+      "label": "Feedback",
+      "placeholder": "Schreibe, was gut lief und was verbessert werden kann",
+      "counter": "{count} / {max}",
+      "submit": "Senden",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "saving": "Wird gesendet...",
+      "tooLong": "Bitte höchstens {max} Zeichen eingeben"
+    },
+    "errors": {
+      "duplicate": "Du hast zu diesem Ergebnis bereits Feedback geschrieben",
+      "not_team_record": "Feedback ist nur für Teamergebnisse möglich",
+      "record_not_found": "Ergebnis nicht gefunden",
+      "not_authorized": "Dazu fehlt dir die Berechtigung",
+      "content_length": "Bitte 1 bis 1000 Zeichen eingeben",
+      "unknown": "Feedback konnte nicht gespeichert werden"
+    },
+    "popup": {
+      "title": "Neues Feedback",
+      "from": "Du hast Feedback von {name} erhalten",
+      "goToRecord": "Zum Ergebnis",
+      "close": "Schließen",
+      "skipAnimation": "Animation überspringen",
+      "noCompetition": "Kein Wettkampf",
+      "relay": "Staffel"
+    }
+  },
+  "recordFeedbackMobile": {
+    "countBadge": "FB {count}",
+    "writtenByMe": "Geschrieben",
+    "write": "Feedback schreiben",
+    "sectionTitle": "Feedback ({count})",
+    "loadFailed": "Feedback konnte nicht geladen werden",
+    "deletedUser": "Gelöschter Benutzer",
+    "newLabel": "NEU",
+    "edit": "Feedback bearbeiten",
+    "delete": "Löschen",
+    "edited": "Bearbeitet",
+    "deleteConfirmTitle": "Feedback löschen",
+    "deleteConfirmMessage": "Dieses Feedback löschen?",
+    "deletedToast": "Feedback gelöscht",
+    "savedToast": "Feedback gespeichert",
+    "errors": {
+      "duplicate": "Sie haben zu diesem Ergebnis bereits Feedback geschrieben",
+      "not_team_record": "Feedback ist nur für Teamergebnisse möglich",
+      "record_not_found": "Ergebnis nicht gefunden",
+      "not_authorized": "Sie haben keine Berechtigung für diese Aktion",
+      "content_length": "Geben Sie 1 bis 1000 Zeichen ein",
+      "unknown": "Feedback konnte nicht gespeichert werden",
+      "deleteFailed": "Feedback konnte nicht gelöscht werden"
+    },
+    "form": {
+      "createTitle": "Feedback schreiben",
+      "editTitle": "Feedback bearbeiten",
+      "placeholder": "Was lief gut, was kann verbessert werden?",
+      "inputLabel": "Feedback-Text",
+      "counter": "{count} / {max}",
+      "save": "Speichern"
+    },
+    "arrival": {
+      "title": "Neues Feedback erhalten",
+      "from": "Sie haben Feedback von {name} erhalten",
+      "openRecord": "Zum Ergebnis",
+      "close": "Schließen",
+      "animationText": "Neues Feedback erhalten",
+      "skipAnimation": "Animation überspringen"
     }
   }
 }

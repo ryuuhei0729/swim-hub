@@ -26,6 +26,8 @@ import type { CalendarItem } from "@apps/shared/types/ui";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { darkenHex } from "@/utils/colorTone";
 import { AttendanceGroupModal } from "@/components/teams/AttendanceGroupModal";
+import { RecordFeedbackRecordBadge } from "@/components/record-feedback/RecordFeedbackRecordBadge";
+import { RecordFeedbackSection } from "@/components/record-feedback/RecordFeedbackSection";
 import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
@@ -40,6 +42,8 @@ interface RecordFromDB {
   style_id: number;
   video_path: string | null;
   video_thumbnail_path: string | null;
+  team_id?: string | null;
+  user_id?: string | null;
   style:
     | { id: number; name_jp: string; distance: number; style: string }
     | { id: number; name_jp: string; distance: number; style: string }[]
@@ -94,6 +98,8 @@ export const RecordCard: React.FC<{
   const { supabase } = useAuth();
   const locale = useDateLocale();
   const [splitTab, setSplitTab] = useState<"race" | "all">("race");
+  // チーム記録 (team_id あり) にだけフィードバックが付く
+  const isTeamRecord = !!record.teamId;
   const [shareVisible, setShareVisible] = useState(false);
   const [shareData, setShareData] = useState<CompetitionShareData | null>(null);
 
@@ -354,6 +360,12 @@ export const RecordCard: React.FC<{
               )}
             </View>
           </View>
+          {/* FB 件数。右上のシェア・編集・削除ボタン (絶対配置) と重ならないよう、種目の行ではなく独立した行に置く */}
+          {isTeamRecord && (
+            <View style={styles.recordInfoRow}>
+              <RecordFeedbackRecordBadge recordId={record.id} />
+            </View>
+          )}
         </View>
       </View>
 
@@ -481,6 +493,15 @@ export const RecordCard: React.FC<{
         </View>
       )}
 
+      {/* チーム内フィードバック (チーム記録のみ) */}
+      {isTeamRecord && (
+        <RecordFeedbackSection
+          recordId={record.id}
+          teamId={record.teamId}
+          recordOwnerId={record.userId ?? null}
+        />
+      )}
+
       <ShareCardModal
         visible={shareVisible}
         onClose={() => setShareVisible(false)}
@@ -580,6 +601,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             style_id,
             video_path,
             video_thumbnail_path,
+            team_id,
+            user_id,
             style:styles(id, name_jp, distance, style),
             split_times(distance, split_time)
           `,
@@ -648,6 +671,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           styleDistance: style?.distance || 0,
           videoPath: record.video_path ?? null,
           videoThumbnailPath: record.video_thumbnail_path ?? null,
+          teamId: record.team_id ?? null,
+          userId: record.user_id ?? null,
         };
       }),
     [recordsData, t],

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useLayoutEffect, useTransition } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { TrophyIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
@@ -29,6 +30,8 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import type { Record, Competition, Style, SwimStyle } from "@apps/shared/types";
 import { EntryAPI } from "@apps/shared/api/entries";
+import { RecordAPI } from "@apps/shared/api/records";
+import { useRecordFeedbackSummaries } from "@/components/record-feedback/useRecordFeedbackSummaries";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionSortColumn, RelayFilterMode } from "@/stores/competition/competitionStore";
@@ -682,6 +685,13 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     return sortedRecords.slice(0, displayCount);
   }, [sortedRecords, displayCount]);
 
+  // 表示中のカードのフィードバック件数 (チーム記録だけが FB を持てる)
+  const visibleTeamRecordIds = useMemo(
+    () => visibleRecords.filter((r) => r.team_id).map((r) => r.id),
+    [visibleRecords],
+  );
+  const feedbackSummaries = useRecordFeedbackSummaries(visibleTeamRecordIds);
+
   const handleLoadMore = () => {
     setDisplayCount((count) => count + PAGE_INCREMENT);
   };
@@ -708,6 +718,51 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     }
     handleViewRecord(record);
   };
+
+  // ---------------------------------------------------------------------------
+  // ディープリンク: ダッシュボードのフィードバック通知「記録画面へ」から
+  // /competition?recordId=...(&competitionId=...) で来たら、その記録のカードを
+  // 押したときと同じ詳細モーダルを開く。開いたらクエリを消す (再読み込みで開き直さない)
+  // ---------------------------------------------------------------------------
+  const searchParams = useSearchParams();
+  const deepLinkRecordId = searchParams?.get("recordId") ?? null;
+  const handledDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!deepLinkRecordId || loading) return;
+    if (handledDeepLinkRef.current === deepLinkRecordId) return;
+    handledDeepLinkRef.current = deepLinkRecordId;
+
+    const clearDeepLinkParams = () => {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("recordId");
+        url.searchParams.delete("competitionId");
+        window.history.replaceState(window.history.state, "", url.toString());
+      } catch {
+        // URL を書き換えられなくてもモーダルは開けているので無視する
+      }
+    };
+
+    const loaded = records.find((r: Record) => r.id === deepLinkRecordId);
+    if (loaded) {
+      handleRowClick(loaded);
+      clearDeepLinkParams();
+      return;
+    }
+    // 一覧に無い (読み込み範囲外など) ときは1件だけ取りに行く。
+    // 処理済みの印は付けてあるので、records の更新で effect が再実行されても二重に開かない
+    void new RecordAPI(supabase)
+      .getRecordById(deepLinkRecordId)
+      .then((fetched) => {
+        if (fetched) handleRowClick(fetched as unknown as Record);
+      })
+      .catch((err) => {
+        console.error("フィードバック通知からの記録の取得に失敗しました:", err);
+      })
+      .finally(clearDeepLinkParams);
+    // handleRowClick は毎レンダー作り直されるが中身は state 更新だけなので依存に入れない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkRecordId, loading, records, supabase]);
 
   // 単体レコードの編集（CompetitionTabModal は大会本体が無いため使えない。
   // 旧 web と同じ単体レコード編集フォーム RecordLogForm を再利用する）
@@ -1091,7 +1146,13 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
 
             <div className="space-y-2 sm:space-y-3 px-0 sm:px-6 pb-4">
               {visibleRecords.map((record: Record) => (
-                <CompetitionRecordCard key={record.id} record={record} onClick={handleRowClick} />
+                <CompetitionRecordCard
+                  key={record.id}
+                  record={record}
+                  onClick={handleRowClick}
+                  feedbackCount={feedbackSummaries[record.id]?.count}
+                  feedbackHasUnread={(feedbackSummaries[record.id]?.unreadCount ?? 0) > 0}
+                />
               ))}
             </div>
 

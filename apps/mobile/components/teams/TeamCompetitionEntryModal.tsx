@@ -22,6 +22,7 @@ import { formatTimeBest } from "@apps/shared/utils/time";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { canEditOrDeleteEntryRow } from "@/utils/entryRowPermissions";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import { localizedStyleName } from "@/utils/styleName";
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
 const NOOP_BACKDROP_PRESS = () => {};
@@ -313,7 +314,7 @@ export function TeamCompetitionEntryModal({
           !error &&
           groupedEntries.map(([styleId, group]) => {
             const styleLabel =
-              group.style?.name_jp ??
+              (group.style ? localizedStyleName(group.style, t) : null) ||
               t("teams.mobile.teamCompetitionEntryModal.unknownStyle");
             return (
               <View key={styleId} style={styles.styleGroup}>

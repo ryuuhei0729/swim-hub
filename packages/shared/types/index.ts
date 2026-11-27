@@ -45,3 +45,6 @@ export * from "./teamMemberGoals";
 
 // 入力画面の目標バッジ用型
 export * from "./goalTargets";
+
+// チーム内フィードバック (大会記録へのフィードバック) 型
+export * from "./recordFeedback";

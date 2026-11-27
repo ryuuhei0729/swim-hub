@@ -1116,6 +1116,7 @@ export default function TeamCompetitions({
             selectedCompetitionForRecords.title ||
             t("competitions.fallbackTitle")
           }
+          isAdmin={isAdmin}
         />
       )}
 

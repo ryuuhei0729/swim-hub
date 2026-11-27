@@ -667,6 +667,8 @@ export function useTeamCompetitionActions(teamId: string, isAdmin: boolean) {
           competitionTitle={
             recordsModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
           }
+          teamId={teamId}
+          isAdmin={isAdmin}
         />
       )}
     </>

@@ -10,6 +10,7 @@ export * from "./goals";
 export * from "./google-calendar";
 export * from "./practices";
 export * from "./records";
+export * from "./recordFeedbacks";
 export * from "./styles";
 export * from "./teams";
 export * from "./practiceLogTemplates";

@@ -271,7 +271,7 @@ describe("TeamCompetitionRecordsModal", () => {
 
   describe("[V-13 配線確認] グルーピング結果が実際に画面へ表示される (rank 計算自体は純関数テストで検証済み)", () => {
     it("種目見出し・個人記録・リレー見出しが表示され、記録の名前が画面に出る", async () => {
-      const STYLE = { id: 20, name_jp: "自由形", name: "Fr", style: "fr", distance: 50 };
+      const STYLE = { id: 20, name_jp: "50m自由形", name: "Fr", style: "fr", distance: 50 };
       const records = [
         {
           id: "r-ind-1",
@@ -315,7 +315,7 @@ describe("TeamCompetitionRecordsModal", () => {
       );
 
       await screen.findByText("田中一郎");
-      expect(screen.getByText("自由形")).toBeDefined();
+      expect(screen.getByText("50m自由形")).toBeDefined();
       expect(screen.getByText("鈴木花子")).toBeDefined();
       // ja.json: teams.competitionRecordsModal.relay = "リレー"
       expect(screen.getByText("リレー")).toBeDefined();

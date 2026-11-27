@@ -7,6 +7,7 @@ import CalendarContainer, { type OpenDayRequest } from "../_components/CalendarC
 import DashboardNoticesSection from "../_components/DashboardNoticesSection";
 import NextCompetitionCard from "../_components/NextCompetitionCard";
 import DashboardBestTimesCard from "../_components/DashboardBestTimesCard";
+import RecordFeedbackArrivalPopup from "@/components/record-feedback/RecordFeedbackArrivalPopup";
 import FocusPointsCard from "@/components/focus-points/FocusPointsCard";
 import GoalCreateModal from "@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal";
 import ReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/ReflectionModal";
@@ -479,6 +480,9 @@ export default function DashboardClient({
             }}
           />
         )}
+
+        {/* 未読フィードバックのお知らせ (期限切れ目標・マイルストーンのモーダルが出ている間は出さない) */}
+        <RecordFeedbackArrivalPopup enabled={!expiredGoal && !expiredMilestone} />
 
         {/* 期限切れマイルストーン内省モーダル */}
         {!expiredGoal && expiredMilestone && (

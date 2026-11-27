@@ -31,6 +31,9 @@ import { styleIdToCodeKey, nameJpToCodeKey, buildSwimStyleLabel } from "@/utils/
 import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
+import RecordFeedbackCountBadge from "@/components/record-feedback/RecordFeedbackCountBadge";
+import RecordFeedbackSection from "@/components/record-feedback/RecordFeedbackSection";
+import { useRecordFeedbackSummaries } from "@/components/record-feedback/useRecordFeedbackSummaries";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
 import type {
@@ -157,6 +160,8 @@ export function CompetitionDetails({
       userId: user?.id ?? null,
     });
   const actualRecords = competitionRecords?.records ?? EMPTY_RECORDS;
+  // フィードバック件数 (閲覧できるものだけ)。件数がある記録にだけ一覧を出す
+  const feedbackSummaries = useRecordFeedbackSummaries(actualRecords.map((r) => r.id));
   // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)。
   // タイムアウト以外の失敗は従来どおり「記録なし」の表示にする
   const loading = !competitionRecords && !recordsError;
@@ -602,6 +607,14 @@ export function CompetitionDetails({
                           : ""}
                       </div>
                     </div>
+                    {(feedbackSummaries[record.id]?.count ?? 0) > 0 && (
+                      <div className="mt-1 flex justify-end">
+                        <RecordFeedbackCountBadge
+                          count={feedbackSummaries[record.id]?.count}
+                          hasUnread={(feedbackSummaries[record.id]?.unreadCount ?? 0) > 0}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* スプリットタイム */}
@@ -634,6 +647,11 @@ export function CompetitionDetails({
                       </div>
                       <div className="text-sm text-gray-700">{record.note}</div>
                     </div>
+                  )}
+
+                  {/* フィードバック */}
+                  {(feedbackSummaries[record.id]?.count ?? 0) > 0 && (
+                    <RecordFeedbackSection recordId={record.id} className="mt-2" />
                   )}
                 </div>
               );
