@@ -57,6 +57,8 @@ export const FocusPointFormScreen: React.FC = () => {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // 空欄のエラーはタイトル欄のすぐ下に出す (画面下のボタンの上だと、キーボードに隠れて離れて見える)
+  const [titleError, setTitleError] = useState<string | null>(null);
   // 削除・状態変更のあとは一覧の再取得で対象が消える (または移る) ので、
   // 画面を閉じるまでの間に「見つかりませんでした」を出さないための印
   const [isClosing, setIsClosing] = useState(false);
@@ -89,13 +91,13 @@ export const FocusPointFormScreen: React.FC = () => {
   // 入力し直したら、空欄のエラーは消す
   const handleTitleChange = (text: string) => {
     setTitle(text);
-    if (error && text.trim() !== "") setError(null);
+    if (titleError && text.trim() !== "") setTitleError(null);
   };
 
   const handleSave = async () => {
     if (isBusy) return;
     if (title.trim() === "") {
-      setError(t("focusPoints.form.titleRequired"));
+      setTitleError(t("focusPoints.form.titleRequired"));
       return;
     }
     setError(null);
@@ -216,6 +218,11 @@ export const FocusPointFormScreen: React.FC = () => {
             accessibilityLabel={t("focusPoints.form.titleLabel")}
             testID="focus-point-title-input"
           />
+          {titleError && (
+            <Text style={styles.errorText} accessibilityRole="alert">
+              {titleError}
+            </Text>
+          )}
           <Text style={styles.counter}>
             {title.length} / {FOCUS_POINT_TITLE_MAX_LENGTH}
           </Text>
@@ -272,7 +279,8 @@ export const FocusPointFormScreen: React.FC = () => {
       </ScrollView>
 
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
-        {error && (
+        {/* 「もう一度取り組む」が上限で止められたときは、ボタンの下の説明と同じ内容になるので重ねて出さない */}
+        {error && !(error === limitMessage && !canReactivate) && (
           <Text style={styles.errorText} accessibilityRole="alert">
             {error}
           </Text>

@@ -100,6 +100,15 @@ describe("FocusPointsCard", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
+  it("空欄のエラーはタイトル欄に結び付けて出す (入力欄の説明として読み上げられる)", () => {
+    renderWithI18n(<FocusPointsCard />);
+    fireEvent.click(screen.getByRole("button", { name: "フォーカスポイントを追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "追加する" }));
+    const input = screen.getByLabelText("泳ぎで意識すること");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(/意識することを入力してください/);
+  });
+
   it("空欄のエラーは、タイトルを入力し直したら消える", () => {
     renderWithI18n(<FocusPointsCard />);
     fireEvent.click(screen.getByRole("button", { name: "フォーカスポイントを追加" }));

@@ -40,6 +40,8 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
   const [title, setTitle] = useState(focusPoint?.title ?? "");
   const [note, setNote] = useState(focusPoint?.note ?? "");
   const [error, setError] = useState<string | null>(null);
+  // 空欄のエラーはタイトル欄のすぐ下に出す (ボタンの上だと入力欄から離れて見える)
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isMasteredConfirmOpen, setIsMasteredConfirmOpen] = useState(false);
 
@@ -64,7 +66,7 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() === "") {
-      setError(t("form.titleRequired"));
+      setTitleError(t("form.titleRequired"));
       return;
     }
     setError(null);
@@ -130,14 +132,22 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
               onChange={(e) => {
                 setTitle(e.target.value);
                 // 入力し直したら、空欄のエラーは消す
-                if (error && e.target.value.trim() !== "") setError(null);
+                if (titleError && e.target.value.trim() !== "") setTitleError(null);
               }}
               maxLength={FOCUS_POINT_TITLE_MAX_LENGTH}
               placeholder={t("form.titlePlaceholder")}
               autoFocus
-              aria-describedby="focus-point-title-count"
+              aria-describedby={
+                titleError ? "focus-point-title-error focus-point-title-count" : "focus-point-title-count"
+              }
+              aria-invalid={titleError ? true : undefined}
               className="block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+            {titleError && (
+              <p id="focus-point-title-error" className="text-sm text-red-600" role="alert">
+                {titleError}
+              </p>
+            )}
             <p id="focus-point-title-count" className="text-right text-xs text-gray-500">
               {title.length} / {FOCUS_POINT_TITLE_MAX_LENGTH}
             </p>
@@ -158,7 +168,8 @@ export default function FocusPointFormModal({ focusPoint, onClose }: FocusPointF
             />
           </div>
 
-          {error && (
+          {/* 「もう一度取り組む」が上限で止められたときは、下の説明と同じ内容になるので重ねて出さない */}
+          {error && !(error === limitMessage && !canReactivate) && (
             <p className="text-sm text-red-600" role="alert">
               {error}
             </p>

@@ -116,6 +116,18 @@ describe("FocusPointFormScreen — 追加", () => {
     expect(Keyboard.dismiss).toHaveBeenCalled();
   });
 
+  it("空欄のエラーはタイトル欄のすぐ下 (文字数の上) に出し、画面下には出さない", () => {
+    const { getByText, container } = render(<FocusPointFormScreen />);
+    fireEvent.click(getByText("追加する"));
+    const errors = Array.from(container.querySelectorAll("*")).filter(
+      (el) => el.childElementCount === 0 && el.textContent === "意識することを入力してください",
+    );
+    expect(errors).toHaveLength(1);
+    const counter = getByText("0 / 100");
+    // 文書の並びで、エラーが文字数より前 (= タイトル欄の直下) にある
+    expect(errors[0]!.compareDocumentPosition(counter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("空欄のエラーは、タイトルを入力し直したら消える", () => {
     const { getByTestId, getByText, queryByText } = render(<FocusPointFormScreen />);
     fireEvent.click(getByText("追加する"));
@@ -270,6 +282,35 @@ describe("FocusPointFormScreen — 編集", () => {
     });
     expect(await findByText(/削除できませんでした/)).toBeTruthy();
     expect(mocks.goBack).not.toHaveBeenCalled();
+  });
+
+  it("「もう一度取り組む」が別端末の追加で上限に止められたとき、同じ説明を2か所に出さない", async () => {
+    mocks.query = {
+      data: [point({ status: "mastered", mastered_at: "2026-10-01T00:00:00Z" }), point({ id: "a1" })],
+      isPending: false,
+      isError: false,
+    };
+    // 止められたあと一覧を取り直すと、取り組み中が3つになっている
+    mocks.setStatus.mockImplementation(async () => {
+      mocks.query = {
+        data: [
+          point({ status: "mastered", mastered_at: "2026-10-01T00:00:00Z" }),
+          point({ id: "a1" }),
+          point({ id: "a2" }),
+          point({ id: "a3" }),
+        ],
+        isPending: false,
+        isError: false,
+      };
+      throw new FocusPointLimitError();
+    });
+    const { getByText, queryAllByText, rerender } = render(<FocusPointFormScreen />);
+    await act(async () => {
+      fireEvent.click(getByText("もう一度取り組む"));
+    });
+    rerender(<FocusPointFormScreen />);
+    expect(getByText(/もう一度取り組むことはできません/)).toBeTruthy();
+    expect(queryAllByText(/同時に3つまでです/)).toHaveLength(0);
   });
 
   it("見つからなければその旨を出す", () => {
