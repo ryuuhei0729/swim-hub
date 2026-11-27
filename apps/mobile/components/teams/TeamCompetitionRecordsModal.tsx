@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
 import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { formatTimeBest } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
@@ -288,6 +289,7 @@ function RelayLegRow({
   feedback?: FeedbackContext;
   teamId?: string | null;
 }) {
+  const { t } = useTranslation();
   const displayName = leg.userName ?? unknownLabel;
   // リレーは個人のレグ (records の行) 単位で FB を付ける
   const rowFeedback = useRowFeedback(feedback, leg.recordId, teamId, leg.userId);
@@ -303,7 +305,7 @@ function RelayLegRow({
         </Text>
         {leg.styleNameJp && (
           <Text style={styles.relayLegStyle} numberOfLines={1}>
-            {leg.styleNameJp}
+            {localizedStyleName(leg.styleNameJp, t)}
           </Text>
         )}
       </View>
@@ -604,7 +606,7 @@ export function TeamCompetitionRecordsModal({
               <View key={group.style.id} style={styles.styleGroup}>
                 <View style={styles.styleGroupHeader}>
                   <View style={styles.styleGroupBar} />
-                  <Text style={styles.styleGroupTitle}>{group.style.name_jp}</Text>
+                  <Text style={styles.styleGroupTitle}>{localizedStyleName(group.style, t)}</Text>
                   <Text style={styles.styleGroupCount}>
                     {t("common.listToolbar.itemCount", {
                       count: group.individual.length + group.relay.length,

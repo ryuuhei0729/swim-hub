@@ -23,6 +23,7 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
 import type { EntryReturnOrigin } from "@/utils/entryReturnOrigin";
@@ -137,6 +138,8 @@ export default function TeamCompetitionEntryModal({
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
+  // 種目名は DB の name_jp を直接出すと全ロケールで日本語になるため、ロケールに合わせて組み立てる
+  const styleLabel = useStyleLabel();
   const tCommon = useTranslations("common");
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const recordApi = useMemo(() => new RecordAPI(supabase), [supabase]);
@@ -531,7 +534,7 @@ export default function TeamCompetitionEntryModal({
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
                         <h4 className="font-semibold text-blue-900">
                           {t("competitionEntryModal.styleGroupHeader", {
-                            style: styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle"),
+                            style: styleLabel(styleData.style) ?? t("competitionEntryModal.unknownStyle"),
                             count: styleData.entries.length,
                           })}
                         </h4>
@@ -541,7 +544,7 @@ export default function TeamCompetitionEntryModal({
                       <div className="divide-y divide-gray-200">
                         {styleData.entries.map((entry, index: number) => {
                           const entryStyleName =
-                            styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle");
+                            styleLabel(styleData.style) ?? t("competitionEntryModal.unknownStyle");
                           // 要件A / SC3・SC8: 自分の行のみ（管理者自身の行も含む）に編集/削除を出す
                           const canModify =
                             isOwnEntryRow(entry.user_id, user?.id) &&

@@ -10,6 +10,7 @@ import {
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import Avatar from "@/components/ui/Avatar";
@@ -209,6 +210,9 @@ export default function TeamCompetitionRecordsModal({
   const { supabase } = useAuth();
   const t = useTranslations("teams.competitionRecordsModal");
   const tFeedback = useTranslations("recordFeedback");
+  const tCommon = useTranslations("common");
+  // 種目名は DB の name_jp を直接出すと全ロケールで日本語になるため、ロケールに合わせて組み立てる
+  const styleLabel = useStyleLabel();
   // リレー種目ラベル・レグ表示は既存のランキング画面の文言を流用する
   // (CLAUDE.md「種目コードの canonical」節と同じ理由で、二重管理にしない)。
   const tRelay = useTranslations("teams.ranking");
@@ -417,8 +421,10 @@ export default function TeamCompetitionRecordsModal({
                         {/* 種目ヘッダー */}
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-1 h-5 bg-blue-500 rounded-full" />
-                          <h4 className="text-base font-semibold text-blue-800">{style.name_jp}</h4>
-                          <span className="text-sm text-blue-600">({visibleCount}件)</span>
+                          <h4 className="text-base font-semibold text-blue-800">{styleLabel(style) ?? style.name_jp}</h4>
+                          <span className="text-sm text-blue-600">
+                            ({tCommon("listToolbar.itemCount", { count: visibleCount })})
+                          </span>
                         </div>
 
                         {/* 記録テーブル */}
@@ -485,7 +491,7 @@ export default function TeamCompetitionRecordsModal({
                                         recipientName={user?.name ?? null}
                                         summary={feedbackSummaries[record.id]}
                                         isAdmin={isAdmin}
-                                        subtitle={`${getUserName(record.users, t("unknownUser"))} / ${style.name_jp}`}
+                                        subtitle={`${getUserName(record.users, t("unknownUser"))} / ${styleLabel(style) ?? style.name_jp}`}
                                       />
                                     </td>
                                   </tr>
@@ -548,7 +554,7 @@ export default function TeamCompetitionRecordsModal({
                                             recipientName={user?.name ?? null}
                                             summary={feedbackSummaries[record.id]}
                                             isAdmin={isAdmin}
-                                            subtitle={`${getUserName(record.users, t("unknownUser"))} / ${style.name_jp}`}
+                                            subtitle={`${getUserName(record.users, t("unknownUser"))} / ${styleLabel(style) ?? style.name_jp}`}
                                           />
                                         </td>
                                       </tr>
@@ -765,7 +771,7 @@ export default function TeamCompetitionRecordsModal({
                                                       </span>
                                                     </td>
                                                     <td className="py-1 px-2">
-                                                      {leg.styleNameJp ?? "-"}
+                                                      {styleLabel(leg.styleNameJp ? { name_jp: leg.styleNameJp } : null) ?? "-"}
                                                     </td>
                                                     <td className="py-1 px-2 text-right tabular-nums">
                                                       <div className="inline-flex items-center gap-1.5">
