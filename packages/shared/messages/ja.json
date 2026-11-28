@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "この練習記録を削除しますか？\nこの操作は取り消せません。",
       "deleteMenuConfirmMessage": "この練習メニューを削除しますか？\nこの操作は取り消せません。",
       "deleteRecordConfirmMessage": "この大会記録を削除しますか？\nこの操作は取り消せません。",
+      "deleteEntryConfirmMessage": "このエントリーを削除しますか？\nこの操作は取り消せません。",
+      "entryNotOpenMessage": "エントリーは{status}のため、エントリー登録はできません。",
       "deleteCompetitionConfirmMessage": "この大会を削除しますか？\nこの操作は取り消せません。",
       "deleteButton": "削除"
     },

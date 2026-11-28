@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "이 연습 기록을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteMenuConfirmMessage": "이 연습 메뉴를 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteRecordConfirmMessage": "이 대회 기록을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
+      "deleteEntryConfirmMessage": "이 엔트리를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+      "entryNotOpenMessage": "엔트리가 {status}이므로 엔트리 등록을 할 수 없습니다.",
       "deleteCompetitionConfirmMessage": "이 대회를 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteButton": "삭제"
     },

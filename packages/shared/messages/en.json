@@ -907,6 +907,8 @@
       "deletePracticeConfirmMessage": "Delete this practice record?\nThis cannot be undone.",
       "deleteMenuConfirmMessage": "Delete this practice menu?\nThis cannot be undone.",
       "deleteRecordConfirmMessage": "Delete this race record?\nThis cannot be undone.",
+      "deleteEntryConfirmMessage": "Delete this entry?\nThis cannot be undone.",
+      "entryNotOpenMessage": "Entries are {status}, so you can't register an entry.",
       "deleteCompetitionConfirmMessage": "Delete this competition?\nThis cannot be undone.",
       "deleteButton": "Delete"
     },

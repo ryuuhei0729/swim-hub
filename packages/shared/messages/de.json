@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "Möchten Sie diesen Trainingseintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
       "deleteMenuConfirmMessage": "Möchten Sie dieses Trainingsmenü löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
       "deleteRecordConfirmMessage": "Möchten Sie diesen Wettkampfeintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteEntryConfirmMessage": "Diese Meldung löschen?\nDies kann nicht rückgängig gemacht werden.",
+      "entryNotOpenMessage": "Meldestatus: {status}. Eine Meldung ist nicht möglich.",
       "deleteCompetitionConfirmMessage": "Möchten Sie diesen Wettkampf löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
       "deleteButton": "Löschen"
     },

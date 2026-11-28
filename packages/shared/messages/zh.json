@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "确定删除该训练记录吗？\n此操作无法撤销。",
       "deleteMenuConfirmMessage": "确定删除该训练菜单吗？\n此操作无法撤销。",
       "deleteRecordConfirmMessage": "确定删除该比赛记录吗？\n此操作无法撤销。",
+      "deleteEntryConfirmMessage": "要删除此报名吗？\n此操作无法撤销。",
+      "entryNotOpenMessage": "报名{status}，无法进行报名登记。",
       "deleteCompetitionConfirmMessage": "确定删除该比赛吗？\n此操作无法撤销。",
       "deleteButton": "删除"
     },
