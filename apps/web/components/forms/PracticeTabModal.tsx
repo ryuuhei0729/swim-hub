@@ -272,6 +272,8 @@ export default function PracticeTabModal({
    */
   const [logsFetchSettled, setLogsFetchSettled] = useState(false);
   const needsLogsFetch = !!editingPracticeId && isDbUuid(editingPracticeId);
+  /** 既存の練習 (DB にある練習) を編集しているか。「テンプレートとして保存」は新規作成のときだけ出す */
+  const isEditingExistingPractice = needsLogsFetch;
   const isHydrating = isOpen && needsLogsFetch && !logsFetchSettled;
 
   useEffect(() => {
@@ -1010,8 +1012,9 @@ export default function PracticeTabModal({
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            {/* Template checkbox — only on log tab, new mode */}
-            {activeTab === "practiceLog" && !logEditData ? (
+            {/* Template checkbox — only on log tab, new mode
+                (既存の練習の編集では出さない。mobile PracticeTabFormScreen の「新規作成のときだけ」と同じ) */}
+            {activeTab === "practiceLog" && !logEditData && !isEditingExistingPractice ? (
               <div className="flex items-center">
                 <input
                   type="checkbox"
