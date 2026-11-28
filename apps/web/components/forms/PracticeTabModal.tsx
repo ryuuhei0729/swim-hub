@@ -518,10 +518,11 @@ export default function PracticeTabModal({
   const isSubmittingRef = useRef(false);
 
   const executeSave = useCallback(async () => {
-    if (overLimitMenuIndices.length > 0) {
+    const [firstOverLimitMenuIndex] = overLimitMenuIndices;
+    if (firstOverLimitMenuIndex !== undefined) {
       // 上限超えの理由が見えるよう、超えている最初のメニューを開いてから止める
       setActiveTab("practiceLog");
-      setActivePracticeIndex(overLimitMenuIndices[0]);
+      setActivePracticeIndex(firstOverLimitMenuIndex);
       return;
     }
 
