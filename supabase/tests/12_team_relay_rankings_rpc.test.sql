@@ -233,7 +233,9 @@ select is(
 --   r_admin     承認済み・アクティブ・admin  … 入力者 (created_by)
 --   r_member    承認済み・アクティブ・user   … 一般メンバー。読めるべき / 書けないべき
 --   r_pending   **承認待ち**                 … 読めてはいけない
---   r_inactive  承認済みだが is_active=false … 読めてはいけない
+--   r_inactive  承認済みだが退会済み (is_active=false) … 読めてはいけない
+--   (20261201000003 以降 is_active は status / left_at と必ず一致するので、
+--    pending は is_active=false、非アクティブの承認済みは left_at ありで作る)
 --   r_outsider  HomeSquad の非メンバー       … 読めてはいけない (AwaySquad の admin)
 --   r_retired   承認済み・アクティブ         … fixture 作成後に **削除** して
 --                                              ON DELETE SET NULL を実証する
@@ -258,8 +260,8 @@ insert into auth.users (id, email, raw_user_meta_data) values
 update public.users
 set profile_image_path = id::text || '/avatar.webp',
     birthday = '2003-04-05',
-    bio = 'QA_RELAY_HIDDEN_BIO',
-    google_calendar_refresh_token = 'QA_RELAY_HIDDEN_TOKEN'
+    bio = 'QA_RELAY_HIDDEN_BIO'
+    -- google_calendar_refresh_token は 20261201000001 で users から user_secrets に移った
 where id in (
   '44440000-0000-4000-a000-000000000001','44440000-0000-4000-a000-000000000002',
   '44440000-0000-4000-a000-000000000003','44440000-0000-4000-a000-000000000004',
@@ -271,13 +273,13 @@ insert into public.teams (id, name, invite_code, created_by) values
   ('55550000-0000-4000-a000-00000000000b', 'QA Relay AwaySquad', 'QA-RELAY-AWAY',
    '44440000-0000-4000-a000-000000000005');
 
-insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at) values
-  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000001', 'admin', 'approved', true,  '2026-01-01'),
-  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000002', 'user',  'approved', true,  '2026-01-01'),
-  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000003', 'user',  'pending',  true,  '2026-01-01'),
-  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000004', 'user',  'approved', false, '2026-01-01'),
-  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000006', 'user',  'approved', true,  '2026-01-01'),
-  ('55550000-0000-4000-a000-00000000000b', '44440000-0000-4000-a000-000000000005', 'admin', 'approved', true,  '2026-01-01');
+insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at, left_at) values
+  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000001', 'admin', 'approved', true,  '2026-01-01', null),
+  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000002', 'user',  'approved', true,  '2026-01-01', null),
+  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000003', 'user',  'pending',  false, '2026-01-01', null),
+  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000004', 'user',  'approved', false, '2026-01-01', '2026-06-01'),
+  ('55550000-0000-4000-a000-00000000000a', '44440000-0000-4000-a000-000000000006', 'user',  'approved', true,  '2026-01-01', null),
+  ('55550000-0000-4000-a000-00000000000b', '44440000-0000-4000-a000-000000000005', 'admin', 'approved', true,  '2026-01-01', null);
 
 -- 大会
 --   MeetPrimary  HomeSquad / 2026-05-03 (2026年度)
@@ -856,8 +858,8 @@ select isnt(
 -- =============================================================================
 -- V-DB-70: users の機微列が返らない (実データで確認する)
 --
--- fixture は 6 人全員の bio / google_calendar_refresh_token に
--- 'QA_RELAY_HIDDEN_...' を入れてある。RPC は users を LEFT JOIN するので、
+-- fixture は 6 人全員の bio に
+-- 'QA_RELAY_HIDDEN_...' を入れてある (refresh_token は users から user_secrets に移った)。RPC は users を LEFT JOIN するので、
 -- 列の allowlist が崩れればこの文字列が返り値に現れる。
 -- =============================================================================
 select is(

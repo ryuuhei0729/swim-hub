@@ -128,11 +128,11 @@ insert into public.teams (id, name, invite_code, created_by) values
   ('66660000-0000-4000-a000-00000000000a', 'QA Relay TeamAlpha', 'QA-RELAY-A',
    '55550000-0000-4000-a000-000000000001');
 
-insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at) values
-  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000001', 'admin', 'approved', true,  '2026-01-01'),
-  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000002', 'user',  'approved', true,  '2026-01-01'),
-  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000003', 'user',  'approved', true,  '2026-01-01'),
-  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000004', 'user',  'approved', false, '2026-01-01');
+insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at, left_at) values
+  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000001', 'admin', 'approved', true,  '2026-01-01', null),
+  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000002', 'user',  'approved', true,  '2026-01-01', null),
+  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000003', 'user',  'approved', true,  '2026-01-01', null),
+  ('66660000-0000-4000-a000-00000000000a', '55550000-0000-4000-a000-000000000004', 'user',  'approved', false, '2026-01-01', '2026-06-01');
 -- u_outsider は意図的に team_memberships へ入れない
 
 -- リレー記録3本。created_by はすべて同一 (バックフィルの状況)

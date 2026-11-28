@@ -41,14 +41,18 @@ FROM (
 WHERE u.id = n.id;
 
 -- -----------------------------------------------------------------------------
--- public.users: 名前・誕生日・プロフィール・トークンをマスク
+-- public.user_secrets: Google カレンダーのトークンを全削除
+-- -----------------------------------------------------------------------------
+DELETE FROM public.user_secrets;
+
+-- -----------------------------------------------------------------------------
+-- public.users: 名前・誕生日・プロフィールをマスク
 -- -----------------------------------------------------------------------------
 UPDATE public.users u SET
   name = 'ユーザー' || n.rn,
   birthday = DATE '2000-01-01' + (FLOOR(RANDOM() * 3650))::int,
   bio = NULL,
   profile_image_path = NULL,
-  google_calendar_refresh_token = NULL,
   google_calendar_enabled = false
 FROM (
   SELECT id, ROW_NUMBER() OVER (ORDER BY created_at) AS rn

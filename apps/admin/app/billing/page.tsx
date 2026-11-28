@@ -44,7 +44,7 @@ export default async function BillingPage() {
       getRcMonthlyRecurring(),
     ]);
 
-  const rcRows = rows.filter((row) => row.provider === "revenucat");
+  const rcRows = rows.filter((row) => row.provider === "revenuecat");
   const rcResults = await Promise.all(
     rcRows.map(async (row) => ({ row, result: await listRcSubscriptions(row.id) })),
   );

@@ -55,13 +55,14 @@ end $$;
 --     a1 admin_ok        team1 admin / approved / active
 --     a2 admin_pending   team1 admin / pending
 --     a3 admin_inactive  team1 admin / approved / is_active=false
---     a4 admin_nullact   team1 admin / approved / is_active=NULL
+--     a4 admin_nullact   team1 admin / approved / is_active=NULL だった行
+--                        (20261201000003 で is_active は NOT NULL かつ status / left_at と一致するようになり、NULL は作れない。退会済みと同じ状態で確認する)
 --     a5 admin_other     team2 のみの admin (team1 に非所属)
 --     a6 plain           team1 の一般メンバー (role='user')
 --     a7 target          team1・team2 の承認済みアクティブメンバー (閲覧対象)
 --     a8 t_pending       team1 に pending
 --     a9 t_left          team1 に approved だが is_active=false (退会済み)
---     b1 t_nullact       team1 に approved / is_active=NULL
+--     b1 t_nullact       team1 に approved / is_active=NULL だった行 (a4 と同じ理由で退会済みの状態)
 --     b2 outsider        どのチームにも非所属
 --     b3 other_user      team1 のメンバー (「別ユーザーの記録」の罠用)
 --     b4 team2_only      team2 のみの承認済みアクティブメンバー (team1 管理者から見て別チームの対象)
@@ -80,16 +81,16 @@ insert into public.teams (id, name, invite_code, created_by) values
 
 insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at, left_at) values
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a1', 'admin', 'approved', true,  '2026-01-01', null),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a2', 'admin', 'pending',  true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a2', 'admin', 'pending',  false, '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a3', 'admin', 'approved', false, '2026-01-01', '2026-06-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a4', 'admin', 'approved', null,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a4', 'admin', 'approved', false, '2026-01-01', '2026-06-01'),
   ('bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a5', 'admin', 'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a6', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'user',  'approved', true,  '2026-01-01', null),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a8', 'user',  'pending',  true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a8', 'user',  'pending',  false, '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a9', 'user',  'approved', false, '2026-01-01', '2026-06-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000b1', 'user',  'approved', null,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000b1', 'user',  'approved', false, '2026-01-01', '2026-06-01'),
   ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000b3', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000b4', 'user',  'approved', true,  '2026-01-01', null);
 
@@ -250,7 +251,7 @@ select throws_ok(
 select public.qa_login_as('aaaaaaaa-0000-4000-a000-0000000000a4');
 select throws_ok(
   $$ select * from public.get_team_member_goals('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7') $$,
-  'P0001', null, 'V-02g: is_active=NULL の管理者は例外 (IS TRUE であること)');
+  'P0001', null, 'V-02g: is_active=NULL だった管理者 (今は退会済みの状態) は例外');
 
 select public.qa_login_as('aaaaaaaa-0000-4000-a000-0000000000a1');
 select throws_ok(
@@ -273,7 +274,7 @@ select throws_ok(
   'P0001', null, 'V-02l: 対象が退会済み (is_active=false) なら例外');
 select throws_ok(
   $$ select * from public.get_team_member_goals('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000b1') $$,
-  'P0001', null, 'V-02m: 対象が is_active=NULL なら例外');
+  'P0001', null, 'V-02m: 対象が is_active=NULL だったメンバー (今は退会済みの状態) なら例外');
 
 -- =============================================================================
 -- 正常系 (V-03): 管理者 a1 が target a7 を閲覧

@@ -104,10 +104,13 @@ async function invokeDeleteUserStorageWithRetry(
  * アカウント削除API
  *
  * 削除フロー:
- * 1. 個人データ（team_id IS NULL の練習・大会）を手動削除
+ * 1. 個人の大会（team_id IS NULL）を手動削除
  * 2. delete-user-storage Edge Function でストレージ（画像・動画）を削除。
  *    リトライしても失敗したら中断し、auth user は削除しない（孤児ストレージ防止）
  * 3. 2 が成功して初めて auth user を削除する（CASCADE + SET NULLで残りを処理）
+ *    個人の練習は users の削除トリガ (delete_personal_events_of_deleted_user) が消す。
+ *    チーム削除で個人練習になった元チーム練習に他のメンバーのログが付いていれば、その練習は消さずに残す
+ *    (ここで練習を消すとメンバーのログが CASCADE で消える)。
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -122,18 +125,8 @@ export async function DELETE(request: NextRequest) {
     const userId = user.id;
     const adminClient = createAdminClient();
 
-    // 個人の練習・大会を手動削除（team_id IS NULLのもの）
+    // 個人の大会を手動削除（team_id IS NULLのもの）
     // チームの練習・大会はSET NULLで保持される（マイグレーション済み）
-    const { error: practiceDeleteError } = await adminClient
-      .from("practices")
-      .delete()
-      .eq("user_id", userId)
-      .is("team_id", null);
-
-    if (practiceDeleteError) {
-      console.error("個人練習の削除エラー:", practiceDeleteError);
-    }
-
     const { error: competitionDeleteError } = await adminClient
       .from("competitions")
       .delete()

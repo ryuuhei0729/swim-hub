@@ -232,7 +232,7 @@ async function hasActiveStripeSubscription(
 
 function mapEventToUpdate(event: RevenueCatEvent): Record<string, unknown> | null {
   const base = {
-    provider: "revenucat",
+    provider: "revenuecat",
     provider_subscription_id: event.original_transaction_id,
     // サンドボックス由来でも Premium 付与ロジックは変えない(App Store 審査員の購入は
     // SANDBOX として届くため)。ただし監査・失効判断のため取引環境は常に記録する。

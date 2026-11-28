@@ -132,7 +132,6 @@ export async function getUserHeader(userId: string) {
     recentLogs,
     recentRecords,
   ] = await Promise.all([
-    // google_calendar_refresh_token は画面に出さないので列を明示して読まない
     supabase
       .from("users")
       .select(

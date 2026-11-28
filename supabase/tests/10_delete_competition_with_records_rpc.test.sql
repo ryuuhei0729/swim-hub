@@ -175,11 +175,16 @@ insert into public.records (id, user_id, competition_id, style_id, time, pool_ty
 -- =============================================================================
 -- V-DB-09/10 用フィクスチャ: user_id IS NULL の大会 (fail open 再発防止)
 --   competitions.user_id は NOT NULL 制約が無いため実在しうる状態。
+--   ただし user_id も team_id も NULL の行は 20261201000002 の competitions_owner_check で
+--   作れなくなった。RPC の認可が NULL で fail open しないことは CHECK と独立に固定しておきたいので、
+--   このトランザクションの中だけ CHECK を外して作る (末尾の rollback で戻る)。
 --   orphan_personal_comp: user_id NULL, team_id NULL (個人大会相当)。records 3件。
 --   orphan_team_comp    : user_id NULL, team_id = team1 (チーム大会相当)。
 --                         records 4件 (member_u 所有、3/5/7と異なる判別可能な値)。
 --   attacker_u          : owner_u/member_u/other_u のいずれでもない無関係な第三者。
 -- =============================================================================
+alter table public.competitions drop constraint competitions_owner_check;
+
 insert into public.competitions (id, user_id, team_id, title, date) values
   ('e0000000-0000-4000-a000-000000000004', null, null, 'QA user_id NULL個人大会相当', '2026-07-04'),
   ('e0000000-0000-4000-a000-000000000005', null, 'd0000000-0000-4000-a000-000000000001',

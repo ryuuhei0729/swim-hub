@@ -688,7 +688,7 @@ export class GoalAPI {
    * マイルストーンを手動で完了にする / 未完了に戻す。
    * 自動判定 (練習記録・大会記録) によらず、ユーザーの申告で達成扱いにするためのもの。
    * 手動完了は記録に紐付かないので milestone_achievements には書かない
-   * (check_source 制約で practice_log_id / record_id のどちらかが必須)。
+   * (milestone_achievements は根拠の練習ログ・記録を持つ行。両方 NULL になるのは根拠が削除されたときだけ)。
    *
    * 未完了に戻すときは、期限を過ぎていれば expired、そうでなければ not_started にする。
    * 戻した時点を candidate_dismissed_at に残し、それまでに登録済みの記録では再び

@@ -47,8 +47,6 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 - 制限: 選手が自分でチーム練習に付けたログも、一括編集の行と区別できないので数えない
 - 制限: 代理入力 (管理者が選手の entries / records を入力する) では、選手の `user_id` が作成者として数えられる。AI 読み取りの利用は区分7で別に数え、ここには含めない
 
-`user_sessions` は使わない。どのアプリからも書き込まれておらず、常に 0 件になるため。
-
 ### 2. 個人の練習
 | キー | 表示名 | 定義 |
 |---|---|---|
@@ -155,7 +153,7 @@ Timer の利用はサーバーに記録されていない (IndexedDB のみ。`a
 ### 集計しないもの (除外リスト)
 - 関連テーブル: `practice_log_tags`, `team_group_memberships`, `user_team_calendar_colors`, `milestone_achievements`
 - マスタ: `styles`, `race_pace_models`
-- システム用: `processed_webhook_events`, `contact_rate_limit_daily_usage`, `user_sessions` (書き込みが無い), `weekly_usage_reports`, `user_subscription_snapshots`
+- システム用: `processed_webhook_events`, `contact_rate_limit_daily_usage`, `user_secrets` (秘密の値), `weekly_usage_reports`, `user_subscription_snapshots`
 - 課金で別扱い: `user_subscriptions`
 
 ### 未分類テーブル

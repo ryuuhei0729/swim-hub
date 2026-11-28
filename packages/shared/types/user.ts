@@ -12,7 +12,7 @@ export interface UserProfile {
   profile_image_path: string | null;
   bio: string | null;
   google_calendar_enabled: boolean;
-  // google_calendar_refresh_token は機密情報のためクライアント側では除外（pgsodiumで暗号化済み）
+  // Google のリフレッシュトークンは users ではなく user_secrets にあり、クライアントからは読めない
   google_calendar_sync_practices: boolean;
   google_calendar_sync_competitions: boolean;
   // iOSカレンダー連携設定
@@ -20,8 +20,8 @@ export interface UserProfile {
   ios_calendar_sync_practices: boolean;
   ios_calendar_sync_competitions: boolean;
   onboarding_completed: boolean;
-  created_at: string | null;
-  updated_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type UserInsert = Omit<UserProfile, "id" | "created_at" | "updated_at">;

@@ -11,39 +11,39 @@ export type Database = {
       announcements: {
         Row: {
           content: string;
-          created_at: string | null;
+          created_at: string;
           created_by: string | null;
           end_at: string | null;
           id: string;
-          is_published: boolean | null;
+          is_published: boolean;
           start_at: string | null;
           team_id: string;
           title: string;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           content: string;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           end_at?: string | null;
           id?: string;
-          is_published?: boolean | null;
+          is_published?: boolean;
           start_at?: string | null;
           team_id: string;
           title: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           content?: string;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           end_at?: string | null;
           id?: string;
-          is_published?: boolean | null;
+          is_published?: boolean;
           start_at?: string | null;
           team_id?: string;
           title?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -65,7 +65,7 @@ export type Database = {
       app_daily_usage: {
         Row: {
           app: Database["public"]["Enums"]["app_id"];
-          daily_tokens_used: number | null;
+          daily_tokens_used: number;
           id: string;
           last_used_at: string | null;
           usage_count: number;
@@ -74,7 +74,7 @@ export type Database = {
         };
         Insert: {
           app: Database["public"]["Enums"]["app_id"];
-          daily_tokens_used?: number | null;
+          daily_tokens_used?: number;
           id?: string;
           last_used_at?: string | null;
           usage_count?: number;
@@ -83,7 +83,7 @@ export type Database = {
         };
         Update: {
           app?: Database["public"]["Enums"]["app_id"];
-          daily_tokens_used?: number | null;
+          daily_tokens_used?: number;
           id?: string;
           last_used_at?: string | null;
           usage_count?: number;
@@ -95,59 +95,59 @@ export type Database = {
       competitions: {
         Row: {
           attendance_status: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at: string | null;
+          created_at: string;
           created_by: string | null;
           date: string;
           end_date: string | null;
           entry_status: Database["public"]["Enums"]["entry_status_type"];
           google_event_id: string | null;
           id: string;
-          image_paths: Json | null;
+          image_paths: Json;
           ios_calendar_event_id: string | null;
           note: string | null;
           place: string | null;
           pool_type: number;
           team_id: string | null;
           title: string | null;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string | null;
         };
         Insert: {
           attendance_status?: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           date: string;
           end_date?: string | null;
           entry_status?: Database["public"]["Enums"]["entry_status_type"];
           google_event_id?: string | null;
           id?: string;
-          image_paths?: Json | null;
+          image_paths?: Json;
           ios_calendar_event_id?: string | null;
           note?: string | null;
           place?: string | null;
           pool_type?: number;
           team_id?: string | null;
           title?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Update: {
           attendance_status?: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           date?: string;
           end_date?: string | null;
           entry_status?: Database["public"]["Enums"]["entry_status_type"];
           google_event_id?: string | null;
           id?: string;
-          image_paths?: Json | null;
+          image_paths?: Json;
           ios_calendar_event_id?: string | null;
           note?: string | null;
           place?: string | null;
           pool_type?: number;
           team_id?: string | null;
           title?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Relationships: [
@@ -177,38 +177,38 @@ export type Database = {
       entries: {
         Row: {
           competition_id: string;
-          created_at: string | null;
+          created_at: string;
           entry_time: number | null;
           id: string;
           is_relaying: boolean;
           note: string | null;
           style_id: number;
           team_id: string | null;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
           competition_id: string;
-          created_at?: string | null;
+          created_at?: string;
           entry_time?: number | null;
           id?: string;
           is_relaying?: boolean;
           note?: string | null;
           style_id: number;
           team_id?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
           competition_id?: string;
-          created_at?: string | null;
+          created_at?: string;
           entry_time?: number | null;
           id?: string;
           is_relaying?: boolean;
           note?: string | null;
           style_id?: number;
           team_id?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -246,34 +246,34 @@ export type Database = {
         Row: {
           achieved_at: string | null;
           competition_id: string;
-          created_at: string | null;
+          created_at: string;
           id: string;
           status: string;
           style_id: number;
           target_time: number;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
           achieved_at?: string | null;
           competition_id: string;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           status?: string;
           style_id: number;
           target_time: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
           achieved_at?: string | null;
           competition_id?: string;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           status?: string;
           style_id?: number;
           target_time?: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -338,7 +338,7 @@ export type Database = {
       milestones: {
         Row: {
           achieved_at: string | null;
-          created_at: string | null;
+          created_at: string;
           deadline: string | null;
           goal_id: string;
           id: string;
@@ -350,11 +350,11 @@ export type Database = {
           status: string;
           title: string;
           type: string;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           achieved_at?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           deadline?: string | null;
           goal_id: string;
           id?: string;
@@ -366,11 +366,11 @@ export type Database = {
           status?: string;
           title: string;
           type: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           achieved_at?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           deadline?: string | null;
           goal_id?: string;
           id?: string;
@@ -382,7 +382,7 @@ export type Database = {
           status?: string;
           title?: string;
           type?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -396,25 +396,22 @@ export type Database = {
       };
       practice_log_tags: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           id: string;
           practice_log_id: string;
           practice_tag_id: string;
-          updated_at: string | null;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_log_id: string;
           practice_tag_id: string;
-          updated_at?: string | null;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_log_id?: string;
           practice_tag_id?: string;
-          updated_at?: string | null;
         };
         Relationships: [
           {
@@ -436,56 +433,56 @@ export type Database = {
       practice_log_templates: {
         Row: {
           circle: number | null;
-          created_at: string | null;
+          created_at: string;
           distance: number;
           id: string;
-          is_favorite: boolean | null;
+          is_favorite: boolean;
           last_used_at: string | null;
           name: string;
           note: string | null;
           rep_count: number;
           set_count: number;
           style: string;
-          swim_category: string;
-          tag_ids: string[] | null;
-          updated_at: string | null;
-          use_count: number | null;
+          swim_category: Database["public"]["Enums"]["swim_category_enum"];
+          tag_ids: string[];
+          updated_at: string;
+          use_count: number;
           user_id: string;
         };
         Insert: {
           circle?: number | null;
-          created_at?: string | null;
+          created_at?: string;
           distance?: number;
           id?: string;
-          is_favorite?: boolean | null;
+          is_favorite?: boolean;
           last_used_at?: string | null;
           name: string;
           note?: string | null;
           rep_count?: number;
           set_count?: number;
           style: string;
-          swim_category?: string;
-          tag_ids?: string[] | null;
-          updated_at?: string | null;
-          use_count?: number | null;
+          swim_category?: Database["public"]["Enums"]["swim_category_enum"];
+          tag_ids?: string[];
+          updated_at?: string;
+          use_count?: number;
           user_id: string;
         };
         Update: {
           circle?: number | null;
-          created_at?: string | null;
+          created_at?: string;
           distance?: number;
           id?: string;
-          is_favorite?: boolean | null;
+          is_favorite?: boolean;
           last_used_at?: string | null;
           name?: string;
           note?: string | null;
           rep_count?: number;
           set_count?: number;
           style?: string;
-          swim_category?: string;
-          tag_ids?: string[] | null;
-          updated_at?: string | null;
-          use_count?: number | null;
+          swim_category?: Database["public"]["Enums"]["swim_category_enum"];
+          tag_ids?: string[];
+          updated_at?: string;
+          use_count?: number;
           user_id?: string;
         };
         Relationships: [];
@@ -493,7 +490,7 @@ export type Database = {
       practice_logs: {
         Row: {
           circle: number | null;
-          created_at: string | null;
+          created_at: string;
           distance: number;
           id: string;
           note: string | null;
@@ -502,14 +499,14 @@ export type Database = {
           set_count: number;
           style: string;
           swim_category: Database["public"]["Enums"]["swim_category_enum"];
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
           video_path: string | null;
           video_thumbnail_path: string | null;
         };
         Insert: {
           circle?: number | null;
-          created_at?: string | null;
+          created_at?: string;
           distance: number;
           id?: string;
           note?: string | null;
@@ -518,14 +515,14 @@ export type Database = {
           set_count: number;
           style: string;
           swim_category?: Database["public"]["Enums"]["swim_category_enum"];
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
           video_path?: string | null;
           video_thumbnail_path?: string | null;
         };
         Update: {
           circle?: number | null;
-          created_at?: string | null;
+          created_at?: string;
           distance?: number;
           id?: string;
           note?: string | null;
@@ -534,7 +531,7 @@ export type Database = {
           set_count?: number;
           style?: string;
           swim_category?: Database["public"]["Enums"]["swim_category_enum"];
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
           video_path?: string | null;
           video_thumbnail_path?: string | null;
@@ -559,26 +556,26 @@ export type Database = {
       practice_tags: {
         Row: {
           color: string | null;
-          created_at: string | null;
+          created_at: string;
           id: string;
           name: string;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
           color?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           name: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
           color?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           name?: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -593,33 +590,33 @@ export type Database = {
       };
       practice_times: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           id: string;
           practice_log_id: string;
           rep_number: number;
           set_number: number;
           time: number;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_log_id: string;
           rep_number: number;
           set_number: number;
           time: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_log_id?: string;
           rep_number?: number;
           set_number?: number;
           time?: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -642,50 +639,50 @@ export type Database = {
       practices: {
         Row: {
           attendance_status: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at: string | null;
+          created_at: string;
           created_by: string | null;
           date: string;
           google_event_id: string | null;
           id: string;
-          image_paths: Json | null;
+          image_paths: Json;
           ios_calendar_event_id: string | null;
           note: string | null;
           place: string | null;
           team_id: string | null;
           title: string | null;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string | null;
         };
         Insert: {
           attendance_status?: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           date: string;
           google_event_id?: string | null;
           id?: string;
-          image_paths?: Json | null;
+          image_paths?: Json;
           ios_calendar_event_id?: string | null;
           note?: string | null;
           place?: string | null;
           team_id?: string | null;
           title?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Update: {
           attendance_status?: Database["public"]["Enums"]["attendance_status_type"] | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           date?: string;
           google_event_id?: string | null;
           id?: string;
-          image_paths?: Json | null;
+          image_paths?: Json;
           ios_calendar_event_id?: string | null;
           note?: string | null;
           place?: string | null;
           team_id?: string | null;
           title?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Relationships: [
@@ -715,7 +712,7 @@ export type Database = {
       records: {
         Row: {
           competition_id: string | null;
-          created_at: string | null;
+          created_at: string;
           id: string;
           is_relaying: boolean;
           note: string | null;
@@ -724,14 +721,14 @@ export type Database = {
           style_id: number;
           team_id: string | null;
           time: number;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
           video_path: string | null;
           video_thumbnail_path: string | null;
         };
         Insert: {
           competition_id?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           is_relaying?: boolean;
           note?: string | null;
@@ -740,14 +737,14 @@ export type Database = {
           style_id: number;
           team_id?: string | null;
           time: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
           video_path?: string | null;
           video_thumbnail_path?: string | null;
         };
         Update: {
           competition_id?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           is_relaying?: boolean;
           note?: string | null;
@@ -756,7 +753,7 @@ export type Database = {
           style_id?: number;
           team_id?: string | null;
           time?: number;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
           video_path?: string | null;
           video_thumbnail_path?: string | null;
@@ -794,28 +791,28 @@ export type Database = {
       };
       split_times: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           distance: number;
           id: string;
           record_id: string;
           split_time: number;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           distance: number;
           id?: string;
           record_id: string;
           split_time: number;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           distance?: number;
           id?: string;
           record_id?: string;
           split_time?: number;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -854,32 +851,32 @@ export type Database = {
       team_attendance: {
         Row: {
           competition_id: string | null;
-          created_at: string | null;
+          created_at: string;
           id: string;
           note: string | null;
           practice_id: string | null;
           status: string | null;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
           competition_id?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           note?: string | null;
           practice_id?: string | null;
           status?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
           competition_id?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           note?: string | null;
           practice_id?: string | null;
           status?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -910,7 +907,7 @@ export type Database = {
         Row: {
           assigned_at: string | null;
           assigned_by: string | null;
-          created_at: string | null;
+          created_at: string;
           id: string;
           team_group_id: string;
           user_id: string;
@@ -918,7 +915,7 @@ export type Database = {
         Insert: {
           assigned_at?: string | null;
           assigned_by?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           team_group_id: string;
           user_id: string;
@@ -926,7 +923,7 @@ export type Database = {
         Update: {
           assigned_at?: string | null;
           assigned_by?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           team_group_id?: string;
           user_id?: string;
@@ -958,30 +955,30 @@ export type Database = {
       team_groups: {
         Row: {
           category: string | null;
-          created_at: string | null;
+          created_at: string;
           created_by: string | null;
           id: string;
           name: string;
           team_id: string;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           category?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           id?: string;
           name: string;
           team_id: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           category?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           id?: string;
           name?: string;
           team_id?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -1002,39 +999,39 @@ export type Database = {
       };
       team_memberships: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           id: string;
-          is_active: boolean | null;
+          is_active: boolean;
           joined_at: string | null;
           left_at: string | null;
           role: string;
           status: Database["public"]["Enums"]["membership_status_type"];
           team_id: string;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
-          is_active?: boolean | null;
+          is_active?: boolean;
           joined_at?: string | null;
           left_at?: string | null;
           role?: string;
           status?: Database["public"]["Enums"]["membership_status_type"];
           team_id: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
-          is_active?: boolean | null;
+          is_active?: boolean;
           joined_at?: string | null;
           left_at?: string | null;
           role?: string;
           status?: Database["public"]["Enums"]["membership_status_type"];
           team_id?: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -1056,31 +1053,31 @@ export type Database = {
       };
       teams: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           created_by: string | null;
           description: string | null;
           id: string;
           invite_code: string | null;
           name: string;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           description?: string | null;
           id?: string;
           invite_code?: string | null;
           name: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           created_by?: string | null;
           description?: string | null;
           id?: string;
           invite_code?: string | null;
           name?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -1125,54 +1122,30 @@ export type Database = {
         };
         Relationships: [];
       };
-      user_sessions: {
+      user_secrets: {
         Row: {
-          created_at: string | null;
-          created_at_ts: string | null;
-          expires_at: string;
-          id: string;
-          ip_address: unknown;
-          is_active: boolean | null;
-          last_activity: string | null;
-          session_id: string;
-          updated_at: string | null;
-          updated_at_ts: string | null;
-          user_agent: string | null;
-          user_id: string | null;
+          created_at: string;
+          google_calendar_refresh_token: string | null;
+          updated_at: string;
+          user_id: string;
         };
         Insert: {
-          created_at?: string | null;
-          created_at_ts?: string | null;
-          expires_at: string;
-          id?: string;
-          ip_address?: unknown;
-          is_active?: boolean | null;
-          last_activity?: string | null;
-          session_id: string;
-          updated_at?: string | null;
-          updated_at_ts?: string | null;
-          user_agent?: string | null;
-          user_id?: string | null;
+          created_at?: string;
+          google_calendar_refresh_token?: string | null;
+          updated_at?: string;
+          user_id: string;
         };
         Update: {
-          created_at?: string | null;
-          created_at_ts?: string | null;
-          expires_at?: string;
-          id?: string;
-          ip_address?: unknown;
-          is_active?: boolean | null;
-          last_activity?: string | null;
-          session_id?: string;
-          updated_at?: string | null;
-          updated_at_ts?: string | null;
-          user_agent?: string | null;
-          user_id?: string | null;
+          created_at?: string;
+          google_calendar_refresh_token?: string | null;
+          updated_at?: string;
+          user_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "user_sessions_user_id_fkey";
+            foreignKeyName: "user_secrets_user_id_fkey";
             columns: ["user_id"];
-            isOneToOne: false;
+            isOneToOne: true;
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
@@ -1180,7 +1153,7 @@ export type Database = {
       };
       user_subscriptions: {
         Row: {
-          cancel_at_period_end: boolean | null;
+          cancel_at_period_end: boolean;
           created_at: string;
           current_period_start: string | null;
           id: string;
@@ -1196,7 +1169,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          cancel_at_period_end?: boolean | null;
+          cancel_at_period_end?: boolean;
           created_at?: string;
           current_period_start?: string | null;
           id: string;
@@ -1212,7 +1185,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          cancel_at_period_end?: boolean | null;
+          cancel_at_period_end?: boolean;
           created_at?: string;
           current_period_start?: string | null;
           id?: string;
@@ -1232,29 +1205,29 @@ export type Database = {
       user_team_calendar_colors: {
         Row: {
           competition_color: string | null;
-          created_at: string | null;
+          created_at: string;
           id: string;
           practice_color: string | null;
           team_id: string;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
           competition_color?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_color?: string | null;
           team_id: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
           competition_color?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           id?: string;
           practice_color?: string | null;
           team_id?: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -1278,10 +1251,9 @@ export type Database = {
         Row: {
           bio: string | null;
           birthday: string | null;
-          created_at: string | null;
+          created_at: string;
           gender: number;
           google_calendar_enabled: boolean;
-          google_calendar_refresh_token: string | null;
           google_calendar_sync_competitions: boolean;
           google_calendar_sync_practices: boolean;
           id: string;
@@ -1293,15 +1265,14 @@ export type Database = {
           personal_competition_color: string | null;
           personal_practice_color: string | null;
           profile_image_path: string | null;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           bio?: string | null;
           birthday?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           gender?: number;
           google_calendar_enabled?: boolean;
-          google_calendar_refresh_token?: string | null;
           google_calendar_sync_competitions?: boolean;
           google_calendar_sync_practices?: boolean;
           id: string;
@@ -1313,15 +1284,14 @@ export type Database = {
           personal_competition_color?: string | null;
           personal_practice_color?: string | null;
           profile_image_path?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           bio?: string | null;
           birthday?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           gender?: number;
           google_calendar_enabled?: boolean;
-          google_calendar_refresh_token?: string | null;
           google_calendar_sync_competitions?: boolean;
           google_calendar_sync_practices?: boolean;
           id?: string;
@@ -1333,7 +1303,7 @@ export type Database = {
           personal_competition_color?: string | null;
           personal_practice_color?: string | null;
           profile_image_path?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
