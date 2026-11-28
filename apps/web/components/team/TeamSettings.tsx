@@ -7,6 +7,11 @@ import { TeamCoreAPI } from "@apps/shared/api/teams/core";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
 
+// チーム名・説明の上限 (チーム作成フォーム TeamCreateForm・mobile の TeamSettingsModal と同じ。
+// DB の teams テーブルには文字数の制約は無い)
+export const TEAM_NAME_MAX_LENGTH = 50;
+export const TEAM_DESCRIPTION_MAX_LENGTH = 200;
+
 export interface TeamSettingsProps {
   teamId: string;
   teamName: string;
@@ -38,6 +43,8 @@ export default function TeamSettings({
   onEditingEnd,
 }: TeamSettingsProps) {
   const t = useTranslations("teamsAdmin");
+  const tTeams = useTranslations("teams");
+  const tCreate = useTranslations("forms.teamCreate");
   const [isEditing, setIsEditing] = useState(initialEditing);
   const [name, setName] = useState(teamName);
   const [description, setDescription] = useState(teamDescription || "");
@@ -55,6 +62,15 @@ export default function TeamSettings({
   const handleSave = async () => {
     if (!name.trim()) {
       setError(t("settings.nameRequired"));
+      return;
+    }
+    // 上限より長い既存の値をそのまま保存しようとした場合 (入力欄の maxLength では切り詰められない)
+    if (name.trim().length > TEAM_NAME_MAX_LENGTH) {
+      setError(tCreate("nameTooLong"));
+      return;
+    }
+    if (description.trim().length > TEAM_DESCRIPTION_MAX_LENGTH) {
+      setError(tCreate("descTooLong"));
       return;
     }
 
@@ -156,11 +172,20 @@ export default function TeamSettings({
                 id="teamName"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                maxLength={TEAM_NAME_MAX_LENGTH}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
             ) : (
               <p className="text-lg font-medium text-gray-900">{name}</p>
+            )}
+            {isEditing && (
+              <p className="mt-1 text-xs text-gray-500" data-testid="team-settings-name-counter">
+                {tTeams("mobile.charCounter", {
+                  current: name.length,
+                  max: TEAM_NAME_MAX_LENGTH,
+                })}
+              </p>
             )}
           </div>
 
@@ -176,12 +201,21 @@ export default function TeamSettings({
                 id="teamDescription"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                maxLength={TEAM_DESCRIPTION_MAX_LENGTH}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
             ) : (
               <p className="text-gray-900">{description || t("settings.noDescription")}</p>
+            )}
+            {isEditing && (
+              <p className="mt-1 text-xs text-gray-500" data-testid="team-settings-description-counter">
+                {tTeams("mobile.charCounter", {
+                  current: description.length,
+                  max: TEAM_DESCRIPTION_MAX_LENGTH,
+                })}
+              </p>
             )}
           </div>
 

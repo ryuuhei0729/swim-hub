@@ -3,6 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
+import { notificationKeys } from "@apps/shared/hooks/queries/keys";
 import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { AttendanceStatusType, TeamEvent } from "@swim-hub/shared/types";
 import { addMonths, endOfMonth, format } from "date-fns";
@@ -17,6 +19,7 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
   const t = useTranslations("teams.adminAttendanceHook");
   const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
+  const queryClient = useQueryClient();
 
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +97,8 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
               : attendancesAPI.updateCompetitionAttendanceStatus(event.id, status),
           ),
         );
+        // 締切にすると未回答に数えなくなるので、ホームのお知らせ・チームのバッジを数え直す (mobile と同じ)
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
         return true;
       } catch (err) {
         console.error("出欠ステータスの保存に失敗:", err);
@@ -112,7 +117,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         });
       }
     },
-    [events, attendancesAPI, fetchEvents, t],
+    [events, attendancesAPI, fetchEvents, t, queryClient],
   );
 
   return {

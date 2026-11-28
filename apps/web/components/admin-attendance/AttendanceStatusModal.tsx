@@ -5,8 +5,13 @@ import { useTranslations, useLocale } from "next-intl";
 import { isValid } from "date-fns";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import BaseModal from "@/components/ui/BaseModal";
-import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
+import type {
+  AttendanceStatus,
+  TeamEvent,
+  TeamAttendanceWithDetails,
+} from "@swim-hub/shared/types";
 import { TeamMember } from "@swim-hub/shared/utils/team";
+import type { MemberAnswerTarget } from "@/hooks/useMemberAnswerEditor";
 import { AttendanceGroupingDisplay } from "./AttendanceGroupingDisplay";
 
 interface AttendanceStatusModalProps {
@@ -16,6 +21,14 @@ interface AttendanceStatusModalProps {
   teamMembers: TeamMember[];
   loading: boolean;
   onClose: () => void;
+  /** メンバーの回答を代わりに変更する (管理者ビュー)。失敗したら例外を投げる */
+  onChangeMemberStatus?: (
+    event: TeamEvent,
+    target: MemberAnswerTarget,
+    status: AttendanceStatus,
+  ) => Promise<void>;
+  /** 自分には「変更」を出さない */
+  currentUserId?: string;
 }
 
 export function AttendanceStatusModal({
@@ -25,6 +38,8 @@ export function AttendanceStatusModal({
   teamMembers,
   loading,
   onClose,
+  onChangeMemberStatus,
+  currentUserId,
 }: AttendanceStatusModalProps) {
   const t = useTranslations("teamsAdmin");
   const locale = useLocale();
@@ -47,7 +62,16 @@ export function AttendanceStatusModal({
         </div>
       ) : (
         <div className="space-y-4">
-          <AttendanceGroupingDisplay attendanceData={attendanceData} teamMembers={teamMembers} />
+          <AttendanceGroupingDisplay
+            attendanceData={attendanceData}
+            teamMembers={teamMembers}
+            currentUserId={currentUserId}
+            onChangeMemberStatus={
+              onChangeMemberStatus && event
+                ? (target, status) => onChangeMemberStatus(event, target, status)
+                : undefined
+            }
+          />
         </div>
       )}
     </BaseModal>

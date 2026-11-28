@@ -221,7 +221,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-other-admin"
         competitionTitle="他管理者大会"
         teamId="team-1"
-        routeIsAdmin={false}
+        // 受付状況の変更は管理者ビューでだけ出す (swimhub-tasks #67)
+        routeIsAdmin={true}
         onOpenSelfEntry={vi.fn()}
       />,
     );
@@ -233,6 +234,9 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
       screen.getByTestId("team-competition-entry-status-select"),
       "closed",
     );
+    // 変更は確認してから保存する (swimhub-tasks #68)
+    expect(mocks.updateCompetition).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "OK" }));
 
     await waitFor(() => {
       expect(mocks.updateCompetition).toHaveBeenCalledWith("comp-other-admin", {

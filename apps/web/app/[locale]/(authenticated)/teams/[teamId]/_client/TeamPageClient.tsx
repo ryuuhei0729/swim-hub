@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import {
   type TeamTabType,
 } from "@/components/team/teamTabDefs";
 import { useTeamViewStore } from "@/stores/team/teamViewStore";
+import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import { teamViewSearch } from "@/utils/teamView";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import type { TeamMembership, TeamWithMembers } from "@apps/shared/types";
@@ -140,6 +141,23 @@ export default function TeamPageClient({
     setAdminViewPref(nextAdminView);
   }, [isAdminView]);
 
+  // ---------------------------------------------------------------- 未対応件数のバッジ
+  // サイドバーの「チーム」の合計の内訳。このチームの分はタブ (出欠・メンバー) に、
+  // 他のチームの分はチーム名 (切替) の横と切替メニューの各チームに出す (mobile と同じ。swimhub-tasks #73)
+  const { total: badgeTotal, byTeam: badgeByTeam, countOf } = useTeamBadgeCounts();
+  const thisTeamCount = countOf(teamId);
+  const otherTeamsBadgeCount = Math.max(
+    0,
+    badgeTotal - thisTeamCount.unanswered - thisTeamCount.pendingMembers,
+  );
+  const switcherBadgeCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(badgeByTeam).map(([id, c]) => [id, c.unanswered + c.pendingMembers]),
+      ),
+    [badgeByTeam],
+  );
+
   // ---------------------------------------------------------------- 承認待ち
   const [isRefreshing, startRefresh] = useTransition();
   const handlePendingRetry = useCallback(() => {
@@ -157,6 +175,8 @@ export default function TeamPageClient({
           isCurrentUserAdmin={false}
           isAdminView={false}
           onToggleView={handleToggleView}
+          badgeCounts={switcherBadgeCounts}
+          otherTeamsBadgeCount={otherTeamsBadgeCount}
         />
         <div
           className="bg-white rounded-lg shadow px-6 py-12 flex flex-col items-center text-center"
@@ -208,6 +228,8 @@ export default function TeamPageClient({
         onToggleView={handleToggleView}
         onOpenAnnouncements={isMember ? () => setSubScreen("announcements") : undefined}
         onOpenSettings={isMember ? () => setSubScreen("settings") : undefined}
+        badgeCounts={switcherBadgeCounts}
+        otherTeamsBadgeCount={otherTeamsBadgeCount}
       />
 
       {visibleSubScreen ? (
@@ -226,6 +248,8 @@ export default function TeamPageClient({
           activeTab={activeTab}
           onTabChange={handleTabChange}
           onOpenSubScreen={setSubScreen}
+          attendanceBadgeCount={thisTeamCount.unanswered}
+          pendingBadgeCount={thisTeamCount.pendingMembers}
         />
       ) : null}
     </div>

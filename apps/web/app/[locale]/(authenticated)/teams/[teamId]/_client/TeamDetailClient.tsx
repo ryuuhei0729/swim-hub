@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -12,7 +12,6 @@ import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 import TeamOthersTab from "@/components/team/TeamOthersTab";
 import type { TeamSubScreen, TeamTabType } from "@/components/team/teamTabDefs";
 import type { TeamMembership } from "@apps/shared/types";
-import { usePendingMemberCountQuery } from "@/hooks/queries/teamMemberQueries";
 import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
 
 // タブコンテンツは一度に1つしか表示されないため遅延読み込み。
@@ -55,6 +54,10 @@ interface TeamDetailClientProps {
   onTabChange: (tab: TeamTabType) => void;
   /** タブの上に重ねる画面 (ランキング・目標・一括登録) を開く */
   onOpenSubScreen: (screen: TeamSubScreen) => void;
+  /** 出欠タブのバッジ (このチームの出欠の未回答数) */
+  attendanceBadgeCount?: number;
+  /** メンバータブのバッジ (承認待ち数。自分が管理者のときだけ数える) */
+  pendingBadgeCount?: number;
 }
 
 /**
@@ -74,10 +77,12 @@ export default function TeamDetailClient({
   activeTab,
   onTabChange,
   onOpenSubScreen,
+  attendanceBadgeCount = 0,
+  pendingBadgeCount = 0,
 }: TeamDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("teams");
-  const { user, supabase } = useAuth();
+  const { user } = useAuth();
   const [membersSegment, setMembersSegment] = useState<MembersSegment>("members");
   // グループ管理は管理者ビューでのみ選べる。利用者ビューに戻したらメンバー表を出す
   const activeMembersSegment: MembersSegment = isAdminView ? membersSegment : "members";
@@ -88,24 +93,14 @@ export default function TeamDetailClient({
   const [membersRefreshSignal, setMembersRefreshSignal] = useState<number | undefined>(undefined);
 
   const isMember = initialMembership !== null;
-  const isAdminMembership = initialMembership?.role === "admin";
 
   // 開いているタブの読み込みが終わったら、既定タブと隣のタブのデータを先読みする
   // (所属していないチームでは取得できないので先読みしない)
   useTeamTabPrefetch(teamId, activeTab, isAdminView ? "admin" : "member", isMember);
 
-  // 承認待ち数 (管理者ビューのメンバータブのバッジ)。承認・却下では
-  // invalidateTeamMemberQueries が teamKeys.pendingMembers ごと落とす
-  const pendingCountQuery = usePendingMemberCountQuery(
-    supabase,
-    teamId,
-    isAdminView && isAdminMembership,
-  );
-  const pendingCount = isAdminView ? (pendingCountQuery.data ?? 0) : 0;
-  const pendingCountError = pendingCountQuery.error;
-  useEffect(() => {
-    if (pendingCountError) console.error("承認待ち数の取得に失敗:", pendingCountError);
-  }, [pendingCountError]);
+  // タブのバッジ (出欠の未回答・承認待ち) は TeamPageClient が useTeamBadgeCounts で数えて渡す。
+  // 承認待ちは mobile と同じく、管理者なら表示中のビューに関係なく出す (swimhub-tasks #73)。
+  // 承認・却下では invalidateTeamMemberQueries が teamKeys.pendingMembers ごと落とすので数え直される
 
   const renderMembersTab = () => (
     <div>
@@ -186,7 +181,12 @@ export default function TeamDetailClient({
 
   return (
     <div>
-      <TeamTabs activeTab={activeTab} onTabChange={onTabChange} pendingCount={pendingCount} />
+      <TeamTabs
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        pendingCount={pendingBadgeCount}
+        attendanceCount={attendanceBadgeCount}
+      />
 
       <div className="bg-white rounded-lg shadow">{renderTabContent()}</div>
 

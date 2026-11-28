@@ -79,6 +79,14 @@ vi.mock("@/components/team/TeamViewHeader", () => ({
     );
   },
 }));
+// 未対応件数のバッジ (所属チーム一覧・未回答・承認待ちの取得) はこのテストの対象外
+vi.mock("@/hooks/useTeamBadgeCounts", () => ({
+  useTeamBadgeCounts: () => ({
+    total: 0,
+    byTeam: {},
+    countOf: () => ({ unanswered: 0, pendingMembers: 0 }),
+  }),
+}));
 vi.mock("@/components/team/TeamSubScreenView", () => ({
   default: (props: { screen: string; onBack: () => void }) => (
     <div>

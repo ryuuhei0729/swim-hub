@@ -30,6 +30,8 @@ import {
 import { isValid } from "date-fns";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
@@ -776,6 +778,7 @@ export function useTeamCompetitionActions({
     // 明日以降の大会は「エントリー」、今日・過去の大会は「記録」だけを出す
     // (mobile と同じ出し分け。管理者も同じ。swimhub-tasks #60)
     const isEntryPhase = isEntryTabVisible(competition.date);
+    const entryStatus = resolveEntryStatus(competition.date, competition.entry_status);
     return (
       // 記録の有無に関わらず、カードを押したら記録一覧を開く (0件なら一覧側で空表示。
       // mobile と同じ。swimhub-tasks #103)
@@ -802,22 +805,21 @@ export function useTeamCompetitionActions({
               <span className="text-lg font-medium text-gray-900">
                 {competitionTitle}
               </span>
-              {/* エントリーステータスバッジ */}
-              {competition.entry_status && (
+              {/* エントリーステータスバッジ。過去の大会 (昨日以前) には出さない。
+                  今日以降は大会日を織り込んだ実効ステータス (未設定は「受付前」) を出す
+                  (mobile の TeamCompetitionList と同じ。swimhub-tasks #68) */}
+              {!isCompetitionDateInPast(competition.date) && (
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                    competition.entry_status === "open"
+                    entryStatus === "open"
                       ? "bg-green-100 text-green-800"
-                      : competition.entry_status === "closed"
+                      : entryStatus === "closed"
                         ? "bg-red-100 text-red-800"
                         : "bg-gray-100 text-gray-800"
                   }`}
+                  data-testid="team-competition-entry-status-badge"
                 >
-                  {competition.entry_status === "open"
-                    ? t("competitions.entryStatus.open")
-                    : competition.entry_status === "closed"
-                      ? t("competitions.entryStatus.closed")
-                      : t("competitions.entryStatus.before")}
+                  {t(`competitions.entryStatus.${entryStatus}`)}
                 </span>
               )}
             </div>
@@ -971,8 +973,8 @@ export function useTeamCompetitionActions({
             selectedCompetition.title || t("competitions.fallbackTitle")
           }
           teamId={teamId}
-          // 追加スプリント D11: 自身のルート固定 isAdmin prop をそのまま渡す。
-          // モーダル内部の data.isAdmin (実ロール) とは別物 (往路の判定用)
+          // 表示中のビュー (管理者ビューか) をそのまま渡す。モーダル内の管理操作
+          // (受付状況の変更・代理入力) はこの値で出し分ける (swimhub-tasks #67)
           routeIsAdmin={isAdmin}
           onOpenSelfEntry={handleOpenEntryEditor}
         />

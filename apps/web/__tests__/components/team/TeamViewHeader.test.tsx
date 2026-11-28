@@ -174,3 +174,20 @@ describe("TeamViewHeader — お知らせ・チーム設定・招待コード", 
     expect(screen.queryByText("招待コード")).toBeNull();
   });
 });
+
+describe("TeamViewHeader — 未対応件数のバッジ (swimhub-tasks #73)", () => {
+  it("他のチームの件数をチーム名の横に、各チームの件数を切替メニューに出す", async () => {
+    renderHeader({ badgeCounts: { "team-a": 2, "team-b": 5 }, otherTeamsBadgeCount: 5 });
+    expect(screen.getByTestId("team-switcher-other-teams-badge").textContent).toContain("5");
+
+    await userEvent.click(screen.getByTestId("team-switcher-open"));
+    expect(screen.getByTestId("team-switcher-badge-team-a").textContent).toContain("2");
+    expect(screen.getByTestId("team-switcher-badge-team-b").textContent).toContain("5");
+    expect(screen.queryByTestId("team-switcher-badge-team-c")).toBeNull();
+  });
+
+  it("件数が 0 ならバッジを出さない", () => {
+    renderHeader();
+    expect(screen.queryByTestId("team-switcher-other-teams-badge")).toBeNull();
+  });
+});

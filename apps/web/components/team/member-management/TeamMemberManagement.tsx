@@ -77,7 +77,12 @@ export default function TeamMemberManagement({
   const { pendingMembers, loading: loadingPending } = usePendingMembers(teamId, isCurrentUserAdmin, supabase);
 
   // 承認/却下アクション
-  const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange);
+  const {
+    handleApprove,
+    handleReject,
+    error: membershipActionError,
+    clearError: clearMembershipActionError,
+  } = useMembershipActions(teamId, onMembershipChange);
 
   // グループ別表示
   // グループ内は年齢の降順 (同じ年齢は名前順、生年月日未設定は最後に名前順)。並び順の説明は出さない
@@ -211,6 +216,8 @@ export default function TeamMemberManagement({
           isLoading={loadingPending}
           onApprove={handleApproveWithRefresh}
           onReject={handleRejectWithRefresh}
+          actionError={membershipActionError}
+          onClearActionError={clearMembershipActionError}
         />
       )}
 

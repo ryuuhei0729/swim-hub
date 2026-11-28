@@ -82,6 +82,13 @@ describe("TeamTabs", () => {
     expect(screen.getByTestId("team-tab-members").getAttribute("aria-label")).toContain("3");
     expect(screen.getByTestId("team-tab-schedule").textContent).toBe("予定");
   });
+
+  it("出欠の未回答の件数は出欠タブにバッジで出す (swimhub-tasks #73)", () => {
+    withI18n(<TeamTabs activeTab="members" onTabChange={vi.fn()} attendanceCount={120} />);
+    expect(screen.getByTestId("team-tab-attendance").textContent).toContain("99+");
+    expect(screen.getByTestId("team-tab-attendance").getAttribute("aria-label")).toContain("120");
+    expect(screen.getByTestId("team-tab-members").textContent).toBe("メンバー");
+  });
 });
 
 describe("TeamOthersTab", () => {
