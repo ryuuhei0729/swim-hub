@@ -140,7 +140,7 @@ describe("DELETE /api/account/delete - ストレージ削除失敗時のフェ�
     expect(response.status).toBe(401);
     expect(functionsInvokeMock).not.toHaveBeenCalled();
     expect(deleteUserMock).not.toHaveBeenCalled();
-    expect(practicesDeleteMock).not.toHaveBeenCalled();
+    expect(competitionsDeleteMock).not.toHaveBeenCalled();
   });
 
   it("アクセストークンが無効(getUserがエラー)な場合、401を返し何も削除しない", async () => {
@@ -181,7 +181,9 @@ describe("DELETE /api/account/delete - ストレージ削除失敗時のフェ�
     const response = await promise;
 
     expect(response.status).toBe(200);
-    expect(practicesDeleteMock).toHaveBeenCalledTimes(1);
+    // 練習はルートでは消さない。users の削除トリガが、他のメンバーのログが付いた練習を残して消す
+    // (ここで消すと、チーム削除で個人練習になった元チーム練習のメンバーのログが CASCADE で消える)
+    expect(practicesDeleteMock).not.toHaveBeenCalled();
     expect(competitionsDeleteMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).not.toHaveBeenCalled();
   });

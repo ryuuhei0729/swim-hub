@@ -48,7 +48,8 @@ end $$;
 --   a1 admin_ok        team1 admin / approved / active (自身も目標を持つ)
 --   a2 admin_pending   team1 admin / pending
 --   a3 admin_inactive  team1 admin / approved / is_active=false
---   a4 admin_nullact   team1 admin / approved / is_active=NULL
+--   a4 admin_nullact   team1 admin / approved / is_active=NULL だった行
+--                      (20261201000003 で is_active は NOT NULL かつ status / left_at と一致するようになり、NULL は作れない。退会済みと同じ状態で確認する)
 --   a5 admin_team2     team2 の admin (team1 に非所属)
 --   a6 plain           team1 の一般メンバー (role='user')
 --   a7 member_x        team1 の承認済みアクティブメンバー (c1 に3種目の目標)
@@ -56,7 +57,7 @@ end $$;
 --   a9 left            team1 に approved だが is_active=false (退会済み) / c1 に目標
 --   b1 pending_member  team1 に pending / c1 に目標
 --   b2 outsider        どのチームにも非所属 / c1 に目標
---   b4 nullact_member  team1 に approved / is_active=NULL / c1 に目標
+--   b4 nullact_member  team1 に approved / is_active=NULL だった行 (a4 と同じ理由で退会済みの状態) / c1 に目標
 --   b5 team2_member    team2 の承認済みアクティブメンバー / c3 (team2 の大会) に目標
 -- 大会: c1=team1 の対象大会 / c2=team1 の別大会 / c3=team2 の大会 /
 --       c4=a7 の個人大会 (team_id NULL) / c5=team1 の大会 (目標なし)
@@ -75,16 +76,16 @@ insert into public.teams (id, name, invite_code, created_by) values
 
 insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at, left_at) values
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a1', 'admin', 'approved', true,  '2026-01-01', null),
-  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a2', 'admin', 'pending',  true,  '2026-01-01', null),
+  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a2', 'admin', 'pending',  false, '2026-01-01', null),
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a3', 'admin', 'approved', false, '2026-01-01', '2026-06-01'),
-  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a4', 'admin', 'approved', null,  '2026-01-01', null),
+  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a4', 'admin', 'approved', false, '2026-01-01', '2026-06-01'),
   ('bbbbbbbb-1900-4000-a000-000000000002', 'aaaaaaaa-1900-4000-a000-0000000000a5', 'admin', 'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a6', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a8', 'user',  'approved', true,  '2026-01-01', null),
   ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a9', 'user',  'approved', false, '2026-01-01', '2026-06-01'),
-  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000b1', 'user',  'pending',  true,  '2026-01-01', null),
-  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000b4', 'user',  'approved', null,  '2026-01-01', null),
+  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000b1', 'user',  'pending',  false, '2026-01-01', null),
+  ('bbbbbbbb-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000b4', 'user',  'approved', false, '2026-01-01', '2026-06-01'),
   ('bbbbbbbb-1900-4000-a000-000000000002', 'aaaaaaaa-1900-4000-a000-0000000000b5', 'user',  'approved', true,  '2026-01-01', null);
 
 insert into public.competitions (id, title, date, pool_type, team_id, user_id, created_by) values
@@ -200,7 +201,7 @@ select throws_ok(
 select public.qa_login_as('aaaaaaaa-1900-4000-a000-0000000000a4');
 select throws_ok(
   $$ select * from public.get_team_competition_goal_targets('bbbbbbbb-1900-4000-a000-000000000001', 'cccccccc-1900-4000-a000-000000000001') $$,
-  'P0001', 'not an approved active admin of the team', 'V-02i: is_active=NULL の管理者は例外 (IS TRUE であること)');
+  'P0001', 'not an approved active admin of the team', 'V-02i: is_active=NULL だった管理者 (今は退会済みの状態) は例外');
 
 -- 大会 id のガード (正規の管理者 a1 が、チームに属さない大会 id を渡す)
 select public.qa_login_as('aaaaaaaa-1900-4000-a000-0000000000a1');

@@ -67,7 +67,7 @@ const STATIC_LABELS: ReadonlyArray<readonly [string, string]> = [
 const DYNAMIC_LABELS: ReadonlyArray<readonly [string, string, string]> = [
   ["goal.milestones_created.reps_time", "マイルストーン設定 (種類別)", "reps_time"],
   ["billing.premium_total.stripe", "有料会員数 (集計時点)", "stripe"],
-  ["billing.new_premium.revenucat", "新規有料 (トライアル開始を含む)", "revenucat"],
+  ["billing.new_premium.revenuecat", "新規有料 (トライアル開始を含む)", "revenuecat"],
   ["token.swimhub_scanner.scanner_scan", "AI 読み取り回数", "scanner_scan"],
   // Timer の利用はサーバーに記録されないので、app は scanner と swimhub だけ
   ["usage.swimhub_scanner.active_users", "AI 読み取りを使った人数", "swimhub_scanner"],
@@ -349,7 +349,7 @@ Deno.test("課金のフローの指標が無い週 (前週のスナップショ�
   const metrics = allLabeledMetrics();
   delete metrics["billing.new_cancel_pending"];
   delete metrics["billing.churned"];
-  delete metrics["billing.new_premium.revenucat"];
+  delete metrics["billing.new_premium.revenuecat"];
   const { text } = formatWeeklyReport(makeReport({ metrics }));
   assert(text.includes("比較なし"), text);
   assert(!lines(text).some((l) => /^(新規有料|新規解約予約|有料終了).*: \d/.test(norm(l))), text);

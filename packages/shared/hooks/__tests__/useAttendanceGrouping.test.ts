@@ -58,8 +58,8 @@ function makeUser(id: string, name: string): UserProfile {
     ios_calendar_sync_practices: false,
     ios_calendar_sync_competitions: false,
     onboarding_completed: true,
-    created_at: null,
-    updated_at: null,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
   };
 }
 

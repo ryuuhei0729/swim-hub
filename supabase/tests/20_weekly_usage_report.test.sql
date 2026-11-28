@@ -195,7 +195,7 @@ insert into public.practices (id, user_id, created_by, team_id, date, image_path
   (public.qa_e(205), public.qa_u(3), null, null, '2026-11-07', '[]', '2026-11-07 00:00:00+09'),       -- PB2 週外
   (public.qa_e(206), public.qa_u(4), public.qa_u(4), null, '2026-11-02', '["qa/wr/a.jpg"]', '2026-11-02 12:00:00+09'), -- PP1 画像あり
   (public.qa_e(207), public.qa_u(1), null, null, '2026-11-02', '[]', '2026-11-02 12:00:00+09'),       -- PP2 空配列
-  (public.qa_e(208), public.qa_u(1), null, null, '2026-11-02', null, '2026-11-02 12:00:00+09'),       -- PP3 NULL
+  (public.qa_e(208), public.qa_u(1), null, null, '2026-11-02', '[]', '2026-11-02 12:00:00+09'),       -- PP3 画像なし (20261201000006 で image_paths が NOT NULL になり NULL は作れない)
   (public.qa_e(209), public.qa_u(7), null, null, '2026-11-02', '[]', '2026-11-02 12:00:00+09'),       -- PP4 created_by NULL → 作成者は user_id
   (public.qa_e(210), public.qa_u(1), public.qa_u(1), public.qa_e(101), '2026-11-02', '[]', '2026-11-02 12:00:00+09'), -- TP1 ログあり
   (public.qa_e(211), public.qa_u(1), null, public.qa_e(101), '2026-11-02', '[]', '2026-11-02 12:00:00+09'),           -- TP2 ログなし
@@ -380,20 +380,20 @@ insert into public.contact_messages (name, email, subject, message, created_at) 
 
 -- -----------------------------------------------------------------------------
 -- 課金: 状態 A (前週 P のスナップショット時点)
---   s1 stripe 本番 / s2 revenucat 環境 NULL (= 本番扱い) / s3 revenucat 本番 (→ W で終了) /
---   s4 stripe 本番 (→ W で解約予約) / s5 revenucat canceled (A から解約予約中) /
---   s6, s7, s9, s11 は free / s8 revenucat sandbox / s10 revenucat sandbox (→ W で終了) /
+--   s1 stripe 本番 / s2 revenuecat 環境 NULL (= 本番扱い) / s3 revenuecat 本番 (→ W で終了) /
+--   s4 stripe 本番 (→ W で解約予約) / s5 revenuecat canceled (A から解約予約中) /
+--   s6, s7, s9, s11 は free / s8 revenuecat sandbox / s10 revenuecat sandbox (→ W で終了) /
 --   s12 provider NULL (→ キーは unknown)・premium_expires_at NULL (期限なしも有料会員) /
 --   s11 は W で provider NULL の有料になる / s9 は W で sandbox の trialing になる (billing.trialing に入らない)
 --   P の前週 (10-17) は保存行だけがありスナップショットは0行 = 「前週の premium 0 人」で比較あり
---   支払い遅延 (A・B とも): s14 stripe 本番 past_due / s18 revenucat sandbox past_due。
+--   支払い遅延 (A・B とも): s14 stripe 本番 past_due / s18 revenuecat sandbox past_due。
 --     スナップショットには入るが有料会員数には入らず、本番の s14 だけが billing.past_due に入る
---   スナップショットの対象外 (A・B とも): s15 revenucat active だが premium_expires_at が過去
---     (失効の webhook の取りこぼし) / s17 revenucat active で premium_expires_at = 集計時刻ちょうど
+--   スナップショットの対象外 (A・B とも): s15 revenuecat active だが premium_expires_at が過去
+--     (失効の webhook の取りこぼし) / s17 revenuecat active で premium_expires_at = 集計時刻ちょうど
 --   支払い遅延の遷移 (2026-11-10 再レビュー R1):
---     s20 revenucat: P は active → W は past_due → 翌週 N (11-07) は active に回復。どの週でも有料終了・新規有料にならない
+--     s20 revenuecat: P は active → W は past_due → 翌週 N (11-07) は active に回復。どの週でも有料終了・新規有料にならない
 --     s21 stripe:    P は active → W は past_due → N は past_due のまま期限切れ。N で有料終了になる
---   s19 revenucat active (A は期限内、B では期限が過ぎたまま premium で残る → 有料終了) /
+--   s19 revenuecat active (A は期限内、B では期限が過ぎたまま premium で残る → 有料終了) /
 --   s16 は W で stripe の trialing になる (新規有料に入り、billing.trialing に入る)
 --   期限は実行日に追従させる (now() 基準。now() はトランザクション開始時刻で、集計の間は変わらない)
 -- -----------------------------------------------------------------------------
@@ -403,15 +403,15 @@ update public.user_subscriptions us set
   premium_expires_at = now() + interval '30 days'
 from (values
   (51, 'active',   'stripe',    'production', false),
-  (52, 'active',   'revenucat', null,         false),
-  (53, 'active',   'revenucat', 'production', false),
+  (52, 'active',   'revenuecat', null,         false),
+  (53, 'active',   'revenuecat', 'production', false),
   (54, 'active',   'stripe',    'production', false),
-  (55, 'canceled', 'revenucat', 'production', false),
-  (58, 'active',   'revenucat', 'sandbox',    false),
-  (60, 'active',   'revenucat', 'sandbox',    false),
+  (55, 'canceled', 'revenuecat', 'production', false),
+  (58, 'active',   'revenuecat', 'sandbox',    false),
+  (60, 'active',   'revenuecat', 'sandbox',    false),
   (62, 'active',   null,        null,         false),
-  (69, 'active',   'revenucat', 'production', false),
-  (70, 'active',   'revenucat', 'production', false),
+  (69, 'active',   'revenuecat', 'production', false),
+  (70, 'active',   'revenuecat', 'production', false),
   (71, 'active',   'stripe',    'production', false)
 ) as v(n, status, provider, env, cape)
 where us.id = public.qa_u(v.n);
@@ -421,9 +421,9 @@ update public.user_subscriptions us set
 from (values
   (62, 'active',   null,        null,         null::timestamptz),
   (64, 'past_due', 'stripe',    'production', now() + interval '30 days'),
-  (65, 'active',   'revenucat', 'production', now() - interval '1 day'),
-  (67, 'active',   'revenucat', 'production', now()),
-  (68, 'past_due', 'revenucat', 'sandbox',    now() + interval '30 days')
+  (65, 'active',   'revenuecat', 'production', now() - interval '1 day'),
+  (67, 'active',   'revenuecat', 'production', now()),
+  (68, 'past_due', 'revenuecat', 'sandbox',    now() + interval '30 days')
 ) as v(n, status, provider, env, expires)
 where us.id = public.qa_u(v.n);
 
@@ -438,9 +438,9 @@ update public.user_subscriptions us set
   provider_environment = v.env, cancel_at_period_end = v.cape,
   premium_expires_at = now() + interval '30 days'
 from (values
-  (56, 'active',   'revenucat', 'production', false),
+  (56, 'active',   'revenuecat', 'production', false),
   (57, 'active',   'stripe',    'production', true),
-  (59, 'trialing', 'revenucat', 'sandbox',    false),
+  (59, 'trialing', 'revenuecat', 'sandbox',    false),
   (61, 'active',   null,        null,         false),
   (66, 'trialing', 'stripe',    'production', false)
 ) as v(n, status, provider, env, cape)
@@ -675,8 +675,8 @@ select is(
   'H-1d: 前週の有料契約が 0 件なら、新規有料の合計 = 有料会員数の合計 + 支払い遅延 (スナップショットの本番の全行)');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.stripe'), 4::numeric,
   'H-2: 有料会員数 (stripe): s1, s4, s7, s16 (trialing)。past_due の s14・s21 は入らない');
-select is(pg_temp.qa_delta('w1', 'billing.premium_total.revenucat'), 3::numeric,
-  'H-3: 有料会員数 (revenucat): s2 (環境 NULL は本番扱い), s5 (canceled = 解約予約中), s6。sandbox の s8, s9、期限切れのまま残った s15・s19、期限が集計時刻ちょうどの s17、past_due の s20 は入らない');
+select is(pg_temp.qa_delta('w1', 'billing.premium_total.revenuecat'), 3::numeric,
+  'H-3: 有料会員数 (revenuecat): s2 (環境 NULL は本番扱い), s5 (canceled = 解約予約中), s6。sandbox の s8, s9、期限切れのまま残った s15・s19、期限が集計時刻ちょうどの s17、past_due の s20 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.unknown'), 2::numeric,
   'H-3b: provider が NULL の有料はキーの末尾を unknown にする (s11, 期限なしの s12)');
 select ok(
@@ -689,8 +689,8 @@ select is(pg_temp.qa_delta('w1', 'billing.sandbox_premium_total'), 2::numeric,
   'H-5: sandbox の有料: s8, s9 (trialing)。sandbox の past_due の s18 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.stripe'), 2::numeric,
   'H-6: 新規有料 (stripe): s7 と、トライアルを始めた s16');
-select is(pg_temp.qa_delta('w1', 'billing.new_premium.revenucat'), 1::numeric,
-  'H-7: 新規有料 (revenucat): s6 (sandbox で新しく有料になった s9 は入らない)');
+select is(pg_temp.qa_delta('w1', 'billing.new_premium.revenuecat'), 1::numeric,
+  'H-7: 新規有料 (revenuecat): s6 (sandbox で新しく有料になった s9 は入らない)');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.unknown'), 1::numeric,
   'H-7b: 新規有料 (unknown): s11');
 select is(pg_temp.qa_delta('w1', 'billing.new_cancel_pending'), 2::numeric,

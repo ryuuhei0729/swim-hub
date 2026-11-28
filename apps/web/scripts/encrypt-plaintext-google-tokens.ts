@@ -8,7 +8,8 @@
  * 「暗号化済み文字列をそのまま保存 / 返す passthrough」になっている。暗号化責務は完全に
  * アプリ側 (apps/web/lib/encryption.ts の encrypt/decrypt/isEncrypted) にある。
  *
- * それ以前（あるいはアプリ側の暗号化漏れ）によって users.google_calendar_refresh_token に
+ * それ以前（あるいはアプリ側の暗号化漏れ）によって google_calendar_refresh_token に
+ * (20261201000001 で users から user_secrets に移った)
  * 平文のまま保存された行が残っている可能性がある。読み出し側
  * apps/web/lib/google-calendar-auth.ts が isEncrypted(token) ? decrypt(token) : token という
  * 分岐を持つのはそのため。本スクリプトはその平文行を暗号化して正規化する。
@@ -83,18 +84,18 @@ async function findPlaintextTokenRows(
 
   for (;;) {
     const { data, error } = await supabase
-      .from("users")
-      .select("id, google_calendar_refresh_token")
+      .from("user_secrets")
+      .select("user_id, google_calendar_refresh_token")
       .not("google_calendar_refresh_token", "is", null)
       // ORDER BY を明示しないと Postgres はページ間で行順を保証しない。
       // 本番実行中に他ユーザーのログイン (INSERT/UPDATE) が走ると行がページを跨いで
       // シフトし、対象行を取りこぼす (再実行で拾えるとはいえ「全件処理した」という
-      // 実行結果が不正確になる)。id で安定ソートする。
-      .order("id", { ascending: true })
+      // 実行結果が不正確になる)。user_id で安定ソートする。
+      .order("user_id", { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw new Error(`users テーブルの取得に失敗しました: ${error.message}`);
+      throw new Error(`user_secrets テーブルの取得に失敗しました: ${error.message}`);
     }
 
     if (!data || data.length === 0) {
@@ -104,7 +105,7 @@ async function findPlaintextTokenRows(
     for (const row of data) {
       if (row.google_calendar_refresh_token && !isEncrypted(row.google_calendar_refresh_token)) {
         targets.push({
-          id: row.id,
+          id: row.user_id,
           google_calendar_refresh_token: row.google_calendar_refresh_token,
         });
       }
@@ -121,7 +122,7 @@ async function findPlaintextTokenRows(
 
 /**
  * 1行を暗号化して set_google_refresh_token RPC で保存する
- * （書き込みは既存の RPC 経路を使い、users テーブルへの直接 UPDATE は行わない）
+ * （書き込みは既存の RPC 経路を使い、テーブルへの直接 UPDATE は行わない）
  */
 async function encryptRow(
   supabase: ReturnType<typeof getServiceRoleClient>,

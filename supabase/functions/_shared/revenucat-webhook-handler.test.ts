@@ -99,7 +99,7 @@ function installFetchMock(opts: FetchMockOptions = {}): {
     if (url.pathname === "/rest/v1/user_subscriptions" && req.method === "GET") {
       return (
         opts.onSelectSubscription?.() ??
-        new Response(JSON.stringify({ provider: "revenucat", status: "expired" }), {
+        new Response(JSON.stringify({ provider: "revenuecat", status: "expired" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })

@@ -290,7 +290,6 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
     profile_image_path: null,
     bio: null,
     google_calendar_enabled: false,
-    // google_calendar_refresh_token は機密情報のためクライアント側では除外
     google_calendar_sync_practices: false,
     google_calendar_sync_competitions: false,
     ios_calendar_enabled: false,

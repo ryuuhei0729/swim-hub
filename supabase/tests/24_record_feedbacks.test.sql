@@ -34,10 +34,12 @@ end $$;
 -- フィクスチャ (postgres = BYPASSRLS)
 --   ユーザー (末尾 id):
 --     a1 admin1        team1 admin / approved / active
---     a2 admin_inact   team1 admin / approved / is_active=false
+--     a2 admin_inact   team1 admin / approved / is_active=false (退会済み)
 --     a3 admin_team2   team2 のみの admin
 --     a4 admin2        team1 admin / approved / active (2人目)
 --     a5 admin_pending team1 admin / pending
+--   (20261201000003 以降 is_active は status / left_at と必ず一致するので、
+--    pending は is_active=false、非アクティブの承認済みは left_at ありで作る)
 --     p1 player        team1 の一般メンバー (FB を受ける選手)
 --     p2 plain         team1 の一般メンバー (管理者ではない)
 --   records:
@@ -59,14 +61,14 @@ insert into public.teams (id, name, invite_code, created_by) values
   ('bbbbbbbb-0000-4000-a000-000000000001', 'QA FB Team1', 'QA-FB-T1-CODE', 'aaaaaaaa-0000-4000-a000-0000000000a1'),
   ('bbbbbbbb-0000-4000-a000-000000000002', 'QA FB Team2', 'QA-FB-T2-CODE', 'aaaaaaaa-0000-4000-a000-0000000000a3');
 
-insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at) values
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a1', 'admin', 'approved', true,  '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a2', 'admin', 'approved', false, '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a3', 'admin', 'approved', true,  '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a4', 'admin', 'approved', true,  '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a5', 'admin', 'pending',  true,  '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000c1', 'user',  'approved', true,  '2026-01-01'),
-  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000c2', 'user',  'approved', true,  '2026-01-01');
+insert into public.team_memberships (team_id, user_id, role, status, is_active, joined_at, left_at) values
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a1', 'admin', 'approved', true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a2', 'admin', 'approved', false, '2026-01-01', '2026-06-01'),
+  ('bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a3', 'admin', 'approved', true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a4', 'admin', 'approved', true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a5', 'admin', 'pending',  false, '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000c1', 'user',  'approved', true,  '2026-01-01', null),
+  ('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000c2', 'user',  'approved', true,  '2026-01-01', null);
 
 insert into public.competitions (id, title, date, pool_type, team_id, created_by) values
   ('cccccccc-0000-4000-a000-000000000001', 'QA FB Meet', '2026-10-01', 1,
@@ -360,7 +362,8 @@ select throws_ok(
 
 -- 退団した管理者は自分の FB でも編集・削除できない
 select public.qa_logout();
-update public.team_memberships set is_active = false
+-- 退会処理 (members.ts の leave / remove) と同じく is_active と left_at を一緒に書く
+update public.team_memberships set is_active = false, left_at = '2026-11-01'
   where team_id = 'bbbbbbbb-0000-4000-a000-000000000001'
     and user_id = 'aaaaaaaa-0000-4000-a000-0000000000a4';
 select public.qa_login_as('aaaaaaaa-0000-4000-a000-0000000000a4');
