@@ -51,6 +51,8 @@ describe("AvatarUpload — 削除失敗時のエラー表示 — 情報露出防
       );
 
       await user.click(await screen.findByLabelText("アバターを削除"));
+      // 削除前に確認が出る (swimhub-tasks#130)
+      await user.click(screen.getByRole("button", { name: "削除" }));
 
       await screen.findByText("画像の削除に失敗しました");
       expect(screen.queryByText(/row-level security policy/)).not.toBeInTheDocument();
@@ -77,6 +79,8 @@ describe("AvatarUpload — 削除失敗時のエラー表示 — 情報露出防
       );
 
       await user.click(await screen.findByLabelText("アバターを削除"));
+      // 削除前に確認が出る (swimhub-tasks#130)
+      await user.click(screen.getByRole("button", { name: "削除" }));
 
       await waitFor(() => {
         expect(screen.getByText("テスト用の翻訳済みメッセージ")).toBeInTheDocument();

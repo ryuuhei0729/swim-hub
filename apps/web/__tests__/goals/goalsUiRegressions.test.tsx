@@ -167,6 +167,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
           styles={[baseStyle]}
           onUpdate={async () => {}}
           onDelete={async () => {}}
+          onEdit={() => {}}
         />,
       ));
     }).not.toThrow();
@@ -265,8 +266,6 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
           goals={[goalWithNullCompetition]}
           selectedGoalId={null}
           onSelectGoal={() => {}}
-          onDeleteGoal={async () => {}}
-          onEditGoal={() => {}}
         />,
       ),
     ).not.toThrow();
@@ -302,8 +301,6 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
         goals={[goalWithNullCompetition]}
         selectedGoalId={null}
         onSelectGoal={() => {}}
-        onDeleteGoal={async () => {}}
-        onEditGoal={() => {}}
       />,
     );
 
@@ -316,45 +313,60 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
 });
 
 describe("[V-UI-NULLCOMP-EDIT] goal.competition が null の目標は編集不可・削除は可能", () => {
-  it("competition が null の目標カードには編集ボタンが無く、削除ボタンはあり、理由文言 (editUnavailableReason) が表示される", async () => {
+  it("一覧カードには編集・削除ボタンを出さない (詳細側だけに置く。mobile と同じ)", async () => {
     const nullGoal = createGoalWithNullCompetition({ id: "goal-null" });
 
     const { container } = renderWithQueryClient(
-      <GoalList
-        goals={[nullGoal]}
-        selectedGoalId={null}
-        onSelectGoal={() => {}}
-        onDeleteGoal={async () => {}}
-        onEditGoal={() => {}}
-      />,
+      <GoalList goals={[nullGoal]} selectedGoalId={null} onSelectGoal={() => {}} />,
     );
 
     // GoalAPI.getGoalCurrentBestTime (モック) の非同期解決を待って act 警告を避ける
     await screen.findByText("goals.list.editUnavailableReason");
     expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("goals.list.delete")).toBeInTheDocument();
+    expect(screen.queryByLabelText("goals.list.delete")).not.toBeInTheDocument();
     // 水路が分からないので Best 差は出さない。カードに進捗バーは無い
     expect(screen.queryByText(/diffFromBest/)).not.toBeInTheDocument();
     expect(container.querySelector(".bg-blue-600.h-2")).toBeNull();
   });
 
-  it("[非退行] competition がある目標カードには従来どおり編集ボタンが表示される", async () => {
+  it("competition が null の目標の詳細には編集ボタンが無く、削除ボタンはある", async () => {
+    const nullGoal = createGoalWithNullCompetition({ id: "goal-null" });
+
+    renderWithQueryClient(
+      <GoalDetail
+        goal={nullGoal}
+        styles={[baseStyle]}
+        onUpdate={async () => {}}
+        onDelete={async () => {}}
+        onEdit={() => {}}
+      />,
+    );
+
+    await screen.findByText("goals.list.editUnavailableReason");
+    expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("goals.list.delete")).toBeInTheDocument();
+  });
+
+  it("[非退行] competition がある目標の詳細には編集ボタンが表示され、押すと onEdit が呼ばれる", async () => {
     const normalGoal = createGoalWithNullCompetition({
       id: "goal-with-competition",
       competition: { id: "comp-1", title: "テスト大会", date: "2026-01-01", pool_type: 1 } as never,
     });
+    const onEdit = vi.fn();
 
     renderWithQueryClient(
-      <GoalList
-        goals={[normalGoal]}
-        selectedGoalId={null}
-        onSelectGoal={() => {}}
-        onDeleteGoal={async () => {}}
-        onEditGoal={() => {}}
+      <GoalDetail
+        goal={normalGoal}
+        styles={[baseStyle]}
+        onUpdate={async () => {}}
+        onDelete={async () => {}}
+        onEdit={onEdit}
       />,
     );
 
-    await screen.findByLabelText("goals.list.edit");
+    const editButton = await screen.findByLabelText("goals.list.edit");
     expect(screen.queryByText("goals.list.editUnavailableReason")).not.toBeInTheDocument();
+    editButton.click();
+    expect(onEdit).toHaveBeenCalledWith("goal-with-competition");
   });
 });

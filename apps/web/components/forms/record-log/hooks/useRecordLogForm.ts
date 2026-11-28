@@ -15,6 +15,7 @@ import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { formatSecondsToDisplay } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { hasRecordInputBesidesTime } from "@/utils/tabModalDiff";
+import { getReactionTimeError, type ReactionTimeError } from "../utils/reactionTimeValidation";
 
 interface UseRecordLogFormOptions {
   isOpen: boolean;
@@ -57,6 +58,8 @@ interface UseRecordLogFormReturn {
     hasTimeFormatError: boolean;
     /** タイムが空なのにタイム以外の入力 (または既存 DB 行) がある最初の行。無ければ null */
     timeRequiredIndex: number | null;
+    /** リアクションタイムが形式不正・範囲外 (-1〜2秒) の最初の行。無ければ null */
+    reactionTimeError: { index: number; kind: ReactionTimeError } | null;
     submitList: RecordLogFormData[];
   };
   isSplitTimeLimitReached: (entryIndex: number) => boolean;
@@ -568,6 +571,8 @@ export const useRecordLogForm = ({
     hasTimeFormatError: boolean;
     /** タイムが空なのにタイム以外の入力 (または既存 DB 行) がある最初の行。無ければ null */
     timeRequiredIndex: number | null;
+    /** リアクションタイムが形式不正・範囲外 (-1〜2秒) の最初の行。無ければ null */
+    reactionTimeError: { index: number; kind: ReactionTimeError } | null;
     submitList: RecordLogFormData[];
   } => {
     let hasStyleError = false;
@@ -579,6 +584,16 @@ export const useRecordLogForm = ({
         isInvalidTimeInput(data.timeDisplayValue) ||
         data.splitTimes.some((st) => isInvalidTimeInput(st.splitTimeDisplayValue)),
     );
+    // リアクションタイムの範囲 (-1〜2秒) を保存時にも検査する (入力欄の min/max 属性は
+    // 保存を止めないため。mobile の CompetitionTabFormScreen と同じ判定)
+    let reactionTimeError: { index: number; kind: ReactionTimeError } | null = null;
+    for (const [index, data] of formDataList.entries()) {
+      const kind = getReactionTimeError(data.reactionTime);
+      if (kind) {
+        reactionTimeError = { index, kind };
+        break;
+      }
+    }
     const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>(
       (acc, data, index) => {
         const styleId = data.styleId;
@@ -630,7 +645,7 @@ export const useRecordLogForm = ({
       [],
     );
 
-    return { hasStyleError, hasTimeFormatError, timeRequiredIndex, submitList };
+    return { hasStyleError, hasTimeFormatError, timeRequiredIndex, reactionTimeError, submitList };
   }, [formDataList, styles]);
 
   const isSplitTimeLimitReached = useCallback(

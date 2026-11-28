@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   updateAllMilestoneStatuses: vi.fn(),
   getExpiredGoals: vi.fn(),
   getExpiredMilestones: vi.fn(),
+  nextCompetitionCardHasTeams: [] as boolean[],
 }));
 
 vi.mock("@/contexts", () => ({
@@ -113,7 +114,13 @@ vi.mock("../../_hooks/useCalendarHandlers", () => ({
 vi.mock("../../_components/CalendarContainer", () => ({ __esModule: true, default: () => null }));
 vi.mock("../FormModals", () => ({ FormModals: () => null }));
 vi.mock("../../_components/DashboardNoticesSection", () => ({ __esModule: true, default: () => null }));
-vi.mock("../../_components/NextCompetitionCard", () => ({ __esModule: true, default: () => null }));
+vi.mock("../../_components/NextCompetitionCard", () => ({
+  __esModule: true,
+  default: ({ hasTeams }: { hasTeams: boolean }) => {
+    mocks.nextCompetitionCardHasTeams.push(hasTeams);
+    return null;
+  },
+}));
 vi.mock("../../_components/DashboardBestTimesCard", () => ({ __esModule: true, default: () => null }));
 vi.mock("../../_components/LastPracticeCard", () => ({ __esModule: true, default: () => null }));
 vi.mock("../../_components/DashboardCardCarousel", () => ({
@@ -143,8 +150,9 @@ vi.mock("@/app/[locale]/(authenticated)/goals/_components/GoalReflectionModal", 
 }));
 
 import DashboardClient from "../DashboardClient";
+import { resetExpiredGoalCheckSession } from "../../_hooks/expiredGoalCheckSession";
 
-function renderClient() {
+function renderClient(teams: React.ComponentProps<typeof DashboardClient>["teams"] = []) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
   });
@@ -152,7 +160,7 @@ function renderClient() {
     <QueryClientProvider client={queryClient}>
       <DashboardClient
         initialCalendarMonth="2026-01"
-        teams={[]}
+        teams={teams}
         styles={[]}
         tags={[]}
       />
@@ -162,6 +170,8 @@ function renderClient() {
 
 describe("DashboardClient — マウント時 checkExpired の呼び出し順序", () => {
   beforeEach(() => {
+    // 判定済みフラグはページの外 (モジュール) にあるので、テストごとに消す
+    resetExpiredGoalCheckSession();
     mocks.callOrder.length = 0;
     mocks.updateAllMilestoneStatuses.mockReset().mockResolvedValue(undefined);
     mocks.getExpiredGoals.mockReset().mockResolvedValue([]);
@@ -221,5 +231,56 @@ describe("DashboardClient — マウント時 checkExpired の呼び出し順序
     // (呼び出しが握りつぶされずに後続処理へ進んでいることの確認)。
     expect(mocks.getExpiredGoals).toHaveBeenCalledTimes(1);
     expect(mocks.getExpiredMilestones).toHaveBeenCalledTimes(1);
+  });
+
+  it("確認が終わったあとにページを離れて戻ってきても、もう一度は確認しない (スキップした振り返りをまた出さない)", async () => {
+    const first = renderClient();
+    await waitFor(() => expect(mocks.getExpiredMilestones).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    renderClient();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledTimes(1);
+    expect(mocks.getExpiredGoals).toHaveBeenCalledTimes(1);
+  });
+
+  it("確認が終わる前にページを離れたときは、次に開いたときにもう一度確認する", async () => {
+    mocks.updateAllMilestoneStatuses.mockImplementation(() => new Promise<void>(() => {}));
+    const first = renderClient();
+    await waitFor(() => expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    mocks.updateAllMilestoneStatuses.mockReset().mockResolvedValue(undefined);
+    renderClient();
+    await waitFor(() => expect(mocks.getExpiredMilestones).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("DashboardClient — 「チームの大会を見る」の表示条件", () => {
+  beforeEach(() => {
+    resetExpiredGoalCheckSession();
+    mocks.nextCompetitionCardHasTeams.length = 0;
+    mocks.updateAllMilestoneStatuses.mockReset().mockResolvedValue(undefined);
+    mocks.getExpiredGoals.mockReset().mockResolvedValue([]);
+    mocks.getExpiredMilestones.mockReset().mockResolvedValue([]);
+  });
+
+  const membership = (status: "pending" | "approved" | "rejected", isActive = true) =>
+    ({ id: `m-${status}`, team_id: "team-1", user_id: "user-1", status, is_active: isActive }) as never;
+
+  it("参加申請中のチームしかないときは出さない", () => {
+    renderClient([membership("pending")]);
+    expect(mocks.nextCompetitionCardHasTeams.at(-1)).toBe(false);
+  });
+
+  it("承認済み・有効なチームがあるときは出す", () => {
+    renderClient([membership("pending"), membership("approved")]);
+    expect(mocks.nextCompetitionCardHasTeams.at(-1)).toBe(true);
+  });
+
+  it("承認済みでも無効 (退会済み) なら出さない", () => {
+    renderClient([membership("approved", false)]);
+    expect(mocks.nextCompetitionCardHasTeams.at(-1)).toBe(false);
   });
 });

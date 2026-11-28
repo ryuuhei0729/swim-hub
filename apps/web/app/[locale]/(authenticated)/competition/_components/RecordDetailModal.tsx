@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { XMarkIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/contexts";
+import { RecordAPI } from "@apps/shared/api/records";
+import type { CompetitionShareData } from "@/components/share";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
@@ -12,6 +15,13 @@ import RecordFeedbackSection from "@/components/record-feedback/RecordFeedbackSe
 import type { Record as RecordType, Style } from "@apps/shared/types";
 
 const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), { ssr: false });
+const ShareCardModal = dynamic(
+  () =>
+    import("@/components/share/ShareCardModal").then((mod) => ({
+      default: mod.ShareCardModal,
+    })),
+  { ssr: false },
+);
 
 export interface RecordDetailModalProps {
   isOpen: boolean;
@@ -40,7 +50,10 @@ export default function RecordDetailModal({
 }: RecordDetailModalProps) {
   const t = useTranslations("competition");
   const tPractice = useTranslations("practice");
+  const tDashboard = useTranslations("dashboard");
+  const { supabase } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [shareData, setShareData] = useState<CompetitionShareData | null>(null);
 
   if (!isOpen) return null;
 
@@ -57,6 +70,51 @@ export default function RecordDetailModal({
     raceDistance && recordTime && recordTime > 0 && !hasGoalSplit
       ? [...baseSplitTimes, { distance: raceDistance, splitTime: recordTime }]
       : baseSplitTimes;
+
+  // 大会に紐付かない記録は大会日が無いため、登録日時 (created_at) を記録日として扱う
+  // (一覧の日付・並び替え、RecordAPI.getPreviousBestTime の一括登録の比較と同じ基準)
+  const recordDate = record.created_at || null;
+
+  // 共有: 前回ベストを取って記録シェアカードを開く (日付詳細 CompetitionDetails の
+  // share-record-button と同じ方針。取得失敗時はバッジ無しで開く)
+  const handleShare = async () => {
+    const poolTypeNum = record.pool_type === 1 ? 1 : 0;
+    let previousBest: number | undefined;
+    let isFirstRecord = false;
+    if (record.style_id != null && !Number.isNaN(record.style_id) && recordDate) {
+      try {
+        const prevBest = await new RecordAPI(supabase).getPreviousBestTime(
+          record.style_id,
+          poolTypeNum,
+          record.id,
+          record.is_relaying ?? false,
+          recordDate,
+        );
+        if (prevBest === null) {
+          isFirstRecord = true;
+        } else {
+          previousBest = prevBest;
+        }
+      } catch {
+        // 取得失敗時はバッジ非表示（初記録の誤表示を防ぐ）
+      }
+    }
+    setShareData({
+      // mobile StandaloneRecordDetailModal と同じく、大会名は既定名・日付と場所は空
+      competitionName: tDashboard("competition.defaultName"),
+      date: "",
+      place: "",
+      poolType: poolTypeNum === 1 ? "long" : "short",
+      eventName: style?.name_jp || "",
+      raceDistance: style?.distance || 0,
+      time: record.time || 0,
+      reactionTime: record.reaction_time ?? undefined,
+      splitTimes: record.split_times,
+      isFirstRecord,
+      previousBest,
+      userName: "",
+    });
+  };
 
   const handleDeleteConfirm = async () => {
     await onDelete();
@@ -89,6 +147,15 @@ export default function RecordDetailModal({
                     <div className="text-xs font-medium text-gray-500">{t("table.style")}</div>
                     <div className="text-xs font-medium text-gray-500">{tPractice("details.timeLabel")}</div>
                     <div className="flex items-center justify-end gap-0.5">
+                      <button
+                        onClick={handleShare}
+                        className="p-1 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                        title={tDashboard("competition.shareRecord")}
+                        aria-label={tDashboard("competition.shareRecord")}
+                        data-testid="share-standalone-record-button"
+                      >
+                        <ShareIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={onEdit}
                         className="p-1 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -124,6 +191,7 @@ export default function RecordDetailModal({
                         poolType={record.pool_type}
                         currentTime={record.time || 0}
                         isRelaying={record.is_relaying}
+                        recordDate={recordDate}
                       />
                     </div>
                     <div
@@ -180,6 +248,15 @@ export default function RecordDetailModal({
         onConfirm={handleDeleteConfirm}
         onCancel={() => setShowDeleteConfirm(false)}
       />
+
+      {shareData && (
+        <ShareCardModal
+          isOpen={!!shareData}
+          onClose={() => setShareData(null)}
+          type="competition"
+          data={shareData}
+        />
+      )}
     </div>
   );
 }

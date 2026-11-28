@@ -23,6 +23,8 @@ interface GoalReflectionModalProps {
   onSkip: () => void;
   /** 保存成功後。呼び出し元が次の期限切れを取得して表示する */
   onSaved: () => Promise<void>;
+  /** 「目標管理を見る」。モーダルを閉じて目標タブへ移る (web の振り返りと同じ) */
+  onGoToGoals: () => void;
 }
 
 /** 期限切れ目標の振り返り (達成した / 達成できなかった + 理由) */
@@ -30,6 +32,7 @@ export const GoalReflectionModal: React.FC<GoalReflectionModalProps> = ({
   goal,
   onSkip,
   onSaved,
+  onGoToGoals,
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
@@ -124,6 +127,9 @@ export const GoalReflectionModal: React.FC<GoalReflectionModalProps> = ({
             </Text>
           )}
         </View>
+        <Pressable onPress={onGoToGoals} accessibilityRole="link">
+          <Text style={styles.link}>{t("goals.goalReflection.goToGoalsLink")}</Text>
+        </Pressable>
         <Text style={styles.question}>{t("goals.goalReflection.achievedQuestion")}</Text>
         <View style={styles.choiceRow}>
           <Pressable
@@ -228,6 +234,11 @@ const styles = StyleSheet.create({
   summaryMeta: {
     fontSize: 12,
     color: "#6B7280",
+  },
+  link: {
+    fontSize: 12,
+    color: "#2563EB",
+    textDecorationLine: "underline",
   },
   question: {
     fontSize: 14,

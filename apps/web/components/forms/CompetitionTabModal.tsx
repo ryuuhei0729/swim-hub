@@ -985,15 +985,29 @@ export default function CompetitionTabModal({
           hasStyleError,
           hasTimeFormatError,
           timeRequiredIndex,
+          reactionTimeError,
           submitList: recordList,
         } = prepareRecordSubmitData();
-        if (hasStyleError || hasTimeFormatError || timeRequiredIndex !== null) {
+        if (
+          hasStyleError ||
+          hasTimeFormatError ||
+          timeRequiredIndex !== null ||
+          reactionTimeError !== null
+        ) {
           setTabErrors((prev) => ({ ...prev, record: true }));
           setActiveTab("record");
           if (timeRequiredIndex !== null) {
             // エラーの記録を開き、何が足りないかを文で出す (タブの印だけでは気づけない)
             setActiveRecordIndex(timeRequiredIndex);
             setRecordValidationError(tRecord("formError_noTime"));
+          } else if (reactionTimeError !== null) {
+            // リアクションタイムの範囲外 (-1〜2秒)・形式不正。該当の記録を開いて理由を出す
+            setActiveRecordIndex(reactionTimeError.index);
+            setRecordValidationError(
+              reactionTimeError.kind === "range"
+                ? tRecord("reactionTimeRange")
+                : tRecord("reactionTimeFormatInvalid"),
+            );
           }
           isSubmittingRef.current = false;
           setIsSubmitted(false);

@@ -11,6 +11,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import type { Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
 import GoalForm, { type NewCompetitionInput } from "./forms/GoalForm";
+import { useDiscardConfirm } from "./shared/useDiscardConfirm";
 
 interface GoalEditModalProps {
   isOpen: boolean;
@@ -109,6 +110,17 @@ export default function GoalEditModal({
     }
   }, [isOpen, competitionMode, supabase, goalAPI, goal.competition.id]);
 
+  // 入力途中で閉じるときの破棄確認 (開いた時点の値と比べる)
+  const discard = useDiscardConfirm(() => handleClose());
+  const formValues = {
+    competitionMode,
+    selectedCompetitionId: competitionMode === "existing" ? selectedCompetitionId : "",
+    newCompetition: competitionMode === "new" ? newCompetition : null,
+    styleId,
+    targetTime: targetTime && targetTime > 0 ? targetTime : null,
+  };
+  const { markPristine } = discard;
+
   // 既存の目標データでフォームを初期化
   useEffect(() => {
     if (isOpen && goal) {
@@ -117,8 +129,15 @@ export default function GoalEditModal({
       setStyleId(goal.style_id.toString());
       setTargetTime(goal.target_time);
       setValidationError(null);
+      markPristine({
+        competitionMode: "existing",
+        selectedCompetitionId: goal.competition.id,
+        newCompetition: null,
+        styleId: goal.style_id.toString(),
+        targetTime: goal.target_time > 0 ? goal.target_time : null,
+      });
     }
-  }, [isOpen, goal]);
+  }, [isOpen, goal, markPristine]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +247,10 @@ export default function GoalEditModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
+          onClick={() => discard.requestClose(formValues)}
+        />
         <div
           role="dialog"
           aria-modal="true"
@@ -238,7 +260,7 @@ export default function GoalEditModal({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("edit.title")}</h3>
               <button
-                onClick={handleClose}
+                onClick={() => discard.requestClose(formValues)}
                 aria-label={t("edit.closeAriaLabel")}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -273,7 +295,12 @@ export default function GoalEditModal({
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => discard.requestClose(formValues)}
+                  disabled={isLoading}
+                >
                   {t("edit.cancelButton")}
                 </Button>
                 <Button type="submit" loading={isLoading}>
@@ -284,6 +311,7 @@ export default function GoalEditModal({
           </div>
         </div>
       </div>
+      {discard.confirmDialog}
     </div>
   );
 }

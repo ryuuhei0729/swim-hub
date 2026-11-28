@@ -160,7 +160,7 @@ export default function RecordLogForm({
     setFormError(null);
     setIsSubmitted(true);
 
-    const { hasStyleError, hasTimeFormatError, timeRequiredIndex, submitList } =
+    const { hasStyleError, hasTimeFormatError, timeRequiredIndex, reactionTimeError, submitList } =
       prepareSubmitData();
 
     if (hasStyleError) {
@@ -171,6 +171,15 @@ export default function RecordLogForm({
 
     if (hasTimeFormatError) {
       setFormError(tTimeError("invalidTimeFormat"));
+      setIsSubmitted(false);
+      return;
+    }
+
+    // リアクションタイムが形式不正・範囲外 (-1〜2秒) なら保存しない
+    if (reactionTimeError) {
+      setFormError(
+        reactionTimeError.kind === "range" ? t("reactionTimeRange") : t("reactionTimeFormatInvalid"),
+      );
       setIsSubmitted(false);
       return;
     }

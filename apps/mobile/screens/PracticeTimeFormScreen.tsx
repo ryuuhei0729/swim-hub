@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
   InputAccessoryView,
   Keyboard,
   Platform,
+  Alert,
 } from "react-native";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
@@ -82,6 +83,11 @@ export const PracticeTimeFormScreen: React.FC = () => {
   // タイムエントリー
   const [times, setTimes] = useState<TimeEntryWithDisplay[]>([]);
 
+  // 開いた時点のタイム (未保存の確認用)。id → 確定タイム・表示値
+  const initialSnapshotRef = useRef<Map<string, { time: number; displayValue: string }>>(new Map());
+  // 保存ボタンで戻るときは未保存の確認を出さない
+  const [isSaved, setIsSaved] = useState(false);
+
   // 現在フォーカス中のセルID（保存時に blur を待たずに確定値へ反映するため）
   const focusedIdRef = useRef<string | null>(null);
 
@@ -111,8 +117,50 @@ export const PracticeTimeFormScreen: React.FC = () => {
         });
       }
     }
+    initialSnapshotRef.current = new Map(
+      allCombinations.map((entry) => [
+        entry.id,
+        { time: entry.time, displayValue: entry.displayValue ?? "" },
+      ]),
+    );
     setTimes(allCombinations);
   }, [setCount, repCount, initialTimes, resetContext]);
+
+  // 開いた時点から変わったか。確定タイムの差に加え、フォーカス中の1本目 (自由入力) で
+  // 打ちかけてまだ確定していない文字列も変更として扱う (キーボードを出したままキャンセルを
+  // 押すと blur が来ないため)。2本目以降のシード (前の本の十の位) だけが入った状態は
+  // time=0 のままなので変更に数えない
+  const hasUnsavedChanges = useMemo(
+    () =>
+      times.some((entry) => {
+        const initial = initialSnapshotRef.current.get(entry.id);
+        if (!initial) return false;
+        if (entry.time !== initial.time) return true;
+        return (
+          entry.id === focusedIdRef.current &&
+          entry.quickSeed === undefined &&
+          (entry.displayValue ?? "") !== initial.displayValue
+        );
+      }),
+    [times],
+  );
+
+  // キャンセル・戻る操作で入力が消えるときは確認する (web の TimeInputModal と同じ)
+  usePreventRemove(!isSaved && hasUnsavedChanges, ({ data }) => {
+    Alert.alert(t("common.discardTitle"), t("common.discardMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.discard"),
+        style: "destructive",
+        onPress: () => navigation.dispatch(data.action),
+      },
+    ]);
+  });
+
+  // isSaved の再レンダー commit 後に戻ることで、preventRemove=false が確定した状態で画面を外す
+  useEffect(() => {
+    if (isSaved) navigation.goBack();
+  }, [isSaved, navigation]);
 
   // タイム入力の変更（入力中は表示値のみ更新）
   const handleTimeChange = (id: string, value: string) => {
@@ -304,7 +352,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
       }));
       saveTimes(currentMenuId, timeEntries);
     }
-    navigation.goBack();
+    setIsSaved(true);
   };
 
   return (

@@ -58,7 +58,7 @@ function renderDetail() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={qc}>
-      <GoalDetail goal={goal} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} />
+      <GoalDetail goal={goal} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} onEdit={() => {}} />
     </QueryClientProvider>,
   );
   return { ...view, goal };
