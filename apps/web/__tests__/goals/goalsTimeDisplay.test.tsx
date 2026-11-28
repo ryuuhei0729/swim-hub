@@ -115,8 +115,6 @@ function renderList(goal: ListGoal) {
         goals={[goal]}
         selectedGoalId={null}
         onSelectGoal={() => {}}
-        onDeleteGoal={async () => {}}
-        onEditGoal={() => {}}
       />
     </QueryClientProvider>,
   );
@@ -152,7 +150,7 @@ function renderDetail(goal: GoalWithMilestones) {
   const queryClient = newQueryClient();
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <GoalDetail goal={goal} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} />
+      <GoalDetail goal={goal} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} onEdit={() => {}} />
     </QueryClientProvider>,
   );
   return { ...result, queryClient };
@@ -366,7 +364,7 @@ describe("詳細: 大会日までの残り日数", () => {
   it("サーバー描画では残り日数を出さない (サーバーとブラウザで「今日」がずれてもハイドレーションが食い違わない)", () => {
     const html = renderToString(
       <QueryClientProvider client={newQueryClient()}>
-        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} />
+        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} onEdit={() => {}} />
       </QueryClientProvider>,
     );
 
@@ -520,7 +518,7 @@ describe("詳細: 見出し・達成率 (初期タイムは出さない)", () =>
     const queryClient = newQueryClient();
     const ui = (
       <QueryClientProvider client={queryClient}>
-        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} />
+        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} onEdit={() => {}} />
       </QueryClientProvider>
     );
 
@@ -541,10 +539,8 @@ describe("詳細: 見出し・達成率 (初期タイムは出さない)", () =>
           goals={[listGoal()]}
           selectedGoalId="goal-1"
           onSelectGoal={() => {}}
-          onDeleteGoal={async () => {}}
-          onEditGoal={() => {}}
         />
-        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} />
+        <GoalDetail goal={detailGoal()} styles={[fr50]} onUpdate={async () => {}} onDelete={async () => {}} onEdit={() => {}} />
       </QueryClientProvider>,
     );
 

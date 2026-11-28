@@ -65,8 +65,6 @@ function Harness() {
       goals={data}
       selectedGoalId={null}
       onSelectGoal={() => {}}
-      onDeleteGoal={async () => {}}
-      onEditGoal={() => {}}
     />
   );
 }
@@ -90,7 +88,7 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
     mocks.getGoalCurrentBestTime.mockReset().mockResolvedValue(null);
   });
 
-  it("competition_id が指すレコードが getSelectableCompetitions() の結果に無い場合、GoalList は編集ボタンを出さず『大会情報なし』文言を表示する", async () => {
+  it("competition_id が指すレコードが getSelectableCompetitions() の結果に無い場合、GoalList は『大会情報なし』文言を表示する (編集・削除はカードに出さない)", async () => {
     mocks.getGoals.mockResolvedValue([
       {
         id: "goal-1",
@@ -114,11 +112,11 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
 
     await screen.findByText("goals.list.editUnavailableReason");
     expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("goals.list.delete")).toBeInTheDocument();
+    expect(screen.queryByLabelText("goals.list.delete")).not.toBeInTheDocument();
     expect(screen.getByText("goals.list.competitionInfoUnavailable")).toBeInTheDocument();
   });
 
-  it("[非退行] competition_id が解決できる場合は従来どおり編集ボタンが表示される", async () => {
+  it("[非退行] competition_id が解決できる場合は大会名を出し、『大会情報なし』の理由文言は出さない", async () => {
     mocks.getGoals.mockResolvedValue([
       {
         id: "goal-2",
@@ -138,7 +136,9 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
 
     renderWithQueryClient();
 
-    await screen.findByLabelText("goals.list.edit");
+    await screen.findByText("解決できる大会");
     expect(screen.queryByText("goals.list.editUnavailableReason")).not.toBeInTheDocument();
+    // 編集・削除は詳細 (GoalDetail) 側だけ。一覧カードには出さない (mobile と同じ)
+    expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
   });
 });

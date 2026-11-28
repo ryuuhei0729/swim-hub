@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
@@ -34,6 +34,16 @@ import {
   type MilestoneFormTab,
 } from "./forms/milestoneFormModel";
 import GoalSetCalculatorModal from "./GoalSetCalculatorModal";
+import { useDiscardConfirm } from "./shared/useDiscardConfirm";
+
+/** 開いた時点 (初期値) のフォーム。入力途中で閉じるときの破棄確認の比較元 */
+const PRISTINE_FORM = {
+  tab: "practice_time" as MilestoneFormTab,
+  title: "",
+  deadline: "",
+  params: defaultParamsFor("practice_time"),
+  addToTemplate: false,
+};
 
 interface MilestoneCreateModalProps {
   isOpen: boolean;
@@ -84,6 +94,14 @@ export default function MilestoneCreateModal({
 
   const goalAPI = new GoalAPI(supabase);
   const templateAPI = new PracticeLogTemplateAPI(supabase);
+
+  // 入力途中で閉じるときの破棄確認。作成フォームは毎回初期値から始まる
+  const discard = useDiscardConfirm(() => handleClose());
+  const formValues = { tab, title, deadline, params, addToTemplate };
+  const { markPristine } = discard;
+  useEffect(() => {
+    if (isOpen) markPristine(PRISTINE_FORM);
+  }, [isOpen, markPristine]);
 
   // Goalが100m種目かどうかをチェック
   const is100mGoal = useMemo(() => {
@@ -279,7 +297,10 @@ export default function MilestoneCreateModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
+          onClick={() => discard.requestClose(formValues)}
+        />
         <div
           role="dialog"
           aria-modal="true"
@@ -289,7 +310,7 @@ export default function MilestoneCreateModal({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("milestoneCreate.title")}</h3>
               <button
-                onClick={handleClose}
+                onClick={() => discard.requestClose(formValues)}
                 aria-label={t("milestoneCreate.closeAriaLabel")}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -347,7 +368,7 @@ export default function MilestoneCreateModal({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleClose}
+                    onClick={() => discard.requestClose(formValues)}
                     disabled={isLoading}
                   >
                     {t("milestoneCreate.cancelButton")}
@@ -370,6 +391,7 @@ export default function MilestoneCreateModal({
         goal={goal}
         style={goal.style}
       />
+      {discard.confirmDialog}
     </div>
   );
 }

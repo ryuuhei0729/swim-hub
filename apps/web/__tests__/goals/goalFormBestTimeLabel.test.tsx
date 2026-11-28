@@ -248,7 +248,7 @@ describe("GoalCreateModal", () => {
       expect(document.body.textContent).not.toMatch(/goals\.detail\.noRecord|—/);
     });
 
-    it("種目を変えるとその種目のベストに切り替わり、目標タイム欄の値は変わらない", async () => {
+    it("種目を変えるとその種目のベストに切り替わり、目標タイム欄は空になる (mobile と同じ。swimhub-tasks#129)", async () => {
       const user = userEvent.setup();
       await open();
       await pickCompetition(user, "c2");
@@ -257,7 +257,7 @@ describe("GoalCreateModal", () => {
       expect(labelText()).toBe(bestLabel("bestTimeLabel", "58.00"));
       await pickStyle(user, 50, "Fr");
       expect(labelText()).toBe(bestLabel("bestTimeLabel", "27.00"));
-      expect(targetInput().value).toBe("1:00.00");
+      expect(targetInput().value).toBe("");
     });
 
     it("新規大会 (既定は短水路) でも出て、水路ボタンで入れ替わる (55 → 58 → 55)。目標タイム欄の値は変わらない", async () => {
@@ -339,6 +339,8 @@ describe("GoalCreateModal", () => {
       await pickStyle(user, 100, "Fr");
       expect(labelText()).toBe(bestLabel("bestTimeLabel", "58.00"));
       await user.click(screen.getByRole("button", { name: "goals.create.closeAriaLabel" }));
+      // 入力途中なので破棄の確認が出る (swimhub-tasks#90)。閉じるを選ぶ
+      await user.click(screen.getByRole("button", { name: "forms.unsavedChanges.confirmClose" }));
       rerender(ui(false));
       await settle();
       rerender(ui(true));
@@ -576,14 +578,15 @@ describe("GoalEditModal", () => {
     expect(labelText()).toBe(bestLabel("bestTimeLabel", "55.00"));
   });
 
-  it("[V4-1] 大会を長水路杯に変えると 58.00、種目を 50m Fr に変えると 27.00。目標タイム欄は 1:00.00 のまま", async () => {
+  it("[V4-1] 大会を長水路杯に変えると 58.00、種目を 50m Fr に変えると 27.00。大会の変更では目標タイム欄は 1:00.00 のまま、種目を変えると空になる", async () => {
     const user = userEvent.setup();
     await open();
     await pickCompetition(user, "c2");
     expect(labelText()).toBe(bestLabel("bestTimeLabel", "58.00"));
+    expect(targetInput().value).toBe("1:00.00");
     await pickStyle(user, 50, "Fr");
     expect(labelText()).toBe(bestLabel("bestTimeLabel", "27.00"));
-    expect(targetInput().value).toBe("1:00.00");
+    expect(targetInput().value).toBe("");
   });
 
   it("[V4-1] 別の目標 (50m Fr / 長水路杯) で開き直すと、その目標のベスト (27.00) を出す (前の目標の 55.00 ではない)", async () => {
@@ -675,5 +678,75 @@ describe("GoalCreateModal — 種目未選択", () => {
     await settle();
     expect(mocks.createGoal).not.toHaveBeenCalled();
     expect(window.alert).toHaveBeenCalledWith("goals.edit.validation.styleNotSelected");
+  });
+});
+
+// ============================== 入力途中で閉じるときの破棄確認 (swimhub-tasks#90) ==============================
+describe("目標フォームの破棄確認", () => {
+  const confirmButton = () => screen.queryByRole("button", { name: "forms.unsavedChanges.confirmClose" });
+  const keepEditingButton = () => screen.getByRole("button", { name: "forms.unsavedChanges.cancel" });
+
+  it("作成: 何も入力していなければ確認なしで閉じる", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <QueryClientProvider client={qc}>
+        <GoalCreateModal isOpen onClose={onClose} onSuccess={async () => {}} styles={STYLES} />
+      </QueryClientProvider>,
+    );
+    await settle();
+    await user.click(screen.getByRole("button", { name: "goals.create.cancelButton" }));
+    expect(confirmButton()).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("作成: 入力途中で閉じると確認を出し、「編集を続ける」なら閉じない。「閉じる」で閉じる", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <QueryClientProvider client={qc}>
+        <GoalCreateModal isOpen onClose={onClose} onSuccess={async () => {}} styles={STYLES} />
+      </QueryClientProvider>,
+    );
+    await settle();
+    await user.type(targetInput(), "1:00.00");
+    await user.click(screen.getByRole("button", { name: "goals.create.cancelButton" }));
+    expect(confirmButton()).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await user.click(keepEditingButton());
+    expect(confirmButton()).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(targetInput().value).toBe("1:00.00");
+
+    await user.click(screen.getByRole("button", { name: "goals.create.closeAriaLabel" }));
+    await user.click(confirmButton()!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("編集: 開いたままの値なら確認なしで閉じ、目標タイムを変えたら確認を出す", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const goal = {
+      id: "g1", user_id: "u1", competition_id: "c1", style_id: 2, target_time: 60, status: "active",
+      achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
+      competition: COMP_SHORT, style: S_100FR, milestones: [],
+    } as unknown as GoalWithMilestones & { competition: Competition };
+    render(
+      <QueryClientProvider client={qc}>
+        <GoalEditModal isOpen onClose={onClose} onSuccess={async () => {}} goal={goal} styles={STYLES} />
+      </QueryClientProvider>,
+    );
+    await settle();
+    await settle();
+    await user.click(screen.getByRole("button", { name: "goals.edit.cancelButton" }));
+    expect(confirmButton()).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await user.clear(targetInput());
+    await user.type(targetInput(), "59.00");
+    await user.click(screen.getByRole("button", { name: "goals.edit.cancelButton" }));
+    expect(confirmButton()).not.toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

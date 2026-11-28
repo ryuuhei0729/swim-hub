@@ -106,7 +106,7 @@ export default function GoalsClient({
   };
 
   // 目標編集ボタンが押されたときのハンドラー
-  // 大会情報が無い目標 (goal.competition === null) は GoalList 側で
+  // 大会情報が無い目標 (goal.competition === null) は GoalDetail 側で
   // 編集導線自体を出していないため通常は起こらないが、一覧取得後に大会削除・
   // チーム退会が発生する競合を考慮し、フェッチ結果側でも保険的に確認する
   const handleEditGoal = async (goalId: string) => {
@@ -178,8 +178,6 @@ export default function GoalsClient({
                 goals={visibleGoals}
                 selectedGoalId={activeGoalId}
                 onSelectGoal={setSelectedGoalId}
-                onDeleteGoal={handleGoalDeleted}
-                onEditGoal={handleEditGoal}
               />
               {/* 新規目標作成ボタン: 一覧 (0件時は空の案内カード) の下に置く。
                   一覧とボタンの間隔は lg:col-span-1 の space-y-3 により一覧内の
@@ -223,6 +221,7 @@ export default function GoalsClient({
               styles={styles}
               onUpdate={handleGoalUpdated}
               onDelete={handleGoalDeleted}
+              onEdit={handleEditGoal}
             />
           ) : (
             <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">

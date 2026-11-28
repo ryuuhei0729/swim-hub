@@ -54,8 +54,8 @@ describe("D7 Dashboard のマイルストーン振り返りから目標タブへ
   it("DashboardScreen は navigate('MainTabs', { screen: 'Goals' }) を使い、GoalForm 等の stack 画面へは飛ばさない", () => {
     const src = read("screens/DashboardScreen.tsx");
     const hits = src.match(/navigation\.navigate\("MainTabs", \{ screen: "Goals" \}\)/g) ?? [];
-    expect(hits.length).toBe(1); // マイルストーン用モーダルの onGoToGoals のみ (目標用は v6 で廃止)
-    expect(src).not.toMatch(/<GoalReflectionModal[^>]*onGoToGoals/);
+    // 目標用・マイルストーン用の振り返りモーダルの onGoToGoals (目標用は swimhub-tasks#129 で web に揃えて復活)
+    expect(hits.length).toBe(2);
     expect(src).not.toMatch(/navigate\("Goals"/);
   });
 });

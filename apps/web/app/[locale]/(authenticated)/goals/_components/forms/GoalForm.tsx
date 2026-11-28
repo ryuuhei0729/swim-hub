@@ -275,7 +275,13 @@ export default function GoalForm({
           <StyleChipSelector
             styles={styleOptions}
             value={styleId}
-            onChange={onStyleIdChange}
+            onChange={(nextStyleId) => {
+              // 同じ種目に解決されたチップ操作では入力中の目標タイムを消さない
+              if (nextStyleId === styleId) return;
+              onStyleIdChange(nextStyleId);
+              // 種目を変えたら入力中の目標タイムは消す (mobile の GoalFormScreen と同じ)
+              onTargetTimeChange(null);
+            }}
             testIdPrefix="goal-style"
           />
         ) : (
@@ -290,6 +296,8 @@ export default function GoalForm({
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <div className="min-w-[10rem] flex-1">
             <TimeSecondsInput
+              // 種目を変えたら入力欄ごと作り直す (解釈できない打ちかけの文字列も残さない)
+              key={styleId}
               value={targetTime}
               onChange={onTargetTimeChange}
               placeholder={t("form.targetTimePlaceholder")}

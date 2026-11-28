@@ -71,9 +71,17 @@ describe("GoalReflectionModal", () => {
   function setup(g = goal()) {
     const onSkip = vi.fn();
     const onSaved = vi.fn().mockResolvedValue(undefined);
-    wrap(<GoalReflectionModal goal={g} onSkip={onSkip} onSaved={onSaved} />);
-    return { onSkip, onSaved };
+    const onGoToGoals = vi.fn();
+    wrap(<GoalReflectionModal goal={g} onSkip={onSkip} onSaved={onSaved} onGoToGoals={onGoToGoals} />);
+    return { onSkip, onSaved, onGoToGoals };
   }
+
+  it("『目標管理を見る』で onGoToGoals を呼ぶ (保存はしない)", () => {
+    const { onGoToGoals } = setup();
+    fireEvent.click(screen.getByText("目標管理を見る"));
+    expect(onGoToGoals).toHaveBeenCalledTimes(1);
+    expect(h.updateGoal).not.toHaveBeenCalled();
+  });
 
   it("概要: 大会名・目標タイム・マイルストーン達成 1/2。初期タイムの行は出さない (Contract v2 SC6)", () => {
     setup();
@@ -137,12 +145,6 @@ describe("GoalReflectionModal", () => {
     fireEvent.click(screen.getByText("スキップ"));
     expect(onSkip).toHaveBeenCalledTimes(1);
     expect(h.updateGoal).not.toHaveBeenCalled();
-  });
-
-  it("[v6] 目標の振り返りモーダルに『目標管理を見る』リンクは無い (遷移先の目標タブに過去の目標は出ない)。マイルストーン側には残る", () => {
-    setup();
-    expect(screen.queryByText("目標管理を見る")).toBeNull();
-    expect(document.querySelector('[accessibilityrole="link"]')).toBeNull();
   });
 
   it("二重タップで updateGoal は1回", async () => {

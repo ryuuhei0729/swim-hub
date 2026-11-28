@@ -18,6 +18,7 @@ import {
   type MilestoneFormParams,
   type MilestoneFormTab,
 } from "./forms/milestoneFormModel";
+import { useDiscardConfirm } from "./shared/useDiscardConfirm";
 
 interface MilestoneEditModalProps {
   isOpen: boolean;
@@ -54,6 +55,11 @@ export default function MilestoneEditModal({
 
   const goalAPI = new GoalAPI(supabase);
 
+  // 入力途中で閉じるときの破棄確認 (開いた時点の値と比べる)
+  const discard = useDiscardConfirm(onClose);
+  const currentForm = { tab, title, deadline, params };
+  const { markPristine } = discard;
+
   const handleParamsChange = (newParams: MilestoneFormParams) => {
     setParams(newParams);
     if (timeFieldInvalid) setTimeFieldInvalid(false);
@@ -69,23 +75,29 @@ export default function MilestoneEditModal({
       setTitle(milestone.title);
       // タイムゾーンシフトを避けるため、YYYY-MM-DD形式の文字列はそのまま使用
       // それ以外の形式の場合はparseISOで安全にパース
+      let initialDeadline = "";
       if (milestone.deadline) {
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (dateRegex.test(milestone.deadline)) {
-          setDeadline(milestone.deadline);
+          initialDeadline = milestone.deadline;
         } else {
           const parsedDate = parseISO(milestone.deadline);
-          setDeadline(isValid(parsedDate) ? format(parsedDate, "yyyy-MM-dd") : "");
+          initialDeadline = isValid(parsedDate) ? format(parsedDate, "yyyy-MM-dd") : "";
         }
-      } else {
-        setDeadline("");
       }
+      setDeadline(initialDeadline);
       setParams(formValues.params);
       setTimeFieldInvalid(false);
       setParamsInvalid(false);
       setOtherContentInvalid(false);
+      markPristine({
+        tab: formValues.tab,
+        title: milestone.title,
+        deadline: initialDeadline,
+        params: formValues.params,
+      });
     }
-  }, [isOpen, milestone]);
+  }, [isOpen, milestone, markPristine]);
 
   // タブ変更時にパラメータをリセット
   const handleTabChange = (newTab: MilestoneFormTab) => {
@@ -154,7 +166,10 @@ export default function MilestoneEditModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
+          onClick={() => discard.requestClose(currentForm)}
+        />
         <div
           role="dialog"
           aria-modal="true"
@@ -164,7 +179,7 @@ export default function MilestoneEditModal({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("milestoneEdit.title")}</h3>
               <button
-                onClick={onClose}
+                onClick={() => discard.requestClose(currentForm)}
                 aria-label={t("milestoneEdit.closeAriaLabel")}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -195,7 +210,12 @@ export default function MilestoneEditModal({
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => discard.requestClose(currentForm)}
+                  disabled={isLoading}
+                >
                   {t("milestoneEdit.cancelButton")}
                 </Button>
                 <Button type="submit" loading={isLoading}>
@@ -206,6 +226,7 @@ export default function MilestoneEditModal({
           </div>
         </div>
       </div>
+      {discard.confirmDialog}
     </div>
   );
 }
