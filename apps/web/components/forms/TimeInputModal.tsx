@@ -383,6 +383,13 @@ export default function TimeInputModal({
     return validTimes.reduce((sum, te) => sum + te.time, 0) / validTimes.length;
   };
 
+  // 最速タイム (mobile PracticeTimeFormScreen と同じく、入力済みの中で最も速いタイム)
+  const getFastestTime = () => {
+    const validTimes = times.filter((te) => te.time > 0);
+    if (validTimes.length === 0) return 0;
+    return Math.min(...validTimes.map((te) => te.time));
+  };
+
   return (
     <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="time-input-modal">
       <div className="flex min-h-screen items-center justify-center px-4 sm:px-0 py-4">
@@ -495,6 +502,15 @@ export default function TimeInputModal({
               <span className="text-xs sm:text-sm font-medium text-gray-700">{t("overallAvg")}</span>
               <span className="text-sm sm:text-lg font-bold text-blue-600">
                 {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : t("notEntered")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs sm:text-sm font-medium text-gray-700">{t("fastest")}</span>
+              <span
+                className="text-sm sm:text-lg font-bold text-red-600"
+                data-testid="time-input-fastest"
+              >
+                {getFastestTime() > 0 ? formatTime(getFastestTime()) : t("notEntered")}
               </span>
             </div>
           </div>
