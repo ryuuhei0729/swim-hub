@@ -4,7 +4,8 @@
  *   [S-2] 「全て / 練習 / 大会」で絞り込み、該当が無ければ空の案内を出す
  *   [S-3] 「過去」をオンにすると昨日以前を新しい順に出す。オンにするまで過去は取得しない
  *   [S-4] 過去は 20 件ずつ「もっと見る」で読み足す
- *   [S-5] 管理者ビューは 練習追加 / 大会追加 / 一括登録、利用者ビューは 自分のログを追加
+ *   [S-5] 管理者ビューは 練習追加 / 大会追加 / 一括登録、利用者ビューは上部に追加ボタンを出さず
+ *         練習カードごとの「記録追加」から自分のログを付ける (swimhub-tasks#57)
  */
 import React from "react";
 import userEvent from "@testing-library/user-event";
@@ -170,10 +171,11 @@ describe("TeamSchedule — ビューごとの操作", () => {
     expect(await screen.findByTestId("practice-basic-form")).toBeInTheDocument();
   });
 
-  it("[S-5] 利用者ビューは自分のログを追加だけを出す", async () => {
+  it("[S-5] 利用者ビューは上部に追加ボタンを出さず、練習カードに「記録追加」を出す", async () => {
     render(<TeamSchedule teamId="team-1" />);
     await screen.findByText("練習A");
-    expect(screen.getByRole("button", { name: "自分のログを追加" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "自分のログを追加" })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("team-practice-add-log-button").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "練習記録追加" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "大会追加" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("team-schedule-bulk-register")).not.toBeInTheDocument();
