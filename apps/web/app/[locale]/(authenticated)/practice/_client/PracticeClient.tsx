@@ -738,6 +738,8 @@ export default function PracticeClient({
         setAvailableTags={setAvailableTags}
         allowParentUpdate={allowParentUpdate}
         initialTab={practiceActiveTab}
+        // チーム練習には他のメンバーのログも付く。自分のログだけを読み込み・保存する (swimhub-tasks#140)
+        logOwnerUserId={user?.id}
       />
     </div>
   );
