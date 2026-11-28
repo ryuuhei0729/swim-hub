@@ -34,7 +34,9 @@
     "test:coverage": "vitest run --coverage",
     "submit:ios": "set -a && source .env && set +a && export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD && eas submit --platform ios --latest",
     "ios:bump-build": "plutil -replace CFBundleVersion -string $(($(plutil -extract CFBundleVersion raw ios/SwimHub/Info.plist) + 1)) ios/SwimHub/Info.plist && plutil -extract CFBundleVersion raw ios/SwimHub/Info.plist",
-    "build:ios:local": "pnpm ios:bump-build && eas build --platform ios --profile production --local"
+    "build:ios:local": "pnpm ios:bump-build && eas build --platform ios --profile production --local",
+    "ota:production": "pnpm --filter @ryuuhei0729/swimhub-oauth build && node scripts/eas-update.js production",
+    "ota:preview": "pnpm --filter @ryuuhei0729/swimhub-oauth build && node scripts/eas-update.js preview"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^1.51.1",
@@ -72,6 +74,7 @@
     "expo-sharing": "~55.0.21",
     "expo-status-bar": "~55.0.6",
     "expo-store-review": "~55.0.18",
+    "expo-updates": "~55.0.33",
     "expo-video": "~55.0.17",
     "expo-video-thumbnails": "~55.0.15",
     "expo-web-browser": "~55.0.16",

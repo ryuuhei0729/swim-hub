@@ -99,6 +99,22 @@ eas token:create
 export EXPO_TOKEN=your_token_here
 ```
 
+### OTA アップデート（EAS Update）
+
+JS だけの修正は、ストア審査を通さずに配信できます。届くのは `expo-updates` を含むビルド (2026-11 以降) だけです。
+
+- `pnpm ota:production --message "変更内容"` - production チャンネルに iOS・Android の順で公開する
+- `pnpm ota:production --platform android --message "..."` - 片方だけ公開し直す
+- `pnpm ota:preview --message "..."` - preview チャンネルに公開する
+
+`eas update` を直接実行しないでください。eas.json のビルド用の `env` が入らず、`.env.local` の値がバンドルに埋め込まれることがあります (`scripts/eas-update.js` の冒頭コメント参照)。
+
+**ネイティブを変えたら版を上げる**: OTA は runtimeVersion が同じビルドにだけ届きます。runtimeVersion は iOS が app.json の `version`、Android が app.config.js の `ANDROID_VERSION` です。次を含むストアリリースでは、そのプラットフォームの版を必ず上げてください。上げないと、同じ版の古いビルドにも新しい JS が届き、ネイティブ側が足りずにクラッシュします。
+
+- ネイティブモジュールの追加・更新 (`npx expo install` で入るものを含む)
+- app.json の `plugins`・権限・`./plugins/*` の変更
+- Expo SDK の更新
+
 ## 技術スタック
 
 - **フレームワーク**: React Native + Expo SDK 54
