@@ -3120,9 +3120,10 @@
         "addAriaLabel": "Trainingseintrag für {date} hinzufügen",
         "viewAriaLabel": "Trainingseintrag für {date} anzeigen",
         "editButton": "Bearbeiten",
-        "deleteButton": "Löschen"
-      },
-      "selfLogButton": "Eigenes Protokoll hinzufügen"
+        "deleteButton": "Löschen",
+        "addLogButton": "Ergebnis hinzufügen",
+        "addLogAriaLabel": "Eigenes Ergebnis zum Training am {date} hinzufügen"
+      }
     },
     "practiceDetail": {
       "title": "Trainingsdetails",

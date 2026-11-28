@@ -3120,9 +3120,10 @@
         "addAriaLabel": "{date}의 연습 기록 추가",
         "viewAriaLabel": "{date}의 연습 기록 보기",
         "editButton": "편집",
-        "deleteButton": "삭제"
-      },
-      "selfLogButton": "내 기록 추가"
+        "deleteButton": "삭제",
+        "addLogButton": "기록 추가",
+        "addLogAriaLabel": "{date} 연습에 내 기록 추가"
+      }
     },
     "practiceDetail": {
       "title": "연습 상세",
