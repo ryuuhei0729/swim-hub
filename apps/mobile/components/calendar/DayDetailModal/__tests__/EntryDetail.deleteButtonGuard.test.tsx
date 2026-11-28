@@ -33,6 +33,19 @@ import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
+// ImageViewerModal (大会画像の拡大表示) が Dimensions.get("window") を参照するため追加する
+// (RecordDetail.share.test.tsx と同じパターン)
+vi.mock("react-native", async (importOriginal) => {
+  const original = await importOriginal<typeof import("react-native")>();
+  return {
+    ...original,
+    Dimensions: {
+      get: vi.fn((_dim: string) => ({ width: 375, height: 667 })),
+      addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+    },
+  };
+});
+
 vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/helpers/authContext";

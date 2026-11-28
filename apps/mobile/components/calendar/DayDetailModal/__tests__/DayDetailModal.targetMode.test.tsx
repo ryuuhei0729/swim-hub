@@ -50,8 +50,11 @@ import { DayDetailModal } from "../DayDetailModal";
 import type { DayDetailModalProps } from "../types";
 
 vi.mock("@/components/calendar/DayDetailModal/components", () => ({
-  MemoizedPracticeLogDetail: (props: { item: CalendarItem }) => (
-    <div data-testid={`other-item-${props.item.type}-${props.item.id}`}>
+  MemoizedPracticeLogDetail: (props: { item: CalendarItem; targetLogId?: string }) => (
+    <div
+      data-testid={`other-item-${props.item.type}-${props.item.id}`}
+      data-target-log-id={props.targetLogId ?? ""}
+    >
       {props.item.type}:{props.item.id}
     </div>
   ),
@@ -113,15 +116,17 @@ describe("DayDetailModal — targetId による1件絞り込み (練習タブ)",
   it("[V-34] 同日に複数ログがあっても targetId に一致する1件のみ描画する", () => {
     renderModal({
       entries: [
-        makeItem("practice_log", "log-A"),
-        makeItem("practice_log", "log-B"),
+        makeItem("practice_log", "log-A", { metadata: { practice: { id: "practice-1", place: "" } } }),
+        makeItem("practice_log", "log-B", { metadata: { practice: { id: "practice-1", place: "" } } }),
       ],
       scope: "practice",
       targetId: "log-A",
     });
 
-    expect(screen.getByTestId("other-item-practice_log-log-A")).toBeDefined();
-    expect(screen.queryByTestId("other-item-practice_log-log-B")).toBeNull();
+    // メニューは練習1件のカードにまとめて描き (#59)、押したメニューだけを出すよう targetLogId を渡す
+    const card = screen.getByTestId("other-item-practice-practice-1");
+    expect(card.getAttribute("data-target-log-id")).toBe("log-A");
+    expect(screen.getAllByTestId(/^other-item-/)).toHaveLength(1);
   });
 
   it("[V-35] ログ0件の practice アイテム (targetId=practice.id) は1件そのまま描画される", () => {

@@ -36,6 +36,7 @@ export interface DayDetailModalProps {
   /** ダッシュボードの記録色カスタマイズ設定。未指定時はデフォルト色として解決される */
   colorSettings?: CalendarColorSettings;
   onClose: () => void;
+  /** 使っていない (日付詳細のカード本体を押しても何もしない。web と同じ) */
   onEntryPress?: (item: CalendarItem) => void;
   onAddPractice?: (date: Date) => void;
   onAddRecord?: (dateOrCompetitionId: Date | string, dateParam?: string) => void;
@@ -61,10 +62,18 @@ export interface PracticeLogDetailProps {
   color: string;
   typeLabel: string;
   isPractice: boolean;
-  isPracticeLog: boolean;
   practiceId: string;
+  /**
+   * 練習タブで押したメニュー1件 (practice_log.id)。指定時はそのメニューだけを出す
+   * (共有は練習全体)。未指定なら自分のメニューを全部出す
+   */
+  targetLogId?: string;
+  /**
+   * カレンダー側のメニューの更新を表す文字列 (メニューの id と updated_at を連結したもの)。
+   * 変わったら練習の詳細を取り直す
+   */
+  practiceLogUpdateKey?: string;
   hasEntriesOrRecords?: boolean;
-  onEntryPress?: (item: CalendarItem) => void;
   onClose: () => void;
   onEditPractice?: (item: CalendarItem) => void;
   onDeletePractice?: (itemId: string) => void;
@@ -122,11 +131,15 @@ export interface EntryDetailProps {
   note?: string;
   entries: CalendarItem[];
   isTeamCompetition: boolean;
+  /** チームID（チーム大会のみ）。「チームの記録を見る」の移動先に使う */
+  teamId?: string | null;
   /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
   color?: string;
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: () => void;
   onEditEntry?: (item: CalendarItem) => void;
+  /** エントリー1件の削除 (確認は呼び出し側で出す)。未指定なら削除ボタンを出さない */
+  onDeleteEntry?: (entryId: string) => void;
   onAddRecord?: (competitionId: string, date: string) => void;
   onClose?: () => void;
 }
@@ -149,21 +162,6 @@ export interface PracticeLogData {
     repNumber: number;
     setNumber: number;
   }>;
-  tags?: PracticeTag[];
-}
-
-// 練習ログ詳細の型
-export interface PracticeLogDetailData {
-  id: string;
-  style: string;
-  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
-  swim_category?: "Swim" | "Pull" | "Kick" | null;
-  repCount: number;
-  setCount: number;
-  distance: number;
-  circle: number | null;
-  note: string | null;
-  times: Array<{ id: string; time: number; repNumber: number; setNumber: number }>;
   tags?: PracticeTag[];
   videoPath?: string | null;
   videoThumbnailPath?: string | null;
