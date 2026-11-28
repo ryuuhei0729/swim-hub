@@ -3,7 +3,7 @@
 // =============================================================================
 // 2026-11-09 にマイページと設定をまとめ、タブを「アカウント」にした。
 // 上にプロフィールカード、下に一覧 (プラン / カレンダー / 練習ログテンプレート /
-// ログインとセキュリティ / 規約 / ログアウト) を置き、各行から詳細画面へ進む。
+// ログインとセキュリティ / 規約 / お問い合わせ・タイムレベル判定 / ログアウト) を置き、各行から詳細画面へ進む。
 // - 一覧の行と右側の値 (プラン名・連携中のカレンダー・テンプレート件数) が出ること
 // - 行を押すと対応する stack 画面へ進むこと
 // - 旧ヘッダーの「設定」ボタンは無くなったこと
@@ -64,6 +64,8 @@ describe("MyPageScreen — アカウントタブの一覧", () => {
       "ログインとセキュリティ",
       "利用規約",
       "プライバシーポリシー",
+      "お問い合わせ",
+      "タイムレベル判定",
       "ログアウト",
     ]) {
       expect(screen.getByText(label), label).toBeTruthy();
@@ -78,6 +80,17 @@ describe("MyPageScreen — アカウントタブの一覧", () => {
     expect(await screen.findByText("テストユーザー")).toBeTruthy();
     expect(screen.getByText("Premium")).toBeTruthy();
     expect(await screen.findByText("Google")).toBeTruthy();
+  });
+
+  it("お問い合わせとタイムレベル判定は web のページを外部リンクで開く (規約と同じ)", async () => {
+    renderScreen();
+    expect(await screen.findByText("テストユーザー")).toBeTruthy();
+    expect(screen.getByTestId("account-row-contact").getAttribute("accessibilityhint")).toBe(
+      "https://swim-hub.app/contact",
+    );
+    expect(screen.getByTestId("account-row-time-level").getAttribute("accessibilityhint")).toBe(
+      "https://swim-hub.app/time-level",
+    );
   });
 
   it("各行を押すと、対応する画面へ進む", async () => {
