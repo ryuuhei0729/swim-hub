@@ -3,7 +3,7 @@
  *
  * Sprint Contract 検証観点:
  *   - V-22: circle=150 (2分30秒) が正しく計算されること
- *   - V-23: circle=0 (0分0秒) が null にならず 0 で保存されること
+ *   - V-23: circle=0 (0分0秒・未入力) は null で保存されること (mobile と同じ。2026-11-28 に 0 保存から変更)
  *   - V-24: 距離「その他」=400 が number 型 400 で保存されること
  *   - V-25: 編集モード: rep_count のみ変更で他フィールドが同値
  *   - Critical 1: カスタム距離が空のまま送信しようとすると保存がブロックされること
@@ -30,6 +30,15 @@ import { DISTANCE_PRESETS } from "../../../components/forms/practice-log/types";
  */
 function calcCircleInSeconds(circleMinutes: number | "", circleSeconds: number | ""): number {
   return (Number(circleMinutes) || 0) * 60 + (Number(circleSeconds) || 0);
+}
+
+/**
+ * handleSubmit の circle 保存値: 0 (0分0秒・未入力) は null にする
+ *   circle: circleInSeconds > 0 ? circleInSeconds : null
+ */
+function resolveCircle(circleMinutes: number | "", circleSeconds: number | ""): number | null {
+  const circleInSeconds = calcCircleInSeconds(circleMinutes, circleSeconds);
+  return circleInSeconds > 0 ? circleInSeconds : null;
 }
 
 /**
@@ -76,7 +85,7 @@ function parseCircleSecondsInput(v: string): number | "" {
 }
 
 /** 編集時の初期化ロジックを再現 */
-function initFromEditData(editData: { circle: number; distance: number }): {
+function initFromEditData(editData: { circle: number | null; distance: number }): {
   circleMin: number;
   circleSec: number;
   showCustomDistance: boolean;
@@ -127,18 +136,24 @@ describe("PracticeLogTemplateCreateModal - 保存ペイロード計算ロジッ�
     });
   });
 
-  describe("[V-23] circle=0: 0分0秒は circle=0（null にならない）", () => {
-    it("circleMinutes=0, circleSeconds=0 → circle=0（ゼロ、null ではない）", () => {
-      const result = calcCircleInSeconds(0, 0);
-      expect(result).toBe(0);
-      expect(result).not.toBeNull();
+  describe("[V-23] 0分0秒 (未入力) のサークルは null で保存する (mobile と同じ)", () => {
+    it("circleMinutes=0, circleSeconds=0 → circle=null", () => {
+      expect(resolveCircle(0, 0)).toBeNull();
     });
 
-    it("circle=0 の往復: 0分0秒 → circle=0", () => {
-      const circleTime = 0;
-      const min = Math.floor(circleTime / 60);
-      const sec = circleTime % 60;
-      expect(calcCircleInSeconds(min, sec)).toBe(0);
+    it("分・秒とも空 → circle=null", () => {
+      expect(resolveCircle("", "")).toBeNull();
+    });
+
+    it("null で保存したテンプレートを編集で開くと 0分0秒 になり、そのまま保存しても null のまま", () => {
+      const { circleMin, circleSec } = initFromEditData({ circle: null, distance: 100 });
+      expect(circleMin).toBe(0);
+      expect(circleSec).toBe(0);
+      expect(resolveCircle(circleMin, circleSec)).toBeNull();
+    });
+
+    it("0より大きければ秒数のまま保存する", () => {
+      expect(resolveCircle(1, 30)).toBe(90);
     });
   });
 
@@ -276,7 +291,7 @@ describe("PracticeLogTemplateCreateModal - 保存ペイロード計算ロジッ�
       const distanceNum = resolveDistance(distance)!;
       const repCountNum = resolveCountField(repCount);
       const setCountNum = resolveCountField(setCount);
-      const circleInSeconds = calcCircleInSeconds(circleMinutes, circleSeconds);
+      const circle = resolveCircle(circleMinutes, circleSeconds);
 
       const input = {
         name,
@@ -285,7 +300,7 @@ describe("PracticeLogTemplateCreateModal - 保存ペイロード計算ロジッ�
         distance: distanceNum,
         rep_count: repCountNum,
         set_count: setCountNum,
-        circle: circleInSeconds,
+        circle,
         note: note || null,
         tag_ids: [] as string[],
       };

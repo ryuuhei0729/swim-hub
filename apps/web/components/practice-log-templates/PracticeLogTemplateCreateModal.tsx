@@ -53,7 +53,7 @@ export function PracticeLogTemplateCreateModal({
 
   // 距離: PracticeMenuItem と同じく number | "" で唯一の真実として保持
   // showCustomDistance=false のとき値はプリセット確定値、true のとき input 直結
-  const [distance, setDistance] = useState<number | "">(50);
+  const [distance, setDistance] = useState<number | "">(100);
   const [showCustomDistance, setShowCustomDistance] = useState(false);
 
   // Critical 2: rep_count / set_count も number | "" で保持（入力途中の空を許容）
@@ -110,7 +110,7 @@ export function PracticeLogTemplateCreateModal({
       setStyle("Fr");
       setSwimCategory("Swim");
       setNote("");
-      setDistance(50);
+      setDistance(100);
       setShowCustomDistance(false);
       setRepCount(1);
       setSetCount(1);
@@ -133,7 +133,7 @@ export function PracticeLogTemplateCreateModal({
       const repCountNum = Math.max(1, Number(repCount) || 1);
       const setCountNum = Math.max(1, Number(setCount) || 1);
 
-      // circle: 0分0秒 → 0（null にしない）
+      // circle: 0分0秒 (未入力) → null で保存する (mobile と同じ)
       const circleInSeconds = (Number(circleMinutes) || 0) * 60 + (Number(circleSeconds) || 0);
 
       const input: CreatePracticeLogTemplateInput = {
@@ -143,7 +143,7 @@ export function PracticeLogTemplateCreateModal({
         distance: distanceNum,
         rep_count: repCountNum,
         set_count: setCountNum,
-        circle: circleInSeconds,
+        circle: circleInSeconds > 0 ? circleInSeconds : null,
         note: note || null,
         tag_ids: selectedTags.map((tag) => tag.id),
       };

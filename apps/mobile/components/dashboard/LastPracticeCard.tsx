@@ -73,7 +73,8 @@ const MenuRow: React.FC<{ row: LastPracticeRow }> = ({ row }) => {
   return (
     <View style={styles.row}>
       <View style={styles.rowHead}>
-        <Text style={[styles.category, tone]}>{t(`practice.categories.${row.category}`)}</Text>
+        {/* Swim/Pull/Kick は言語に関係なく英語で出す */}
+        <Text style={[styles.category, tone]}>{row.category}</Text>
         {/* 大きな文字サイズでは1行に入りきらないので、2行まで折り返す */}
         <Text style={styles.menu} numberOfLines={2}>
           {styleName} {formatLastPracticeMenu(row)}
