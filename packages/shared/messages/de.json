@@ -4584,6 +4584,8 @@
       "distance_placeholder": "Distanz (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "Reaktionszeit",
+      "reactionTimeFormatInvalid": "Ungültiges Reaktionszeitformat",
+      "reactionTimeRange": "Die Reaktionszeit muss zwischen -1.00 und 2.00 Sekunden liegen",
       "splitTimeLabel": "Zwischenzeiten",
       "splitAdd25m": "Hinzufügen (alle 25m)",
       "splitAdd50m": "Hinzufügen (alle 50m)",

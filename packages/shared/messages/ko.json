@@ -4584,6 +4584,8 @@
       "distance_placeholder": "거리 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "반응 시간",
+      "reactionTimeFormatInvalid": "반응 시간 형식이 올바르지 않습니다",
+      "reactionTimeRange": "반응 시간은 -1.00~2.00초 범위로 입력해 주세요",
       "splitTimeLabel": "스플릿 타임",
       "splitAdd25m": "추가 (25m마다)",
       "splitAdd50m": "추가 (50m마다)",
