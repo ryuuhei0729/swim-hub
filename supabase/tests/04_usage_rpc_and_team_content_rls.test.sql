@@ -261,6 +261,11 @@ select ok(
 --   competitions/practices の INSERT ポリシーそのものを直接検証する。
 --   (ファイル全体が最後に rollback されるため、本番スキーマへの影響は無い)
 -- H-3: 第2枝で作成された行が実在することの確認。
+--
+-- 【2026-11-30 追記】20261130000000_team_practice_logs_self_write.sql で、team_id 付きの
+--   practices / competitions を作れるのは管理者だけになった (ryuuhei0729/swimhub-tasks#139)。
+--   第2枝は team_id IS NULL (個人) だけになったため、H-1/H-2 は「一般メンバーは作れない」、
+--   H-3 は「行が作られていない」に期待を反転させている。
 -- H-4/H-5: トリガーを元に戻した「現実の」経路では一般メンバーの team-scoped
 --   作成が team_attendance 側の制約で失敗すること、および migration B の
 --   旧ポリシー (team_id 未検証) に一時的に差し替えても同じ失敗が再現される
@@ -275,15 +280,17 @@ alter table public.practices disable trigger create_attendance_on_team_practice;
 
 select public.qa_login_as('77777777-7777-4777-a777-000000000004'); -- member_b (team1 の一般メンバー、非admin)
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.competitions (user_id, team_id, title, date)
      values (auth.uid(), '88888888-8888-4888-a888-000000000001', 'QA一般メンバー大会', current_date + 32) $$,
-  'H-1: [第2枝] team1 の一般メンバー (非admin) は自チームの team_id で competitions を作成できる (team_attendance トリガーを一時無効化し、ポリシー自体を直接検証)');
+  '42501', null,
+  'H-1: team1 の一般メンバー (非admin) は自チームの team_id でも competitions を作成できない (team_attendance トリガーを一時無効化し、ポリシー自体を直接検証)');
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.practices (user_id, team_id, date)
      values (auth.uid(), '88888888-8888-4888-a888-000000000001', current_date + 33) $$,
-  'H-2: [第2枝] team1 の一般メンバー (非admin) は自チームの team_id で practices を作成できる (同上)');
+  '42501', null,
+  'H-2: team1 の一般メンバー (非admin) は自チームの team_id でも practices を作成できない (同上)');
 
 select public.qa_logout();
 
@@ -295,8 +302,8 @@ select is(
    where team_id = '88888888-8888-4888-a888-000000000001'
      and user_id = '77777777-7777-4777-a777-000000000004'
      and title = 'QA一般メンバー大会'),
-  1,
-  'H-3: 第2枝で作成された competitions 行が実際に1件存在する (トリガー無効化中でも INSERT 自体は本物)');
+  0,
+  'H-3: 一般メンバーによる team_id 付きの competitions 行は作られていない');
 
 -- H-4: トリガー有効時 (現実の経路) では、一般メンバーの team-scoped 作成は
 -- team_attendance 側の別ポリシーで失敗する (C-4 の対象範囲外の既存挙動)
@@ -327,20 +334,12 @@ select throws_ok(
 
 select public.qa_logout();
 
--- 旧ポリシーを migration B の正規ポリシーに戻す (以降のテストへの影響を防ぐ)
+-- 旧ポリシーを現行の正規ポリシー (20261130000000) に戻す (以降のテストへの影響を防ぐ)
 DROP POLICY "Users can create own competitions" ON public.competitions;
 CREATE POLICY "Users can create own competitions" ON public.competitions FOR INSERT WITH CHECK (
-  public.is_team_admin("competitions"."team_id", (SELECT "auth"."uid"()))
+  ("team_id" IS NULL AND "user_id" = (SELECT "auth"."uid"()))
   OR
-  (
-    ("user_id" = (SELECT "auth"."uid"()))
-    AND
-    (
-      ("team_id" IS NULL)
-      OR
-      public.is_team_member("competitions"."team_id", (SELECT "auth"."uid"()))
-    )
-  )
+  ("team_id" IS NOT NULL AND public.is_team_admin("team_id", (SELECT "auth"."uid"())))
 );
 
 -- =============================================================================
