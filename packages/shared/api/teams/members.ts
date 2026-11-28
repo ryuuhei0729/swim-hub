@@ -4,7 +4,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
-import { TeamMembership, TeamMembershipWithUser } from "../../types";
+import { GUARDIAN_ROLE, TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
 import { UserFacingError } from "../../utils/userFacingError";
 import { compareMembersByBirthday } from "../../utils/memberSort";
@@ -17,6 +17,9 @@ export class TeamMembersAPI {
    * このメソッドを起点に useTeamsQuery / useTeamMembersQuery が全画面（メンバータブ・
    * グループ分け・大会/練習の代理入力候補等）へ配信するため、比較関数は
    * memberSort.ts の唯一の定義元を使う（画面側で個別に並べ替えない）。
+   *
+   * 保護者アカウント (role = guardian) は含めない。生徒側のメンバー一覧・グループ分け・
+   * 代理入力の候補のどこにも出さないため、配信元のここで外す。
    */
   async list(teamId: string): Promise<TeamMembershipWithUser[]> {
     await requireAuth(this.supabase);
@@ -25,7 +28,8 @@ export class TeamMembersAPI {
       .select("*, users:users(*), teams:teams(*)")
       .eq("team_id", teamId)
       .eq("status", "approved")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .neq("role", GUARDIAN_ROLE);
     if (error) throw error;
     return (data as unknown as TeamMembershipWithUser[]).sort(compareMembersByBirthday);
   }

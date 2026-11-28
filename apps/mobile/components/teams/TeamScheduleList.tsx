@@ -9,7 +9,7 @@
  *     (種類とは別物なので、右端に別の見た目で置く)
  * 「今日」は大会カードと同じく isCompetitionDateInPast (端末のローカル日付) で判定する。
  *
- * カードと各操作 (編集・削除・記録入力・エントリー等) は既存の一覧
+ * カードと各操作 (編集・削除・記録入力・エントリー・タイム/記録一覧シート等) は既存の一覧
  * (TeamPracticeList / TeamCompetitionList) と同じものを使う。
  */
 import React, { useCallback, useMemo, useState } from "react";
@@ -106,6 +106,7 @@ export function TeamScheduleList({ teamId, isAdmin }: TeamScheduleListProps) {
           onEdit={practiceActions.handleEdit}
           onDelete={practiceActions.handleDelete}
           onAddLog={practiceActions.handleAddLog}
+          onOpenTimes={practiceActions.handleOpenTimes}
           isDeleting={practiceActions.deletingId === item.practice.id}
           deleteDisabled={practiceActions.isDeletePending}
         />
@@ -129,6 +130,7 @@ export function TeamScheduleList({ teamId, isAdmin }: TeamScheduleListProps) {
       practiceActions.handleEdit,
       practiceActions.handleDelete,
       practiceActions.handleAddLog,
+      practiceActions.handleOpenTimes,
       practiceActions.deletingId,
       practiceActions.isDeletePending,
       competitionActions.handleEdit,
@@ -262,6 +264,7 @@ export function TeamScheduleList({ teamId, isAdmin }: TeamScheduleListProps) {
     <View style={styles.container}>
       {filterBar}
       {body}
+      {practiceActions.modals}
       {competitionActions.modals}
     </View>
   );

@@ -20,6 +20,7 @@ import {
 } from "@/lib/onboardingCache";
 import i18n from "@/i18n";
 import { saveLastLoginMethod } from "@/lib/lastLoginMethod";
+import { loadCachedIsGuardian, saveCachedIsGuardian } from "@/lib/guardianCache";
 import {
   getRedirectUri,
   extractTokensFromUrl,
@@ -38,16 +39,19 @@ import { localizeAuthError } from "@/utils/authErrorLocalizer";
 /**
  * Mobile 固有の AuthState 拡張
  * onboardingCompleted: null = 取得中, false = 未完了, true = 完了
+ * isGuardian: null = 取得中, true = 保護者アカウント (保護者版の画面を出す), false = 通常
  *
  * TODO: packages/shared/types/auth.ts の AuthState に onboardingCompleted が追加されたら
  *       このローカル拡張を削除し、共通型を参照するように変更すること。
  */
 type MobileAuthState = AuthState & {
   onboardingCompleted: boolean | null;
+  isGuardian: boolean | null;
 };
 
 type MobileAuthContextType = AuthContextType & {
   onboardingCompleted: boolean | null;
+  isGuardian: boolean | null;
   updateOnboardingCompleted: (value: boolean) => Promise<{ error: Error | null }>;
   getAccessToken: () => Promise<string | null>;
 };
@@ -98,7 +102,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading: true,
     subscription: null,
     onboardingCompleted: null,
+    isGuardian: null,
   });
+
+  // signOut (依存なしの useCallback) から今の値を読むための ref
+  const isGuardianRef = useRef(false);
+  useEffect(() => {
+    isGuardianRef.current = authState.isGuardian === true;
+  }, [authState.isGuardian]);
 
   // サブスクリプション情報を Supabase から直接取得（Web と同じパターン）
   // API 経由だと Bearer token の有効期限切れで 401 になる問題があったため、
@@ -347,7 +358,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await logoutRevenueCat();
 
-      const { error } = await supabase.auth.signOut();
+      // 保護者アカウントは複数の保護者が同じアカウントでログインして使う。
+      // 既定の global だと全端末のセッションが無効になり、1人のログアウトで全員が
+      // 締め出されるため、この端末だけログアウトする。
+      const { error } = await supabase.auth.signOut(
+        isGuardianRef.current ? { scope: "local" } : undefined,
+      );
       if (error) {
         await supabase.auth.signOut({ scope: "local" });
       }
@@ -540,6 +556,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [fetchOnboardingCompleted],
   );
 
+  // 通信できずに保護者かどうかを確定できなかったユーザー ID (電波が戻ったら問い合わせ直す)
+  const guardianRevalidateUserIdRef = useRef<string | null>(null);
+
+  /**
+   * 保護者アカウントかどうかを決める (resolveOnboardingCompleted と同じ流れ)。
+   * 通信で失敗したときは覚えている値を使い、覚えていなければ通常扱いにして電波が戻ったら
+   * 問い合わせ直す。通信以外の失敗 (RPC が無い等) は通常扱い。
+   * どの場合も書き込みは DB 側で拒否されるので、ここは画面の出し分けだけを決める。
+   */
+  const resolveIsGuardian = useCallback(
+    async (userId: string, isCurrent: () => boolean) => {
+      const cached = await loadCachedIsGuardian(userId);
+      if (!isCurrent()) return;
+      if (cached !== null) {
+        setAuthState((prev) =>
+          prev.isGuardian === null ? { ...prev, isGuardian: cached } : prev,
+        );
+      }
+
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase.rpc("is_guardian_account");
+        if (!isCurrent()) return;
+        if (!error) {
+          const isGuardian = data === true;
+          guardianRevalidateUserIdRef.current = null;
+          setAuthState((prev) => ({ ...prev, isGuardian }));
+          void saveCachedIsGuardian(userId, isGuardian);
+          return;
+        }
+        if (isNetworkError(error)) {
+          guardianRevalidateUserIdRef.current = userId;
+          setAuthState((prev) => ({ ...prev, isGuardian: cached ?? false }));
+          return;
+        }
+        console.error("is_guardian_account failed:", error);
+      } catch (err) {
+        if (!isCurrent()) return;
+        if (isNetworkError(err)) {
+          guardianRevalidateUserIdRef.current = userId;
+          setAuthState((prev) => ({ ...prev, isGuardian: cached ?? false }));
+          return;
+        }
+        console.error("is_guardian_account failed:", err);
+      }
+      guardianRevalidateUserIdRef.current = null;
+      setAuthState((prev) => ({ ...prev, isGuardian: cached ?? false }));
+    },
+    [],
+  );
+
   // user が変わったらサブスクリプション + オンボーディング状態を取得 & RevenueCat にログイン
   useEffect(() => {
     if (authState.user) {
@@ -552,14 +619,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       void resolveOnboardingCompleted(userId, () => isCurrent);
+      void resolveIsGuardian(userId, () => isCurrent);
       return () => {
         isCurrent = false;
       };
     }
     onboardingRevalidateUserIdRef.current = null;
-    setAuthState((prev) => ({ ...prev, subscription: null, onboardingCompleted: null }));
+    guardianRevalidateUserIdRef.current = null;
+    setAuthState((prev) => ({
+      ...prev,
+      subscription: null,
+      onboardingCompleted: null,
+      isGuardian: null,
+    }));
     return undefined;
-  }, [authState.user, fetchSubscription, resolveOnboardingCompleted]);
+  }, [authState.user, fetchSubscription, resolveOnboardingCompleted, resolveIsGuardian]);
 
   // 圏外で確定できなかったオンボーディング状態を、電波が戻ったときに問い合わせ直す
   const currentUserId = authState.user?.id ?? null;
@@ -567,14 +641,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUserId) return undefined;
     let isCurrent = true;
     const unsubscribe = onlineManager.subscribe((online) => {
-      if (!online || onboardingRevalidateUserIdRef.current !== currentUserId) return;
-      void resolveOnboardingCompleted(currentUserId, () => isCurrent);
+      if (!online) return;
+      if (onboardingRevalidateUserIdRef.current === currentUserId) {
+        void resolveOnboardingCompleted(currentUserId, () => isCurrent);
+      }
+      if (guardianRevalidateUserIdRef.current === currentUserId) {
+        void resolveIsGuardian(currentUserId, () => isCurrent);
+      }
     });
     return () => {
       isCurrent = false;
       unsubscribe();
     };
-  }, [currentUserId, resolveOnboardingCompleted]);
+  }, [currentUserId, resolveOnboardingCompleted, resolveIsGuardian]);
 
   useEffect(() => {
     let isMounted = true;
@@ -588,6 +667,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading: false,
         subscription: null,
         onboardingCompleted: null,
+        isGuardian: null,
       });
       return;
     }

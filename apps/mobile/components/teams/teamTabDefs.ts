@@ -22,20 +22,28 @@
  * `adminOnly` は全タブに明示する。省略可能にすると「書き忘れ = 全員に公開」が
  * 静かに成立するため、管理者限定にする意図を毎行で表明させる。
  * 現在は管理者限定のタブは無い (タブの数を管理者ビューで変えない方針)。
+ *
+ * `guardianVisible` も同じ理由で全タブに明示する。保護者アカウント (閲覧専用) の
+ * 保護者版の画面に出すかどうか。出欠は生徒が回答するものなので保護者には出さない。
  */
 export const TEAM_TAB_DEFS = [
-  { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users", adminOnly: false },
+  { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users", adminOnly: false, guardianVisible: true },
   // 練習と大会をまとめた一覧 (全て / 練習 / 大会 / 過去 で絞り込む)
-  { id: "schedule", nameKey: "teams.mobile.tabSchedule", icon: "calendar", adminOnly: false },
-  { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard", adminOnly: false },
+  { id: "schedule", nameKey: "teams.mobile.tabSchedule", icon: "calendar", adminOnly: false, guardianVisible: true },
+  { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard", adminOnly: false, guardianVisible: false },
   // ランキングなど、上の 3 つに入らない機能をカードで並べる
-  { id: "others", nameKey: "teams.mobile.tabOthers", icon: "grid", adminOnly: false },
+  { id: "others", nameKey: "teams.mobile.tabOthers", icon: "grid", adminOnly: false, guardianVisible: true },
 ] as const;
 
 export type TeamTabType = (typeof TEAM_TAB_DEFS)[number]["id"];
 
 /** 表示順のタブ ID 一覧 */
 export const TEAM_TAB_IDS: readonly TeamTabType[] = TEAM_TAB_DEFS.map((tab) => tab.id);
+
+/** 保護者版で表示するタブ ID 一覧 */
+export const GUARDIAN_TEAM_TAB_IDS: readonly TeamTabType[] = TEAM_TAB_DEFS.filter(
+  (tab) => tab.guardianVisible,
+).map((tab) => tab.id);
 
 /** 管理者ビューでのみ表示するタブ ID 一覧 */
 export const ADMIN_ONLY_TEAM_TAB_IDS: readonly TeamTabType[] = TEAM_TAB_DEFS.filter(

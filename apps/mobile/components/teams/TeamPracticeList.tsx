@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -21,10 +21,12 @@ import {
 import type { Practice } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useIsGuardian } from "@/hooks/useIsGuardian";
 import { formatDate } from "@apps/shared/utils/date";
 import { cardSurface, colors } from "@/constants/theme";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { TeamPracticeTimesModal } from "./TeamPracticeTimesModal";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -40,6 +42,7 @@ export const PracticeItem = React.memo(function PracticeItem({
   onEdit,
   onDelete,
   onAddLog,
+  onOpenTimes,
   isDeleting,
   deleteDisabled,
 }: {
@@ -48,6 +51,8 @@ export const PracticeItem = React.memo(function PracticeItem({
   onEdit: (practice: Practice) => void;
   onDelete: (practice: Practice) => void;
   onAddLog: (practice: Practice) => void;
+  /** カードを押したとき: メンバー全員のタイム一覧シートを開く (admin/非admin 共通) */
+  onOpenTimes: (practice: Practice) => void;
   /** この練習を削除中か (スピナーを出す) */
   isDeleting: boolean;
   /** 削除ボタンを押せないか (いずれかの削除を実行中) */
@@ -55,18 +60,28 @@ export const PracticeItem = React.memo(function PracticeItem({
 }) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
+  // 保護者版 (閲覧専用) では記録の追加ボタンを出さない (カードを押してタイムを見るのは残す)
+  const isGuardian = useIsGuardian();
 
   return (
     <View style={styles.item}>
-      <Pressable
-        onPress={() => isAdmin && onEdit(practice)}
-        accessibilityRole={isAdmin ? "button" : undefined}
-      >
+      {/* 大会カード (TeamCompetitionList) と同じく、カードを押すとタイム一覧シートを開く。
+          編集は鉛筆ボタンだけにする。カード全体は accessible={false} にして、
+          中のボタン (編集/削除/記録) をスクリーンリーダーで個別に選べるようにし、
+          日付の行をシートを開く入口にする */}
+      <Pressable onPress={() => onOpenTimes(practice)} accessible={false}>
         <View style={styles.itemHeader}>
-          <View style={styles.itemDateRow}>
+          <Pressable
+            style={styles.itemDateRow}
+            onPress={() => onOpenTimes(practice)}
+            accessibilityRole="button"
+            accessibilityLabel={t("teams.practiceTimes.openAria", {
+              title: practice.title || t("teams.mobile.fallbackPractice"),
+            })}
+          >
             <Feather name="calendar" size={14} color="#6B7280" />
             <Text style={styles.itemDate}>{formatDate(practice.date, "shortWithWeekday", dateLocale)}</Text>
-          </View>
+          </Pressable>
           {isAdmin && (
             <View style={styles.itemActions}>
               <Pressable
@@ -110,25 +125,27 @@ export const PracticeItem = React.memo(function PracticeItem({
               <Text style={styles.itemNote} numberOfLines={2}>{practice.note}</Text>
             )}
           </View>
-          <Pressable
-            style={styles.logButton}
-            onPress={() => onAddLog(practice)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isAdmin
-                ? t("teams.mobile.teamPracticeList.recordBulkButton")
-                : t("teams.mobile.teamPracticeList.addLog")
-            }
-          >
-            {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
-                非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
-            <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#059669" />
-            <Text style={styles.logButtonText}>
-              {isAdmin
-                ? t("teams.mobile.teamPracticeList.recordBulkButton")
-                : t("teams.mobile.teamPracticeList.addLog")}
-            </Text>
-          </Pressable>
+          {!isGuardian && (
+            <Pressable
+              style={styles.logButton}
+              onPress={() => onAddLog(practice)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isAdmin
+                  ? t("teams.mobile.teamPracticeList.recordBulkButton")
+                  : t("teams.mobile.teamPracticeList.addLog")
+              }
+            >
+              {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
+                  非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
+              <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#059669" />
+              <Text style={styles.logButtonText}>
+                {isAdmin
+                  ? t("teams.mobile.teamPracticeList.recordBulkButton")
+                  : t("teams.mobile.teamPracticeList.addLog")}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </Pressable>
     </View>
@@ -143,6 +160,8 @@ export function useTeamPracticeActions(teamId: string, isAdmin: boolean) {
   const { supabase } = useAuth();
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
+  const dateLocale = useDateLocale();
+  const [timesModalPractice, setTimesModalPractice] = useState<Practice | null>(null);
 
   const deleteMutation = useDeleteTeamPracticeMutation(supabase);
 
@@ -193,6 +212,10 @@ export function useTeamPracticeActions(teamId: string, isAdmin: boolean) {
     });
   }, [navigation, teamId, isAdmin]);
 
+  const handleOpenTimes = useCallback((practice: Practice) => {
+    setTimesModalPractice(practice);
+  }, []);
+
   // 低速回線で削除中に再度押されないよう、削除は同時に1件だけにする
   const {
     pendingKey: deletingId,
@@ -229,14 +252,27 @@ export function useTeamPracticeActions(teamId: string, isAdmin: boolean) {
     );
   }, [deleteMutation, teamId, t, runDelete, isDeleteBusy]);
 
+  const modals = timesModalPractice && (
+    <TeamPracticeTimesModal
+      visible={timesModalPractice !== null}
+      onClose={() => setTimesModalPractice(null)}
+      practiceId={timesModalPractice.id}
+      heading={`${formatDate(timesModalPractice.date, "shortWithWeekday", dateLocale)} ${
+        timesModalPractice.title || t("teams.mobile.fallbackPractice")
+      }`}
+    />
+  );
+
   return {
     handleAdd,
     handleBulkRegister,
     handleEdit,
     handleAddLog,
+    handleOpenTimes,
     handleDelete,
     deletingId,
     isDeletePending,
+    modals,
   };
 }
 
@@ -250,9 +286,11 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
     handleBulkRegister,
     handleEdit,
     handleAddLog,
+    handleOpenTimes,
     handleDelete,
     deletingId,
     isDeletePending,
+    modals,
   } = useTeamPracticeActions(teamId, isAdmin);
 
   const renderItem = useCallback(({ item }: { item: Practice }) => (
@@ -262,10 +300,11 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
       onEdit={handleEdit}
       onDelete={handleDelete}
       onAddLog={handleAddLog}
+      onOpenTimes={handleOpenTimes}
       isDeleting={deletingId === item.id}
       deleteDisabled={isDeletePending}
     />
-  ), [isAdmin, handleEdit, handleDelete, handleAddLog, deletingId, isDeletePending]);
+  ), [isAdmin, handleEdit, handleDelete, handleAddLog, handleOpenTimes, deletingId, isDeletePending]);
 
   const keyExtractor = useCallback((item: Practice) => item.id, []);
 
@@ -347,6 +386,7 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
           showsVerticalScrollIndicator={false}
         />
       )}
+      {modals}
     </View>
   );
 }

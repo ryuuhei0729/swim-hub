@@ -136,10 +136,10 @@ describe("NextCompetitionCard", () => {
   });
 
 
-  it("自分で登録した大会でエントリーが無ければ「種目を登録」でエントリータブを開く", () => {
+  it("自分で登録した大会でエントリーが無ければ「エントリー」でエントリータブを開く", () => {
     setData({ competition: competition(), entries: [], goals: [] });
     const { getByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
-    fireEvent.click(getByText("種目を登録"));
+    fireEvent.click(getByText("エントリー"));
     expect(mocks.navigate).toHaveBeenCalledWith("CompetitionTabForm", {
       competitionId: "c1",
       date: IN_12_DAYS,

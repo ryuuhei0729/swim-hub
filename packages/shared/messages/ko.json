@@ -764,6 +764,13 @@
       "defaultError": "오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
       "loginFailed": "로그인에 실패했습니다. 입력 내용을 확인한 후 다시 시도해 주세요.",
       "genericError": "오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+    },
+    "guardianAppOnly": {
+      "title": "앱에서 이용해 주세요",
+      "description": "보호자 계정은 SwimHub 앱 전용입니다. 스마트폰의 SwimHub 앱에서 로그인해 주세요.",
+      "openAppStore": "App Store에서 앱 받기",
+      "logout": "로그아웃",
+      "logoutFailed": "로그아웃에 실패했습니다. 다시 시도해 주세요."
     }
   },
   "pricing": {
@@ -1119,7 +1126,7 @@
       "entryBefore": "엔트리 접수가 아직 시작되지 않았습니다",
       "personalNoEntries": "출전할 종목을 등록해 두세요",
       "enter": "엔트리하기",
-      "registerEvents": "종목 등록",
+      "registerEvents": "엔트리",
       "noneTitle": "예정된 대회가 없습니다",
       "noneDescription": "대회를 등록하면 대회까지 남은 일수, 엔트리 종목, 목표와의 차이가 여기에 표시됩니다",
       "addCompetition": "+ 대회 등록",
@@ -2857,6 +2864,10 @@
         "switchedToAdmin": "관리자 보기로 전환했습니다",
         "switchedToUser": "멤버 보기로 전환했습니다"
       },
+      "guardian": {
+        "badge": "보호자용",
+        "logoutButton": "로그아웃"
+      },
       "pendingApproveConfirmTitle": "승인 확인",
       "pendingApproveConfirmMessage": "{name}을(를) 승인하시겠습니까?",
       "pendingRejectConfirmTitle": "거부 확인",
@@ -3120,7 +3131,9 @@
         "addAriaLabel": "{date}의 연습 기록 추가",
         "viewAriaLabel": "{date}의 연습 기록 보기",
         "editButton": "편집",
-        "deleteButton": "삭제"
+        "deleteButton": "삭제",
+        "recordBulkButton": "기록 대리 입력",
+        "viewTimesAriaLabel": "{date}의 연습 기록 보기"
       },
       "selfLogButton": "내 기록 추가"
     },
@@ -3680,6 +3693,23 @@
         "Fly": "접영",
         "IM": "개인혼영"
       }
+    },
+    "practiceTimes": {
+      "titleSuffix": " - 연습 기록",
+      "openAria": "{title}의 연습 기록 보기",
+      "loading": "불러오는 중...",
+      "loadError": "연습 기록을 불러오지 못했습니다",
+      "empty": "아직 기록이 없습니다",
+      "memberCount": "{count}명",
+      "averageLabel": "평균",
+      "fastest": "최고 {time}",
+      "recordedCount": "{recorded}/{total}회",
+      "noTime": "기록된 시간 없음",
+      "setLabel": "{set}세트",
+      "setAverage": "평균 {time}",
+      "memo": "메모",
+      "unknownUser": "알 수 없음",
+      "rowAria": "{name} 평균 {time}"
     },
     "competitionRecordsModal": {
       "titleSuffix": " - 기록 목록",

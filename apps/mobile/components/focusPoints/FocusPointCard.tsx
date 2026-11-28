@@ -23,16 +23,25 @@ import type { MainStackParamList } from "@/navigation/types";
 interface FocusPointCardProps {
   /** 身についたものの一覧も出す (目標タブ用。ホームでは出さない) */
   showMastered?: boolean;
+  /**
+   * 0件のときに案内と大きなボタンを出さず、見出しと「＋ 追加」の1行だけにする (ホーム用)。
+   * ホームでは常に出すので、使っていない人の画面を広く取らないため
+   */
+  compactEmpty?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 /**
  * フォーカスポイント (数字で測らない、泳ぎで意識すること) のカード。
- * ホーム (次の大会の隣のカルーセル) と目標タブの両方に置き、どちらからでも追加・編集できる。
+ * ホーム (お知らせの下に常に出す) と目標タブの両方に置き、どちらからでも追加・編集できる。
  * 取り組み中は FOCUS_POINT_MAX_ACTIVE 個までで、埋まっている間は「＋ 追加」を押せなくする
  * (別の端末で増えていた場合は、保存時に DB の上限エラーをフォームに出す)
  */
-export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = false, style }) => {
+export const FocusPointCard: React.FC<FocusPointCardProps> = ({
+  showMastered = false,
+  compactEmpty = false,
+  style,
+}) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -44,6 +53,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
   const [isMasteredOpen, setIsMasteredOpen] = useState(false);
 
   const isFull = active.length >= FOCUS_POINT_MAX_ACTIVE;
+  const isCompactEmpty = compactEmpty && active.length === 0;
 
   const handleAdd = () => {
     if (isFull) return;
@@ -71,7 +81,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
             </Text>
           )}
         </View>
-        {!isError && active.length > 0 && (
+        {!isError && (active.length > 0 || isCompactEmpty) && (
           <Pressable
             onPress={handleAdd}
             disabled={isFull}
@@ -93,7 +103,7 @@ export const FocusPointCard: React.FC<FocusPointCardProps> = ({ showMastered = f
 
       {isError ? (
         <Text style={styles.errorText}>{t("focusPoints.loadError")}</Text>
-      ) : active.length === 0 ? (
+      ) : isCompactEmpty ? null : active.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>{t("focusPoints.emptyTitle")}</Text>
           <Text style={styles.emptyDescription}>{t("focusPoints.emptyDescription")}</Text>
@@ -266,14 +276,14 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   list: {
-    marginTop: 4,
+    marginTop: 2,
   },
   row: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 10,
-    paddingVertical: 10,
-    minHeight: 48,
+    paddingVertical: 6,
+    minHeight: 40,
   },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -290,7 +300,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
   },
   badgeText: {
     fontSize: 11,

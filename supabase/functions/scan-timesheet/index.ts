@@ -162,6 +162,17 @@ Deno.serve(async (req) => {
       return errorResponse("認証に失敗しました", "AUTH_ERROR", 401);
     }
 
+    // 保護者アカウント (閲覧専用) は使えない。利用枠の予約は service_role で書き込むため
+    // DB の書き込み拒否トリガでは止まらず、ここで止める。判定できないときも通さない。
+    const { data: isGuardian, error: guardianError } = await supabase.rpc("is_guardian_account");
+    if (guardianError) {
+      console.error("is_guardian_account failed:", guardianError);
+      return errorResponse("利用状況の確認に失敗しました。再試行してください", "API_ERROR", 500);
+    }
+    if (isGuardian === true) {
+      return errorResponse("保護者アカウントではこの操作はできません", "AUTH_ERROR", 403);
+    }
+
     // --- 無料枠を原子的に予約する (Gemini 呼び出しの前) ---
     // C-4: 従来は「読み取り(トークンチェック)→Gemini呼び出し(数秒)→加算」という
     // 構造で、読み取りと加算の間に競合窓があった。同一ユーザーが同時に2リクエスト

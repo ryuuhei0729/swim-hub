@@ -687,3 +687,49 @@ describe("TeamPracticeList", () => {
     });
   });
 });
+
+// -----------------------------------------------------------------------
+// カードを押すとタイム一覧シートを開く (大会カードと同じ導線)
+// -----------------------------------------------------------------------
+const timesModalSpy = vi.hoisted(() => vi.fn());
+vi.mock("../TeamPracticeTimesModal", () => ({
+  TeamPracticeTimesModal: (props: { practiceId: string; heading: string }) => {
+    timesModalSpy(props);
+    return React.createElement("div", { "data-testid": "practice-times-modal" }, props.heading);
+  },
+}));
+
+describe("練習カードを押したときのタイム一覧シート", () => {
+  beforeEach(() => {
+    mocks.navigate.mockClear();
+    timesModalSpy.mockClear();
+    mocks.useDeleteTeamPracticeMutation.mockReturnValue(makeMutationMock());
+    mocks.useTeamPracticesQuery.mockReturnValue({
+      data: [makePractice({ id: "p-times", title: "朝練" })],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+  });
+
+  it.each([true, false])("isAdmin=%s: カードを押すとシートが開き、編集画面には遷移しない", (isAdmin) => {
+    render(<TeamPracticeList teamId="team-1" isAdmin={isAdmin} />);
+    expect(screen.queryByTestId("practice-times-modal")).toBeNull();
+
+    fireEvent.click(screen.getByText("朝練"));
+
+    expect(screen.getByTestId("practice-times-modal")).toBeDefined();
+    expect(timesModalSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ practiceId: "p-times", heading: expect.stringContaining("朝練") }),
+    );
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("記録ボタンを押したときはシートを開かず、記録の画面へ進む", () => {
+    render(<TeamPracticeList teamId="team-1" isAdmin={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "記録追加" }));
+    expect(screen.queryByTestId("practice-times-modal")).toBeNull();
+    expect(mocks.navigate).toHaveBeenCalledWith("PracticeTabForm", expect.anything());
+  });
+});

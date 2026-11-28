@@ -87,7 +87,7 @@ describe("LastPracticeCard", () => {
       <LastPracticeCard practice={practice()} onOpenDay={vi.fn()} />,
     );
     expect(getByText("自由形 50×4×2", { exact: false })).toBeTruthy();
-    expect(getByText("キック")).toBeTruthy();
+    expect(getByText("Kick")).toBeTruthy();
     // 平均はタイムのある1つ目のメニューだけ
     expect(getAllByText(/^平均/)).toHaveLength(1);
     expect(getAllByText(/^1:0\d\.\d\d$/)).toHaveLength(3);

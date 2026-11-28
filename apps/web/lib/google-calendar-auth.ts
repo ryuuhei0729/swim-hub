@@ -5,6 +5,7 @@ import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-s
 import { decrypt, isEncrypted } from "@/lib/encryption";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { rejectIfGuardian } from "./guardian-guard";
 
 export type ProfileData = {
   google_calendar_enabled: boolean;
@@ -109,6 +110,12 @@ export async function getGoogleCalendarAuth(
 
   if (!user) {
     return { error: NextResponse.json({ error: "認証が必要です" }, { status: 401 }) };
+  }
+
+  // 保護者アカウントはカレンダー同期 (外部サービスへの書き込み) もできない
+  const guardianDenied = await rejectIfGuardian(user.id);
+  if (guardianDenied) {
+    return { error: guardianDenied };
   }
 
   // プロファイル取得

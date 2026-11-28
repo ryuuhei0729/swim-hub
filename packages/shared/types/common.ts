@@ -28,7 +28,12 @@ export type CalendarItemType =
   | "record"; // 大会記録
 
 // チームロール
-export type TeamRole = "admin" | "user";
+// guardian = 保護者アカウント (閲覧専用。書き込みは DB のトリガで拒否される。
+// supabase/migrations/20261129000000_add_guardian_role.sql)
+export type TeamRole = "admin" | "user" | "guardian";
+
+/** 保護者アカウントのロール。メンバー一覧・出欠の対象からはこのロールを外す */
+export const GUARDIAN_ROLE = "guardian" satisfies TeamRole;
 
 // メンバータイプ
 export type MemberType = "swimmer" | "coach" | "director" | "manager";
@@ -88,7 +93,7 @@ export const isCalendarItemType = (value: unknown): value is CalendarItemType =>
 };
 
 export const isTeamRole = (value: unknown): value is TeamRole => {
-  return value === "admin" || value === "user";
+  return value === "admin" || value === "user" || value === "guardian";
 };
 
 // =============================================================================

@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 
 export interface TeamMember {
   id: string;
@@ -55,7 +56,9 @@ export async function fetchApprovedTeamMembers(
     )
     .eq("team_id", teamId)
     .eq("status", "approved")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // 保護者アカウントは生徒側のメンバー一覧に出さない
+    .neq("role", GUARDIAN_ROLE);
 
   if (fetchError) throw fetchError;
   // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元

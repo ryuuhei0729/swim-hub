@@ -35,6 +35,7 @@ function buildThenableSupabase(data: unknown[]) {
       return chain;
     }),
     eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
     order: vi.fn((col: string) => {
       orderCalls.push(col);
       return chain;
@@ -47,6 +48,7 @@ function buildThenableSupabase(data: unknown[]) {
 
   return {
     client: { from: vi.fn(() => chain) },
+    chain,
     selectCalls,
     orderCalls,
   };
@@ -74,6 +76,17 @@ describe("useMembers - 年上順ソート", () => {
 
     expect(selectCalls).toHaveLength(1);
     expect(selectCalls[0]).toContain("birthday");
+  });
+
+  it("保護者アカウント (role = guardian) はメンバー一覧に出さない", async () => {
+    const { client, chain } = buildThenableSupabase([]);
+
+    const { result } = renderHook(() => useMembers("team-1", client as never), { wrapper });
+    await act(async () => {
+      await result.current.loadMembers();
+    });
+
+    expect(chain.neq).toHaveBeenCalledWith("role", "guardian");
   });
 
   it("年上順（生年月日昇順）で members が返る。管理者でも先頭固定にはならない", async () => {

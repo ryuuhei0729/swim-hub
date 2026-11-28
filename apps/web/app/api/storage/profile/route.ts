@@ -6,6 +6,7 @@ import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, listR2Objects, deleteMultipleFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -21,6 +22,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -129,6 +132,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {

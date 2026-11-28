@@ -213,6 +213,7 @@ export async function fetchTeamPracticeDetail<T>(
               distance,
               circle,
               note,
+              created_at,
               practice_times (
                 id,
                 time,
@@ -229,12 +230,15 @@ export async function fetchTeamPracticeDetail<T>(
                 )
               ),
               users!practice_logs_user_id_fkey (
-                name
+                name,
+                profile_image_path
               )
             )
           `,
     )
     .eq("id", practiceId)
+    // メニューの並びを入力順で安定させる (mobile の TeamPracticeTimesModal と同じ)
+    .order("created_at", { referencedTable: "practice_logs", ascending: true })
     .single();
 
   if (error) throw error;

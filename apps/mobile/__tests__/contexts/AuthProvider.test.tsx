@@ -16,6 +16,8 @@
  * [AP-09] updateOnboardingCompleted — DB 更新失敗時に Error を返す
  * [AP-10] オンボーディング状態 — 圏外・タイムアウトで取得できなくても完了済みの利用者を
  *         オンボーディングへ送らない (端末キャッシュを使い、電波が戻ったら問い合わせ直す)
+ * [AP-11] 保護者アカウントの判定 — is_guardian_account RPC の結果で決め、圏外では端末の値を使う
+ * [AP-12] ログアウト — 保護者アカウントはこの端末だけログアウトする (共有アカウントのため)
  */
 
 import React from "react";
@@ -58,6 +60,13 @@ const mocks = vi.hoisted(() => ({
   refreshSession: vi.fn(),
   onAuthStateChange: vi.fn(),
   fromFn: vi.fn(),
+  rpcFn: vi.fn(
+    async (_fn: string): Promise<{ data: boolean | null; error: unknown }> => ({
+      data: false,
+      error: null,
+    }),
+  ),
+  signOut: vi.fn(async () => ({ error: null })),
   initRevenueCat: vi.fn(),
   loginRevenueCat: vi.fn(),
   logoutRevenueCat: vi.fn(),
@@ -78,9 +87,13 @@ vi.mock("@/lib/supabase", () => ({
       getSession: mocks.getSession,
       refreshSession: mocks.refreshSession,
       onAuthStateChange: mocks.onAuthStateChange,
+      signOut: mocks.signOut,
     },
     from: mocks.fromFn,
+    rpc: mocks.rpcFn,
   },
+  // signOut の後片付けで呼ばれる
+  clearMmkvCaches: vi.fn(),
 }));
 
 // react-native: Linking を AuthProvider のディープリンクハンドラ用に追加
@@ -621,5 +634,146 @@ describe("[AP-10] オンボーディング状態 — 通信できないとき", 
     });
 
     await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("false"));
+  });
+});
+
+// --------------------------------------------------------------------------
+// [AP-11] 保護者アカウントの判定
+// --------------------------------------------------------------------------
+
+/** isGuardian を表示するコンポーネント */
+const GuardianDisplay: React.FC = () => {
+  const { isGuardian } = useAuth();
+  return <span data-testid="guardian">{String(isGuardian)}</span>;
+};
+
+/** 端末に覚えている「保護者かどうか」を差し替える ("1" / "0" / null) */
+function setupCachedGuardian(value: "1" | "0" | null) {
+  vi.mocked(AsyncStorage.getItem).mockImplementation(async (key: string) =>
+    key === "is-guardian:user-1" ? value : null,
+  );
+}
+
+describe("[AP-11] 保護者アカウントの判定", () => {
+  beforeEach(() => {
+    onlineManager.setOnline(true);
+    vi.mocked(AsyncStorage.setItem).mockClear();
+    mocks.rpcFn.mockReset();
+    setupImmediateInitialSession();
+    setupSingleResult({ data: { onboarding_completed: true }, error: null });
+  });
+
+  it("is_guardian_account が true を返せば保護者として扱い、端末に覚える", async () => {
+    setupCachedGuardian(null);
+    mocks.rpcFn.mockResolvedValue({ data: true, error: null });
+
+    renderWithAuth(<GuardianDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("true"));
+    expect(mocks.rpcFn).toHaveBeenCalledWith("is_guardian_account");
+    await waitFor(() =>
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith("is-guardian:user-1", "1"),
+    );
+  });
+
+  it("is_guardian_account が false を返せば通常のアカウント", async () => {
+    setupCachedGuardian(null);
+    mocks.rpcFn.mockResolvedValue({ data: false, error: null });
+
+    renderWithAuth(<GuardianDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("false"));
+  });
+
+  it("圏外でも、保護者だと覚えていれば保護者として扱う (通常版の画面を出さない)", async () => {
+    setupCachedGuardian("1");
+    mocks.rpcFn.mockResolvedValue({ data: null, error: NETWORK_FAILURE });
+
+    renderWithAuth(<GuardianDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("true"));
+  });
+
+  it("圏外で覚えている値も無ければ通常扱いにし、電波が戻ったら問い合わせ直す", async () => {
+    setupCachedGuardian(null);
+    mocks.rpcFn
+      .mockResolvedValueOnce({ data: null, error: NETWORK_FAILURE })
+      .mockResolvedValue({ data: true, error: null });
+
+    renderWithAuth(<GuardianDisplay />);
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("false"));
+
+    await act(async () => {
+      onlineManager.setOnline(false);
+      onlineManager.setOnline(true);
+    });
+
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("true"));
+  });
+
+  it("通信以外の失敗 (RPC が無い等) は通常扱い", async () => {
+    setupCachedGuardian(null);
+    mocks.rpcFn.mockResolvedValue({
+      data: null,
+      error: { message: "function not found", code: "PGRST202" },
+    });
+
+    renderWithAuth(<GuardianDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("false"));
+  });
+});
+
+// --------------------------------------------------------------------------
+// [AP-12] ログアウト
+// --------------------------------------------------------------------------
+
+/** signOut を呼ぶボタン */
+const SignOutButton: React.FC = () => {
+  const { signOut, isGuardian } = useAuth();
+  return (
+    <>
+      <span data-testid="guardian">{String(isGuardian)}</span>
+      <button type="button" onClick={() => void signOut()}>
+        signout
+      </button>
+    </>
+  );
+};
+
+describe("[AP-12] ログアウト", () => {
+  beforeEach(() => {
+    onlineManager.setOnline(true);
+    mocks.rpcFn.mockReset();
+    mocks.signOut.mockClear();
+    setupImmediateInitialSession();
+    setupSingleResult({ data: { onboarding_completed: true }, error: null });
+    setupCachedGuardian(null);
+  });
+
+  it("保護者アカウントは scope: local でログアウトする (他の保護者の端末を締め出さない)", async () => {
+    mocks.rpcFn.mockResolvedValue({ data: true, error: null });
+    renderWithAuth(<SignOutButton />);
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("true"));
+
+    await act(async () => {
+      screen.getByText("signout").click();
+    });
+
+    await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(1));
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("通常のアカウントは今まで通り (scope 指定なし = 全端末) でログアウトする", async () => {
+    mocks.rpcFn.mockResolvedValue({ data: false, error: null });
+    renderWithAuth(<SignOutButton />);
+    await waitFor(() => expect(screen.getByTestId("guardian").textContent).toBe("false"));
+
+    await act(async () => {
+      screen.getByText("signout").click();
+    });
+
+    await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(1));
+    expect(mocks.signOut).toHaveBeenCalledWith(undefined);
   });
 });
