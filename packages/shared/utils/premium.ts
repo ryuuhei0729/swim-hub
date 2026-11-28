@@ -65,3 +65,22 @@ export function canAddPracticeTimes(count: number, isPremium: boolean): boolean 
   if (isPremium) return true;
   return count < FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
 }
+
+/**
+ * PracticeTime の上限を超えている練習ログ(メニュー)の位置を返す
+ *
+ * 上限は「1 練習ログ(= 1 メニュー)あたり」で数える。練習全体の合計では数えない
+ * (モバイルの PracticeTimeFormScreen と同じ数え方)。
+ *
+ * @param timeCountsPerLog 練習ログごとの入力済みタイム件数 (練習ログの並び順)
+ * @returns 上限を超えている練習ログの 0 始まりの位置。Premium なら常に空
+ */
+export function findLogsOverPracticeTimeLimit(
+  timeCountsPerLog: readonly number[],
+  isPremium: boolean,
+): number[] {
+  if (isPremium) return [];
+  return timeCountsPerLog.flatMap((count, index) =>
+    count > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG ? [index] : [],
+  );
+}
