@@ -17,7 +17,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { compareMembersByBirthday, type BirthdaySortableMember } from "../../utils/memberSort";
+import {
+  compareMembersByBirthday,
+  sortMembersByAgeForGroup,
+  type BirthdaySortableMember,
+} from "../../utils/memberSort";
 
 const member = (
   userId: string,
@@ -120,5 +124,73 @@ describe("compareMembersByBirthday", () => {
     const sorted = [nullUsers, withBirthday].sort(compareMembersByBirthday);
 
     expect(sorted.map((m) => m.user_id)).toEqual(["u-has", "u-null-users"]);
+  });
+});
+
+describe("sortMembersByAgeForGroup (グループ表示のグループ内の並び。swimhub-tasks#106)", () => {
+  // 2026-11-28 時点で数える
+  const REF = new Date(2026, 10, 28);
+
+  it("年齢の降順 (年上が先) に並べる", () => {
+    const list = [
+      member("u-a", "アオイ", "2014-05-01"), // 12歳
+      member("u-b", "ベニ", "2008-05-01"), // 18歳
+      member("u-c", "コン", "2011-05-01"), // 15歳
+    ];
+
+    expect(sortMembersByAgeForGroup(list, REF).map((m) => m.user_id)).toEqual([
+      "u-b",
+      "u-c",
+      "u-a",
+    ]);
+  });
+
+  it("同じ年齢なら生年月日ではなく名前順に並べる", () => {
+    // どちらも 15 歳。生年月日の昇順なら u-late が後だが、名前順で先に来る
+    const list = [
+      member("u-early", "サクラ", "2011-01-10"),
+      member("u-late", "アカネ", "2011-09-10"),
+    ];
+
+    expect(sortMembersByAgeForGroup(list, REF).map((m) => m.user_id)).toEqual([
+      "u-late",
+      "u-early",
+    ]);
+  });
+
+  it("誕生日の前後で満年齢を数える (誕生日前日はまだ1つ下)", () => {
+    const list = [
+      member("u-x", "アイ", "2011-11-29"), // 誕生日前日 → 14歳
+      member("u-y", "ユウ", "2012-11-28"), // 誕生日当日 → 14歳
+      member("u-z", "ゼン", "2011-11-28"), // 誕生日当日 → 15歳
+    ];
+
+    expect(sortMembersByAgeForGroup(list, REF).map((m) => m.user_id)).toEqual([
+      "u-z",
+      "u-x",
+      "u-y",
+    ]);
+  });
+
+  it("生年月日が未設定・読めない人は最後にまとめて名前順", () => {
+    const list = [
+      member("u-none-2", "ワタル", null),
+      member("u-has", "ンゴ", "2015-01-01"),
+      member("u-bad", "イチ", "not-a-date"),
+      member("u-none-1", "アユ", undefined),
+    ];
+
+    expect(sortMembersByAgeForGroup(list, REF).map((m) => m.user_id)).toEqual([
+      "u-has",
+      "u-none-1",
+      "u-bad",
+      "u-none-2",
+    ]);
+  });
+
+  it("元の配列は並べ替えない", () => {
+    const list = [member("u-1", "イ", "2014-01-01"), member("u-2", "ア", "2008-01-01")];
+    sortMembersByAgeForGroup(list, REF);
+    expect(list.map((m) => m.user_id)).toEqual(["u-1", "u-2"]);
   });
 });

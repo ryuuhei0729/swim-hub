@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ALWAYS_REVALIDATE } from "@/hooks/cachedQuery";
 import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
+import { sortMembersByAgeForGroup } from "@apps/shared/utils/memberSort";
 import type {
   TeamGroup,
   TeamGroupMembership,
@@ -20,6 +21,12 @@ interface MemberGroupSorterProps {
     sorted: TeamMembershipWithUser[],
     groupHeaders: Map<number, string>,
   ) => void;
+  /**
+   * グループ表示のとき、各グループ内を年齢の降順 (同じ年齢は名前順、生年月日未設定は最後に名前順)
+   * に並べる。メンバー一覧 (TeamMemberList) だけが指定する。メンバー選択モーダルは渡された順
+   * (生年月日順) を保つので指定しない (web も同じ)。
+   */
+  sortWithinGroupsByAge?: boolean;
 }
 
 interface GroupFilterData {
@@ -45,6 +52,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
   supabase,
   members,
   onGroupedMembersChange,
+  sortWithinGroupsByAge = false,
 }) => {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY);
@@ -115,13 +123,17 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
       return;
     }
 
+    // グループ内の並び (sortWithinGroupsByAge のときだけ年齢順に並べ替える)
+    const orderInGroup = (list: TeamMembershipWithUser[]) =>
+      sortWithinGroupsByAge ? sortMembersByAgeForGroup(list) : list;
+
     // 性別カテゴリの場合はユーザープロファイルのgenderで分類
     if (activeCategory === GENDER_CATEGORY) {
       const flat: TeamMembershipWithUser[] = [];
       const headers = new Map<number, string>();
 
-      const maleMembers = members.filter((m) => m.users.gender === 0);
-      const femaleMembers = members.filter((m) => m.users.gender === 1);
+      const maleMembers = orderInGroup(members.filter((m) => m.users.gender === 0));
+      const femaleMembers = orderInGroup(members.filter((m) => m.users.gender === 1));
 
       if (maleMembers.length > 0) {
         headers.set(flat.length, t("teams.mobile.genderMale"));
@@ -142,24 +154,34 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     const assigned = new Set<string>();
 
     for (const group of categoryGroups) {
-      const groupMembers = members.filter((m) => {
-        const memberGroups = userGroupMap.get(m.user_id);
-        return memberGroups?.has(group.id);
-      });
+      const groupMembers = orderInGroup(
+        members.filter((m) => {
+          const memberGroups = userGroupMap.get(m.user_id);
+          return memberGroups?.has(group.id);
+        }),
+      );
       headers.set(flat.length, group.name);
       flat.push(...groupMembers);
       groupMembers.forEach((m) => assigned.add(m.user_id));
     }
 
     // 未所属メンバー
-    const unassigned = members.filter((m) => !assigned.has(m.user_id));
+    const unassigned = orderInGroup(members.filter((m) => !assigned.has(m.user_id)));
     if (unassigned.length > 0) {
       headers.set(flat.length, t("teams.mobile.unassigned"));
       flat.push(...unassigned);
     }
 
     onGroupedMembersChange(flat, headers);
-  }, [members, activeCategory, groupsByCategory, userGroupMap, onGroupedMembersChange, t]);
+  }, [
+    members,
+    activeCategory,
+    groupsByCategory,
+    userGroupMap,
+    onGroupedMembersChange,
+    sortWithinGroupsByAge,
+    t,
+  ]);
 
   if (categories.length === 0) return null;
 

@@ -629,6 +629,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
               supabase={supabase}
               members={members}
               onGroupedMembersChange={handleGroupedMembersChange}
+              sortWithinGroupsByAge
             />
           </View>
           <View style={styles.includeRelayToggle}>

@@ -80,9 +80,12 @@ export default function TeamMemberManagement({
   const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange);
 
   // グループ別表示
+  // グループ内は年齢の降順 (同じ年齢は名前順、生年月日未設定は最後に名前順)。並び順の説明は出さない
   const { categories, activeCategory, toggleCategory, groupMembers, getCategoryLabel } = useMemberGroupSort(
     teamId,
     supabase,
+    true,
+    { sortWithinGroupsByAge: true },
   );
 
   // ベストタイム管理 (メンバー一覧が取れてから取得。重いので teamKeys の外のキー)
