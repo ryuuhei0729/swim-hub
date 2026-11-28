@@ -3897,6 +3897,7 @@
       "upload": {
         "dropzoneText": "이미지를 드래그 앤 드롭하거나 클릭하여 선택하세요",
         "dropzoneHint": "JPEG / PNG, 5MB 이하",
+        "mobileHint": "기록표 사진을 찍거나 라이브러리에서 선택하세요",
         "invalidTypeError": "이미지 형식은 JPEG 또는 PNG만 지원합니다",
         "fileSizeError": "이미지 크기는 5MB 이하로 해주세요",
         "analyzeButton": "분석하기",
@@ -3935,7 +3936,8 @@
       "errors": {
         "serverError": "서버 오류가 발생했습니다",
         "invalidFormat": "분석 결과 형식이 올바르지 않습니다. 다시 시도해 주세요",
-        "analyzeError": "분석 중 오류가 발생했습니다"
+        "analyzeError": "분석 중 오류가 발생했습니다",
+        "dailyLimitReached": "오늘 사용 횟수에 도달했습니다. Premium으로 업그레이드하면 무제한으로 이용할 수 있습니다"
       }
     },
     "adminAttendance": {
@@ -4214,6 +4216,7 @@
         "placePlaceholder": "장소명",
         "notePlaceholder": "메모"
       },
+      "modeTabCalendar": "캘린더",
       "modeTabFile": "파일 가져오기",
       "modeTabManual": "직접 입력"
     },

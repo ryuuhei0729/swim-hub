@@ -249,6 +249,34 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
   );
 
   it(
+    "入力途中にヘッダーの戻るボタンを押すと破棄の確認が出て、「戻る」を選んだときだけ遷移する " +
+      "(swimhub-tasks#70: mobile TeamEntryBulkFormScreen の usePreventRemove と同じく、" +
+      "入力途中のエントリーが確認なしに失われないこと)",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries);
+
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "9" } });
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+
+      expect(mocks.push).not.toHaveBeenCalled();
+      expect(screen.getByText("messageBack")).toBeInTheDocument();
+
+      // 「編集を続ける」なら留まる
+      fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+      expect(mocks.push).not.toHaveBeenCalled();
+
+      // もう一度戻るを押して「戻る」を選ぶと遷移する
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+      fireEvent.click(screen.getByRole("button", { name: "confirmBack" }));
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+    },
+  );
+
+  it(
     "returnOrigin=\"member\" で保存成功後は /teams/team-1?tab=competitions へ遷移する " +
       "[SC21] (人間の意図: 追加スプリント。実ロール admin が利用者ビュー /teams/{teamId} 起点で" +
       "代理入力した場合は、保存後に管理者ビューへ強制移動させず利用者ビューに戻す。" +

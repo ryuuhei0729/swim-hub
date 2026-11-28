@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -32,6 +32,8 @@ import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import MemberSelectModal, { type MemberSelectOption } from "@/components/team/MemberSelectModal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import EntryBulkConfirmModal, {
   type EntryBulkConfirmRow,
 } from "@/components/team/entry/EntryBulkConfirmModal";
@@ -110,11 +112,14 @@ export default function EntriesClient({
   // 参考バッジ「ベストタイム:」は個人の大会入力画面と同じ forms.recordLog.bestTimeLabel を
   // 再利用する (同義キーを増やさない)
   const tRecordLog = useTranslations("forms.recordLog");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
   const { supabase } = useAuth();
   // チーム画面のキャッシュを落とすため。Provider が無い環境 (既存テスト) では null
   const queryClient = useOptionalQueryClient();
 
+  const [initialRowsSnapshot] = useState(() => JSON.stringify(buildInitialRows(existingEntries)));
   const [rows, setRows] = useState<EntryDraftRow[]>(() => buildInitialRows(existingEntries));
+  const [isSaved, setIsSaved] = useState(false);
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmSections, setConfirmSections] = useState<{
@@ -486,6 +491,7 @@ export default function EntriesClient({
       }
 
       setShowConfirmModal(false);
+      setIsSaved(true);
       // 戻った直後にチーム画面のキャッシュ (カードのエントリー数・エントリー一覧モーダル) から
       // 保存前の内容が一瞬表示されないよう捨てる
       if (queryClient) {
@@ -518,9 +524,26 @@ export default function EntriesClient({
     }
   };
 
-  const handleBack = () => {
+  // 戻るボタン・ブラウザバック・タブを閉じる操作で、入力途中のエントリーが確認なしに
+  // 消えないようにする (mobile TeamEntryBulkFormScreen の usePreventRemove と同じ目的)
+  const leaveToReturnPath = useCallback(() => {
     // キャンセル後も保存後と同じ戻り先ルールに従う (R11/SC22)
     router.push(getEntryReturnPath(returnOrigin, teamId));
+  }, [router, returnOrigin, teamId]);
+  const {
+    showConfirmDialog: showLeaveConfirm,
+    handleClose: requestLeave,
+    handleConfirmClose: confirmLeave,
+    handleCancelClose: cancelLeave,
+  } = useUnsavedChangesWarning({
+    isOpen: true,
+    hasUnsavedChanges: JSON.stringify(rows) !== initialRowsSnapshot,
+    isSubmitted: isSaved,
+    onClose: leaveToReturnPath,
+  });
+
+  const handleBack = () => {
+    if (requestLeave()) leaveToReturnPath();
   };
 
   const saveDisabled = saving || isPastDate || duplicatePairs.size > 0;
@@ -805,6 +828,18 @@ export default function EntriesClient({
         submitting={saving}
         onCancel={handleCancelConfirm}
         onConfirm={handleConfirmSave}
+      />
+
+      {/* 未保存のエントリー代理入力の破棄確認 */}
+      <ConfirmDialog
+        isOpen={showLeaveConfirm}
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+        title={tUnsaved("title")}
+        message={tUnsaved("messageBack")}
+        confirmLabel={tUnsaved("confirmBack")}
+        cancelLabel={tUnsaved("cancel")}
+        variant="warning"
       />
     </div>
   );
