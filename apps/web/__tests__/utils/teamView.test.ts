@@ -23,10 +23,10 @@ describe("teamViewHref", () => {
     expect(teamViewHref("t1", true)).toBe("/teams/t1?view=admin");
   });
 
-  it("切替先に存在するタブだけを付ける", () => {
-    expect(teamViewHref("t1", true, "goals")).toBe("/teams/t1?view=admin&tab=goals");
-    expect(teamViewHref("t1", false, "goals")).toBe("/teams/t1");
-    expect(teamViewHref("t1", false, "settings")).toBe("/teams/t1?tab=settings");
+  it("存在するタブだけを付け、旧タブの ID は新しいタブへ読み替える", () => {
+    expect(teamViewHref("t1", true, "schedule")).toBe("/teams/t1?view=admin&tab=schedule");
+    expect(teamViewHref("t1", false, "practices")).toBe("/teams/t1?tab=schedule");
+    expect(teamViewHref("t1", false, "goals")).toBe("/teams/t1?tab=others");
     expect(teamViewHref("t1", true, "nope")).toBe("/teams/t1?view=admin");
   });
 });
@@ -35,7 +35,7 @@ describe("teamViewSearch", () => {
   it("クエリ文字列だけを返す (何も無ければ空文字)", () => {
     expect(teamViewSearch(false)).toBe("");
     expect(teamViewSearch(false, "members")).toBe("?tab=members");
-    expect(teamViewSearch(true, "announcements")).toBe("?view=admin&tab=announcements");
+    expect(teamViewSearch(true, "attendance")).toBe("?view=admin&tab=attendance");
   });
 });
 
@@ -46,6 +46,10 @@ describe("shouldOpenAsAdmin", () => {
     expect(shouldOpenAsAdmin({ role: "admin" }, undefined)).toBe(false);
     // 保存値は権限ではない (管理者でなくなったチーム・別アカウント)
     expect(shouldOpenAsAdmin({ role: "user" }, { adminView: true })).toBe(false);
+    // 承認待ちのチームは管理者ビューにしない
+    expect(shouldOpenAsAdmin({ role: "admin", status: "pending" }, { adminView: true })).toBe(
+      false,
+    );
   });
 });
 
@@ -57,18 +61,20 @@ describe("resolveTeamToOpen", () => {
     membership("left", { is_active: false }),
   ];
 
-  it("最後に開いた承認済みのチームを開く", () => {
+  it("最後に開いたチームが承認済みか承認待ちならそれを開く", () => {
     expect(resolveTeamToOpen(teams, "b")?.team_id).toBe("b");
+    // 承認待ちのチームも開ける (mobile と同じ。swimhub-tasks #101)
+    expect(resolveTeamToOpen(teams, "pending")?.team_id).toBe("pending");
   });
 
-  it("最後に開いたチームが無い・承認済みでないなら承認済みの先頭へ倒す", () => {
+  it("最後に開いたチームが無い・一覧に無いなら承認済みの先頭へ倒す", () => {
     expect(resolveTeamToOpen(teams, null)?.team_id).toBe("a");
     expect(resolveTeamToOpen(teams, "left")?.team_id).toBe("a");
-    expect(resolveTeamToOpen(teams, "pending")?.team_id).toBe("a");
     expect(resolveTeamToOpen(teams, "unknown")?.team_id).toBe("a");
   });
 
-  it("承認済みが無ければ null", () => {
-    expect(resolveTeamToOpen([membership("p", { status: "pending" })], null)).toBeNull();
+  it("承認済みが無ければ承認待ちの先頭、どちらも無ければ null", () => {
+    expect(resolveTeamToOpen([membership("p", { status: "pending" })], null)?.team_id).toBe("p");
+    expect(resolveTeamToOpen([membership("left", { is_active: false })], null)).toBeNull();
   });
 });

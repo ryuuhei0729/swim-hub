@@ -110,7 +110,7 @@ describe("[V-B20] teams.mobile.adminToggle の文言 (5ロケール)", () => {
 // ---------------------------------------------------------------------------
 const REQUIRED_SETTINGS_TAB_KEYS = [
   // タブのラベル
-  "teams.tabs.settings", // web (TEAM_TAB_DEFS の labelKey は "tabs.settings")
+  "teams.mobile.headerSettings", // web / mobile (ヘッダーの ⚙ から開くチーム設定の見出し)
   "teams.mobile.tabSettings", // mobile (BASE_TABS の nameKey)
   // [チーム情報]
   "teams.settingsTab.teamInfoTitle",
@@ -159,9 +159,8 @@ describe("[V-A40] 設定タブの i18n キー (5ロケール)", () => {
 
   // [V-A42] ja のラベルが一意であること (getByText が一意に引ける前提を守る)
   //
-  // 対象は teams.settingsTab.* のみ。タブのラベル 2 件
-  // (teams.tabs.settings / teams.mobile.tabSettings) は web と mobile で同じ
-  // 「設定」になるのが正しいので、重複判定から外す。
+  // 対象は teams.settingsTab.* のみ。画面・タブのラベル 2 件
+  // (teams.mobile.headerSettings / teams.mobile.tabSettings) は重複判定から外す。
   it("[V-A42] ja の teams.settingsTab.* のラベルは互いに重複しない", () => {
     const sectionKeys = REQUIRED_SETTINGS_TAB_KEYS.filter((key) =>
       key.startsWith("teams.settingsTab."),

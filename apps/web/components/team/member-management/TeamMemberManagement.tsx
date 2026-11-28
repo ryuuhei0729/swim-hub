@@ -180,8 +180,6 @@ export default function TeamMemberManagement({
       {/* ヘッダー：統計とリレートグル */}
       <MemberStatsHeader
         totalMembers={members.length}
-        adminCount={members.filter((m) => m.role === "admin").length}
-        userCount={members.filter((m) => m.role === "user").length}
         includeRelaying={includeRelaying}
         onToggleRelaying={setIncludeRelaying}
       />

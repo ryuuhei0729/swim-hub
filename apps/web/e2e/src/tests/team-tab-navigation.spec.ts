@@ -42,7 +42,7 @@ try {
   console.error("環境変数の検証に失敗しました:", error instanceof Error ? error.message : error);
 }
 
-/** アクティブなタブのラベル (TeamTabs は選択中に border-blue-500 を付ける) */
+/** アクティブなタブのラベル (TeamTabs は選択中に border-blue-500 と aria-selected を付ける) */
 async function activeTabLabel(page: Page): Promise<string> {
   return await page.evaluate(() => {
     const buttons = [...document.querySelectorAll("nav[aria-label='Tabs'] button")];
@@ -77,7 +77,7 @@ async function reloadAndClickTab(page: Page, teamId: string, label: string) {
   // ハイドレーション完了を待つ (急ぎすぎるとクリックが届かない)
   await page.waitForTimeout(3000);
 
-  await page.getByRole("button", { name: label, exact: true }).click();
+  await page.getByRole("tab", { name: label, exact: true }).click();
   await page.waitForTimeout(2500);
 }
 
@@ -104,9 +104,9 @@ test.describe("チーム詳細のタブ切替 (クリック経由)", () => {
       return;
     }
 
-    // 設定タブ (今スプリントの成果物) を含め、複数のタブで確認する。
-    // 境界は dynamic() ごとに必要なので、1つ通っても他が通るとは限らない
-    for (const label of ["設定", "メンバー", "練習"]) {
+    // 複数のタブで確認する。境界は dynamic() ごとに必要なので、1つ通っても他が通るとは限らない。
+    // タブは最後に開いたものを覚えるので、毎回前回と違うタブを押す
+    for (const label of ["予定", "メンバー", "出欠"]) {
       await reloadAndClickTab(page, teamId, label);
 
       expect(
@@ -121,7 +121,7 @@ test.describe("チーム詳細のタブ切替 (クリック経由)", () => {
   /**
    * TC-TABNAV-002: クリック後に activeTab が別の値へ戻らない
    *
-   * reset() が走ると既定タブ (出欠) へ戻る。押した直後だけでなく
+   * 本文が作り直されると既定タブ (メンバー) へ戻る。押した直後だけでなく
    * **チャンク解決後まで**見ないと、戻りを取りこぼす。
    */
   test("TC-TABNAV-002: タブをクリックした後、別の値へ戻らない", async ({ page }) => {
@@ -132,20 +132,22 @@ test.describe("チーム詳細のタブ切替 (クリック経由)", () => {
       return;
     }
 
-    await reloadAndClickTab(page, teamId, "設定");
+    // 前回のテストで覚えたタブと違うタブを押すため、先にメンバーへ戻しておく
+    await reloadAndClickTab(page, teamId, "メンバー");
+    await reloadAndClickTab(page, teamId, "その他");
     const right_after = await activeTabLabel(page);
-    expect(right_after).toBe("設定");
+    expect(right_after).toBe("その他");
 
     // チャンク解決・再レンダーが落ち着くまで待ってから再確認する
     await page.waitForTimeout(5000);
     expect(
       await activeTabLabel(page),
-      "クリック直後は「設定」だったが、その後 activeTab が戻った。" +
-        "ストアの reset() が走っている可能性がある",
-    ).toBe("設定");
+      "クリック直後は「その他」だったが、その後 activeTab が戻った。" +
+        "TeamPageClient が作り直されている可能性がある",
+    ).toBe("その他");
 
-    // 設定タブの中身まで到達していること (タブのハイライトだけでなく本文も出る)
-    await expect(page.locator('[data-testid="team-settings-tab"]')).toBeVisible({
+    // その他タブの中身まで到達していること (タブのハイライトだけでなく本文も出る)
+    await expect(page.locator('[data-testid="team-others-tab"]')).toBeVisible({
       timeout: 15000,
     });
   });

@@ -1,11 +1,12 @@
 /**
  * チーム画面ヘッダー (TeamViewHeader)
  *   - チーム名を押すと所属チームの一覧が開き、選ぶとそのチームへ移る
- *     (最後にそのチームを管理者ビューで見ていて、かつ管理者なら /teams-admin へ)
- *   - 承認待ちのチームは選べない
+ *     (最後にそのチームを管理者ビューで見ていて、かつ管理者なら ?view=admin で)
+ *   - 承認待ちのチームも選べる (開くと「承認待ち」の案内。swimhub-tasks #101)
  *   - 管理者にだけ「利用者 / 管理者」スイッチを出す。押してもページ遷移はせず onToggleView を呼ぶ
- *     (本文の入れ替えは TeamPageClient の責務。TeamPageClient.test.tsx で検証)
- *   - 招待コードを出す (利用者ビューでも)
+ *     (本文の入れ替えは TeamPageClient の責務。teamPageClientViewToggle.test.tsx で検証)
+ *   - お知らせ・チーム設定のアイコンを出す。招待コードはヘッダーに出さない
+ *     (チーム設定の中だけ。swimhub-tasks #102)
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -107,12 +108,15 @@ describe("TeamViewHeader — チーム切替", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
-  it("承認待ちのチームは選べない", async () => {
+  it("承認待ちのチームも選べ、利用者ビューで開く", async () => {
+    // 管理者ビューの保存値があっても、承認待ちのチームは管理者ビューにしない
+    useTeamViewStore.setState({ byTeam: { "team-p": { adminView: true } } });
     renderHeader();
     await userEvent.click(screen.getByTestId("team-switcher-open"));
-    expect(screen.queryByTestId("team-switcher-option-team-p")).toBeNull();
-    await userEvent.click(screen.getByText("申請中チーム"));
-    expect(mocks.push).not.toHaveBeenCalled();
+    const option = screen.getByTestId("team-switcher-option-team-p");
+    expect(option.textContent).toContain("承認待ち");
+    await userEvent.click(option);
+    expect(mocks.push).toHaveBeenCalledWith("/teams/team-p");
   });
 
   it("Escape で一覧が閉じる", async () => {
@@ -147,14 +151,26 @@ describe("TeamViewHeader — 利用者 / 管理者 の表示切替", () => {
   });
 });
 
-describe("TeamViewHeader — 招待コード", () => {
-  it("利用者ビューでも招待コードを出す", () => {
-    renderHeader({ isCurrentUserAdmin: false, inviteCode: "ABC12345" });
-    expect((screen.getByTestId("team-invite-code") as HTMLInputElement).value).toBe("ABC12345");
+describe("TeamViewHeader — お知らせ・チーム設定・招待コード", () => {
+  it("お知らせ・チーム設定のアイコンを押すと、それぞれのハンドラを呼ぶ", async () => {
+    const onOpenAnnouncements = vi.fn();
+    const onOpenSettings = vi.fn();
+    renderHeader({ onOpenAnnouncements, onOpenSettings });
+    await userEvent.click(screen.getByRole("button", { name: "お知らせ" }));
+    await userEvent.click(screen.getByRole("button", { name: "チーム設定" }));
+    expect(onOpenAnnouncements).toHaveBeenCalledTimes(1);
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("招待コードが無ければ出さない", () => {
-    renderHeader({ inviteCode: null });
+  it("ハンドラが無ければ (承認待ちのチームなど) アイコンを出さない", () => {
+    renderHeader();
+    expect(screen.queryByTestId("team-header-announcements")).toBeNull();
+    expect(screen.queryByTestId("team-header-settings")).toBeNull();
+  });
+
+  it("招待コードはヘッダーに出さない", () => {
+    renderHeader({ onOpenSettings: vi.fn() });
     expect(screen.queryByTestId("team-invite-code")).toBeNull();
+    expect(screen.queryByText("招待コード")).toBeNull();
   });
 });

@@ -106,8 +106,7 @@ export const CompetitionItem = React.memo(function CompetitionItem({
   const entryStatusLabel = t(`teams.competitions.entryStatus.${displayedEntryStatus}`);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const isSavingStatus = updateStatusMutation.isPending;
-  // 過去大会 (昨日以前) はエントリー導線を無効化する (web とのパリティ)。
-  // 今日・未来日は表示/タップ可能のまま維持する。
+  // 過去大会 (昨日以前) は受付ステータス行を出さない (D-2)。
   const isPastCompetition = isCompetitionDateInPast(competition.date);
 
   useEffect(() => {
@@ -521,9 +520,8 @@ export function useTeamCompetitionActions(teamId: string, isAdmin: boolean) {
   }, []);
 
   // モーダル内の「エントリーを追加」(非admin): 既存の選手セルフエントリー画面へ遷移（機能維持）。
-  // web (apps/web/components/team/TeamCompetitionEntryModal.tsx の canEditOrDeleteEntry) も
-  // 受付中(open)の大会でのみ自分のエントリー導線を表示する方針であり、これに揃えて
-  // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
+  // 受付中(open)の大会でのみ自分のエントリー導線を出す（モーダル側で非表示だが二重ガード）。
+  // web も同じ条件 (apps/web/components/team/TeamCompetitionEntryModal.tsx の canEditOrDeleteEntry)。
   const handleSelfEntry = useCallback((competition: Competition, currentStatus: EntryStatus) => {
     // モーダルが表示している status（resolveEntryStatus の結果をそのまま保持した値。R5 で
     // モーダル内の楽観的更新自体は削除済み）でガードする。

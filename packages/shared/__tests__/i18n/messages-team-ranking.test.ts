@@ -257,11 +257,13 @@ const RELAY_KEYS = [
 /** `teams.ranking.*` 配下の全期待キー (個人種目 35 + リレー 27 = 62)。 */
 const ALL_RANKING_KEYS = [...RANKING_KEYS, ...RELAY_KEYS] as const;
 
-/** PM 裁定: rankings タブは3面すべてに出す。その3面のラベルキー */
+/**
+ * ランキングの入口のラベルキー。web / mobile とも「その他」タブのカード
+ * (TeamOthersTab) から開く (swimhub-tasks #100 で web も mobile と同じタブ構成にした)
+ */
 const TAB_LABEL_KEYS = [
-  "teams.tabs.rankings", // web 一般 (TeamTabs.tsx)
-  "teamsAdmin.tabs.rankings", // web 管理者 (TeamAdminTabs.tsx)
-  "teams.mobile.tabRankings", // mobile (components/teams/TeamTabs.tsx)
+  "teams.mobile.others.rankingsTitle", // web / mobile (TeamOthersTab)
+  "teams.mobile.tabRankings", // mobile (旧タブ名。ランキング画面のタイトル)
 ] as const;
 
 describe("[V-R1] teams.ranking.* が 5 ロケールすべてに存在する", () => {

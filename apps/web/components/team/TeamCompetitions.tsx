@@ -1,8 +1,14 @@
 "use client";
 
+// =============================================================================
+// 予定タブの「大会」側: カードと、カードの操作 (編集・削除・エントリー・記録・
+// 自分の記録追加・記録一覧) とそのモーダル群。一覧の取得と並べ方は TeamSchedule.tsx が
+// 持つ (練習と大会を 1 本に混ぜるため。mobile の TeamCompetitionList の CompetitionItem /
+// useTeamCompetitionActions と同じ分け方)。
+// =============================================================================
+
 import React, {
   useState,
-  useEffect,
   useCallback,
   useMemo,
   Suspense,
@@ -14,22 +20,19 @@ import { useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
-  ChartBarIcon,
   MapPinIcon,
   TrophyIcon,
   PencilSquareIcon,
   ClipboardDocumentListIcon,
-  EyeIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
-import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { isEntryTabVisible } from "@/utils/tabModalUtils";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import TeamCompetitionEntryModal from "./TeamCompetitionEntryModal";
 import TeamCompetitionRecordsModal from "./TeamCompetitionRecordsModal";
-import Pagination from "@/components/ui/Pagination";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import { TeamRecordsAPI } from "@apps/shared/api/teams/records";
 import { useInvalidateTeamRankings } from "@apps/shared/hooks/queries/useInvalidateTeamRankings";
@@ -48,11 +51,7 @@ import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordInsert, RecordUpdate, Style } from "@apps/shared/types";
 import type { EditingData } from "@/stores/types";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  TEAM_COMPETITIONS_PAGE_SIZE,
-  useTeamCompetitionsPageQuery,
-  type TeamCompetition,
-} from "@/hooks/queries/teamCompetitionQueries";
+import type { TeamCompetition } from "@/hooks/queries/teamCompetitionQueries";
 import {
   invalidateTeamCompetitionQueries,
   invalidateTeamMemberBestTimes,
@@ -88,15 +87,27 @@ interface RawSelfRecordEntry {
   split_times?: RawSelfRecordSplitTime[] | null;
 }
 
-export interface TeamCompetitionsProps {
+export interface TeamCompetitionActionsOptions {
   teamId: string;
   isAdmin?: boolean;
 }
 
-export default function TeamCompetitions({
+export interface TeamCompetitionActions {
+  /** 大会 1 件分のカード */
+  renderCard: (competition: TeamCompetition) => React.ReactNode;
+  /** 作成・編集フォーム・エントリー・記録一覧・自分の記録・削除確認のモーダル (一覧の外に 1 回だけ置く) */
+  modals: React.ReactNode;
+  /** 管理者ビュー: 大会を追加 */
+  openAddForm: () => void;
+  /** 保存・削除の失敗 (一覧の代わりに表示する) */
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useTeamCompetitionActions({
   teamId,
   isAdmin = false,
-}: TeamCompetitionsProps) {
+}: TeamCompetitionActionsOptions): TeamCompetitionActions {
   const { supabase, user } = useAuth();
   const invalidateRankings = useInvalidateTeamRankings();
   const router = useRouter();
@@ -110,7 +121,6 @@ export default function TeamCompetitions({
   const [showRecordsModal, setShowRecordsModal] = useState(false);
   const [selectedCompetitionForRecords, setSelectedCompetitionForRecords] =
     useState<TeamCompetition | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selfRecordCompetition, setSelfRecordCompetition] =
@@ -136,7 +146,6 @@ export default function TeamCompetitions({
   const [entryEditorTargetEntryId, setEntryEditorTargetEntryId] = useState<string | undefined>(
     undefined,
   );
-  const pageSize = TEAM_COMPETITIONS_PAGE_SIZE;
 
   const {
     isBasicFormOpen,
@@ -157,25 +166,10 @@ export default function TeamCompetitions({
     setCreatedEntries: setEntryTabCreatedEntries,
   } = useCompetitionStore();
 
-  // チームの大会一覧 (ページ単位)。タブを開くたびに再取得するが (staleTime 0)、
-  // 再取得中は前回の内容をそのまま表示する
-  const competitionsQuery = useTeamCompetitionsPageQuery(supabase, teamId, currentPage, pageSize);
-  const competitions = competitionsQuery.data?.competitions ?? [];
-  const totalCount = competitionsQuery.data?.totalCount ?? 0;
-  // スケルトン / 取得エラーは「表示できるデータが1件も無い」ときだけ出す
-  const loading = competitionsQuery.isPending;
-  const displayError =
-    error ??
-    (competitionsQuery.isError && !competitionsQuery.data ? t("competitions.error") : null);
-  const fetchError = competitionsQuery.error;
-  useEffect(() => {
-    if (fetchError) console.error("チーム大会情報の取得に失敗:", fetchError);
-  }, [fetchError]);
-
-  // 大会一覧 (全ページ)・出欠の月別サマリ・(指定時は) その大会のモーダルを最新化する。
+  // 大会一覧 (今日以降・過去)・出欠の月別サマリ・(指定時は) その大会のモーダルを最新化する。
   // 保存・削除の直後に呼び、保存前の内容が残らないよう再取得の完了まで待つ。
-  // 表示していないページ・閉じているモーダルのキャッシュは捨てるので、保存後に
-  // 1 ページ目へ戻したりモーダルを開き直したりしても保存前の内容は出ない
+  // 表示していない一覧・閉じているモーダルのキャッシュは捨てるので、保存後に
+  // 過去を開き直したりモーダルを開き直したりしても保存前の内容は出ない
   // (refreshQueriesAfterWrite の docstring 参照)
   const loadTeamCompetitions = useCallback(
     async (competitionId?: string) => {
@@ -257,7 +251,6 @@ export default function TeamCompetitions({
         invalidateRankings();
       }
       await loadTeamCompetitions(editingData?.id);
-      setCurrentPage(1);
     } catch (err) {
       console.error(
         editingData?.id ? "大会の更新に失敗:" : "大会の作成に失敗:",
@@ -307,11 +300,6 @@ export default function TeamCompetitions({
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // 新しいページのクエリは useTeamCompetitionsPageQuery がキーの変化で取得する
-  };
-
   // 記録入力ページへ遷移
   const handleRecordClick = (e: React.MouseEvent, competitionId: string) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
@@ -334,7 +322,8 @@ export default function TeamCompetitions({
     setShowRecordsModal(true);
   };
 
-  // 一般メンバー含む全員向け: 自分の記録を追加(RecordLogForm を competitionId 付きで開く)
+  // 利用者ビュー向け: 自分の記録を追加(RecordLogForm を competitionId 付きで開く)。
+  // 管理者ビューには出さない (mobile と同じく代理入力ボタンだけ。swimhub-tasks #112)
   const handleOpenSelfRecord = (
     e: React.MouseEvent,
     competition: TeamCompetition,
@@ -364,7 +353,7 @@ export default function TeamCompetitions({
     // タイムが空欄のまま種目のみ復元される状態に degrade する。一覧クエリ (loadTeamCompetitions)
     // の records select は widen しない方針のため、ここで別クエリとして取得する)。
     //
-    // この導線は isAdmin ガードが無く一般メンバーも操作できるため、records テーブルを
+    // この導線は一般メンバーが操作するため、records テーブルを
     // 直接クエリし、competition_id と user_id の2条件でサーバー側に絞り込みを要求する
     // (C3, PM実測・PM裁定2)。これにより他メンバーの note/video_path/split_times 等の
     // 私的データが一切ネットワークレスポンスに含まれない。
@@ -722,317 +711,171 @@ export default function TeamCompetitions({
     }
   };
 
-  return (
-    <>
-      <div className="bg-white rounded-lg shadow p-6">
-        {/* ヘッダー(データ読み込み中/エラー時も常に描画し、大会追加ボタンを即座に操作可能にする) */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {t("competitions.title", { count: competitions.length })}
-          </h2>
-          {isAdmin && (
-            <button
-              onClick={handleAddCompetition}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              {t("competitions.addButton")}
-            </button>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="animate-pulse">
-            <div className="space-y-3">
-              {[...Array(3)].map((_, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-32 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-20"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : displayError ? (
-          <div className="text-center py-8">
-            <p className="text-red-600 mb-4">{displayError}</p>
-            <button
-              onClick={() => {
-                setError(null);
-                void competitionsQuery.refetch();
-                router.refresh();
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              {t("competitions.retry")}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {competitions.map((competition) => {
-              const hasRecords =
-                competition.records && competition.records.length > 0;
-              const canViewRecords = hasRecords;
-              return (
-                <div
-                  key={competition.id}
-                  onClick={() =>
-                    canViewRecords ? handleOpenRecords(competition) : undefined
-                  }
-                  onKeyDown={(e) => {
-                    if (
-                      canViewRecords &&
-                      (e.key === "Enter" || e.key === " ")
-                    ) {
-                      e.preventDefault();
-                      handleOpenRecords(competition);
-                    }
-                  }}
-                  aria-label={
-                    canViewRecords
-                      ? t("competitions.card.viewRecordsAriaLabel", {
-                          title:
-                            competition.title ||
-                            t("competitions.fallbackTitle"),
-                        })
-                      : undefined
-                  }
-                  tabIndex={canViewRecords ? 0 : undefined}
-                  role={canViewRecords ? "button" : undefined}
-                  className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
-                    canViewRecords
-                      ? "cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      : "cursor-default"
+  const renderCard = (competition: TeamCompetition): React.ReactNode => {
+    const competitionTitle =
+      competition.title || t("competitions.fallbackTitle");
+    // 水路 (mobile の TeamCompetitionList と同じ表記)。pool_type: 0 = 短水路(25m) / 1 = 長水路(50m)
+    const poolTypeParen = competition.pool_type === 1 ? "(50m)" : "(25m)";
+    const poolTypeLabel =
+      competition.pool_type === 1
+        ? t("competitionRecordsModal.poolTypeLong")
+        : t("competitionRecordsModal.poolTypeShort");
+    // 明日以降の大会は「エントリー」、今日・過去の大会は「記録」だけを出す
+    // (mobile と同じ出し分け。管理者も同じ。swimhub-tasks #60)
+    const isEntryPhase = isEntryTabVisible(competition.date);
+    return (
+      // 記録の有無に関わらず、カードを押したら記録一覧を開く (0件なら一覧側で空表示。
+      // mobile と同じ。swimhub-tasks #103)
+      <div
+        key={competition.id}
+        onClick={() => handleOpenRecords(competition)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpenRecords(competition);
+          }
+        }}
+        aria-label={t("competitions.card.viewRecordsAriaLabel", {
+          title: competitionTitle,
+        })}
+        tabIndex={0}
+        role="button"
+        className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <TrophyIcon className="h-5 w-5 text-blue-500" />
+              <span className="text-lg font-medium text-gray-900">
+                {competitionTitle}
+              </span>
+              {/* エントリーステータスバッジ */}
+              {competition.entry_status && (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    competition.entry_status === "open"
+                      ? "bg-green-100 text-green-800"
+                      : competition.entry_status === "closed"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <TrophyIcon className="h-5 w-5 text-blue-500" />
-                        <span className="text-lg font-medium text-gray-900">
-                          {competition.title || t("competitions.fallbackTitle")}
-                        </span>
-                        {/* エントリーステータスバッジ */}
-                        {competition.entry_status && (
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              competition.entry_status === "open"
-                                ? "bg-green-100 text-green-800"
-                                : competition.entry_status === "closed"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {competition.entry_status === "open"
-                              ? t("competitions.entryStatus.open")
-                              : competition.entry_status === "closed"
-                                ? t("competitions.entryStatus.closed")
-                                : t("competitions.entryStatus.before")}
-                          </span>
-                        )}
-                      </div>
+                  {competition.entry_status === "open"
+                    ? t("competitions.entryStatus.open")
+                    : competition.entry_status === "closed"
+                      ? t("competitions.entryStatus.closed")
+                      : t("competitions.entryStatus.before")}
+                </span>
+              )}
+            </div>
 
-                      <div className="flex items-center space-x-2 mb-1">
-                        <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {(() => {
-                            const competitionDate = new Date(
-                              competition.date + "T00:00:00",
-                            );
-                            return isValid(competitionDate)
-                              ? format(competitionDate, "yyyy年M月d日(EEE)", {
-                                  locale: ja,
-                                })
-                              : "-";
-                          })()}
-                        </span>
-                      </div>
+            <div className="flex items-center space-x-2 mb-1">
+              <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-600">
+                {(() => {
+                  const competitionDate = new Date(
+                    competition.date + "T00:00:00",
+                  );
+                  return isValid(competitionDate)
+                    ? format(competitionDate, "yyyy年M月d日(EEE)", {
+                        locale: ja,
+                      })
+                    : "-";
+                })()}
+              </span>
+            </div>
 
-                      {competition.place && (
-                        <div className="flex items-center space-x-2 mb-1">
-                          <MapPinIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            {competition.place}
-                          </span>
-                        </div>
-                      )}
+            {/* 場所と水路。場所が無いときは水路だけを出す (mobile と同じ。swimhub-tasks #104) */}
+            <div className="flex items-center space-x-2 mb-1">
+              <MapPinIcon className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-600">
+                {competition.place || poolTypeLabel} {poolTypeParen}
+              </span>
+            </div>
 
-                      {competition.note && (
-                        <p className="text-sm text-gray-600 mb-2 mt-2">
-                          {competition.note}
-                        </p>
-                      )}
+            {competition.note && (
+              <p className="text-sm text-gray-600 mb-2 mt-2">
+                {competition.note}
+              </p>
+            )}
+          </div>
 
-                      {/* 記録情報 */}
-                      {competition.records &&
-                      competition.records.length > 0 ? (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-sm text-green-600 font-medium flex items-center gap-1">
-                            <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            {t("competitions.card.recordCount", {
-                              count: competition.records.length,
-                            })}
-                          </span>
-                          <span className="text-xs text-gray-500 flex items-center">
-                            <EyeIcon className="h-3 w-3 mr-1" />
-                            {t("competitions.card.tapForDetails")}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-sm text-gray-500 flex items-center gap-1">
-                            <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            {t("competitions.card.noRecords")}
-                          </span>
-                          <span className="text-xs text-blue-600 flex items-center">
-                            <PlusIcon className="h-3 w-3 mr-1" />
-                            {t("competitions.card.addable")}
-                          </span>
-                        </div>
-                      )}
+          <div className="flex flex-col items-end gap-2">
+            {/* アクションボタン */}
+            <div className="flex gap-2 flex-wrap justify-end">
+              {isEntryPhase ? (
+                // エントリー管理モーダルを開く (管理者の代理エントリーはモーダル内の
+                // 「エントリーを代理入力」ボタンから。受付中のときだけ出る)
+                <button
+                  onClick={(e) => handleEntryClick(e, competition)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
+                  {t("competitions.card.entryButton")}
+                </button>
+              ) : isAdmin ? (
+                // 管理者ビュー: 記録の代理入力ページへ
+                <button
+                  onClick={(e) =>
+                    handleRecordClick(e, competition.id)
+                  }
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  <PencilSquareIcon className="h-4 w-4 mr-1" />
+                  {t("competitions.card.recordsButton")}
+                </button>
+              ) : (
+                // 利用者ビュー: 自分の記録を追加
+                <button
+                  onClick={(e) => handleOpenSelfRecord(e, competition)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  {t("competitions.selfRecordButton")}
+                </button>
+              )}
+            </div>
 
-                      {/* エントリー情報 */}
-                      {competition.entries &&
-                        competition.entries.length > 0 && (
-                          <div className="mt-1">
-                            <span className="text-sm text-blue-600 flex items-center gap-1">
-                              <PencilSquareIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              {t("competitions.card.entryCount", { count: competition.entries.length })}
-                            </span>
-                          </div>
-                        )}
-
-                      <div className="mt-2">
-                        <span className="text-xs text-gray-500">
-                          {t("competitions.card.createdBy")}{" "}
-                          {competition.users?.name ||
-                            competition.created_by_user?.name ||
-                            "Unknown"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(competition.created_at), "M/d HH:mm")}
-                      </p>
-
-                      {/* アクションボタン */}
-                      <div className="flex gap-2 flex-wrap justify-end">
-                        {/* エントリー管理ボタン（非adminは過去日を非表示。今日・未来は表示、従来どおり）。
-                            admin は過去日でも表示する (R9) — 撤去前のカード上「エントリー代理一括入力」
-                            ボタンは isAdmin のみでガードされ日付制限が無かった (実測: efcf7c37^)。
-                            そのボタンをこのカードの「エントリー」ボタン一本に統合した (R4) ため、
-                            admin の代理一括入力への到達能力 (日付を問わない) をここで維持しないと
-                            過去大会に対して代理入力ページへ到達できなくなる退行が生じる */}
-                        {(isAdmin || !isCompetitionDateInPast(competition.date)) && (
-                          <button
-                            onClick={(e) => handleEntryClick(e, competition)}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                          >
-                            <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
-                            {t("competitions.card.entryButton")}
-                          </button>
-                        )}
-
-                        {/* 一般メンバー含む全員向け: 自分の記録を追加 */}
-                        <button
-                          onClick={(e) => handleOpenSelfRecord(e, competition)}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                        >
-                          <PlusIcon className="h-4 w-4 mr-1" />
-                          {t("competitions.selfRecordButton")}
-                        </button>
-
-                        {/* エントリー代理一括入力ボタンはカードから撤去し、エントリー管理モーダル内へ
-                            移設した (R4)。admin はカードの「エントリー」ボタン (上) からモーダルを開き、
-                            モーダル内の「エントリーを代理入力」ボタンからこのページへ遷移する
-                            (TeamCompetitionEntryModal.tsx の handleAdminBulkEntryClick)。 */}
-
-                        {/* 記録入力ボタン（adminのみ） */}
-                        {isAdmin && (
-                          <button
-                            onClick={(e) =>
-                              handleRecordClick(e, competition.id)
-                            }
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                          >
-                            <PencilSquareIcon className="h-4 w-4 mr-1" />
-                            {t("competitions.card.recordsButton")}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 編集・削除ボタン（adminのみ） */}
-                      {isAdmin && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={(e) =>
-                              handleEditCompetition(e, competition)
-                            }
-                            onKeyDown={(e) => e.stopPropagation()}
-                            data-testid="team-competition-edit-button"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                            aria-label={t("competitions.card.editButton")}
-                          >
-                            <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
-                            {t("competitions.card.editButton")}
-                          </button>
-                          <button
-                            onClick={(e) =>
-                              handleRequestDelete(e, competition.id)
-                            }
-                            onKeyDown={(e) => e.stopPropagation()}
-                            data-testid="team-competition-delete-button"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
-                            aria-label={t("competitions.card.deleteButton")}
-                          >
-                            <TrashIcon className="h-3.5 w-3.5 mr-1" />
-                            {t("competitions.card.deleteButton")}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {competitions.length === 0 && (
-              <div className="text-center py-8">
-                <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">{t("competitions.empty")}</p>
-                {isAdmin && (
-                  <button
-                    onClick={handleAddCompetition}
-                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                  >
-                    {t("competitions.addButton")}
-                  </button>
-                )}
+            {/* 編集・削除ボタン（adminのみ） */}
+            {isAdmin && (
+              <div className="flex gap-1">
+                <button
+                  onClick={(e) =>
+                    handleEditCompetition(e, competition)
+                  }
+                  onKeyDown={(e) => e.stopPropagation()}
+                  data-testid="team-competition-edit-button"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  aria-label={t("competitions.card.editButton")}
+                >
+                  <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
+                  {t("competitions.card.editButton")}
+                </button>
+                <button
+                  onClick={(e) =>
+                    handleRequestDelete(e, competition.id)
+                  }
+                  onKeyDown={(e) => e.stopPropagation()}
+                  data-testid="team-competition-delete-button"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                  aria-label={t("competitions.card.deleteButton")}
+                >
+                  <TrashIcon className="h-3.5 w-3.5 mr-1" />
+                  {t("competitions.card.deleteButton")}
+                </button>
               </div>
             )}
           </div>
-        )}
-
-        {/* ページング */}
-        {!loading && !displayError && totalCount > 0 && (
-          <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(totalCount / pageSize)}
-              totalItems={totalCount}
-              itemsPerPage={pageSize}
-              onPageChange={handlePageChange}
-            />
-          </div>
-        )}
+        </div>
       </div>
+    );
+  };
 
+  const modals = (
+    <>
       {/* チーム大会作成・編集モーダル */}
       <Suspense fallback={null}>
         <CompetitionBasicForm
@@ -1147,4 +990,12 @@ export default function TeamCompetitions({
       />
     </>
   );
+
+  return {
+    renderCard,
+    modals,
+    openAddForm: handleAddCompetition,
+    error,
+    clearError: () => setError(null),
+  };
 }

@@ -131,11 +131,11 @@
  *
  * === コンポーネント層 (components/admin-attendance/) ===
  *   EventListItem.tsx →
- *     受付中ボタン / 締切ボタン / 保存ボタン / 保存中テキスト
+ *     受付中ボタン / 締切ボタン / 変更前の確認ダイアログ (受付開始 / 締切)
  *   BulkChangeModal.tsx →
  *     モーダルタイトル (まとめて出欠状態を変更)
  *     イベントなしテキスト
- *     ステータスラベル: 受付中 / 締切 / 未設定
+ *     ステータスラベル: 受付中 / 締切 (未設定は受付中として表示)
  *     大会ラベル (括弧内)
  *     受付中にするボタン / 締切にするボタン
  *   AttendanceStatusModal.tsx →
@@ -278,7 +278,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 //   GroupMemberModal.tsx → タイトル / 検索 / カウント / ボタン
 //   GroupMemberListModal.tsx → メンバー数 / 空状態
 //   GroupCard.tsx → aria-label × 3 (a11y 検証対象)
-//   EventListItem.tsx → ステータスボタン / 保存ボタン
+//   EventListItem.tsx → ステータスボタン / 確認ダイアログ
 //   BulkChangeModal.tsx → タイトル / ステータス / ボタン
 //   AttendanceStatusModal.tsx → タイトル / ローディング
 //   AttendanceGroupingDisplay.tsx → カテゴリヘッダー × 4 / 空状態
@@ -303,30 +303,10 @@ describe("[V-C2C2-01] teamsAdmin namespace の必須キー確認", () => {
     "teamsAdmin.badge.admin",
 
     // --------------------------------------------------------
-    // TeamAdminClient.tsx: チーム未発見エラー
+    // TeamSchedule.tsx / TeamSubScreenView.tsx: 一括登録
+    // (管理者専用タブは廃止。タブ名は teams.mobile.* を両ビューで使う)
     // --------------------------------------------------------
-    "teamsAdmin.client.notFound.title",
-    "teamsAdmin.client.notFound.description",
-
-    // TeamAdminClient.tsx: 権限なしエラー
-    "teamsAdmin.client.unauthorized.title",
-    "teamsAdmin.client.unauthorized.description",
-
-    // TeamAdminClient.tsx: 招待コードラベル
-    "teamsAdmin.client.inviteCodeLabel",
-
-    // --------------------------------------------------------
-    // TeamAdminTabs.tsx: タブ名 × 8
-    // ※ useTranslations フック制約のため配列定義を関数内に移動して実装する
-    // --------------------------------------------------------
-    "teamsAdmin.tabs.attendance",
-    "teamsAdmin.tabs.announcements",
-    "teamsAdmin.tabs.members",
-    "teamsAdmin.tabs.groups",
-    "teamsAdmin.tabs.practices",
-    "teamsAdmin.tabs.competitions",
     "teamsAdmin.tabs.bulkRegister",
-    "teamsAdmin.tabs.settings",
 
     // --------------------------------------------------------
     // TeamSettings.tsx
@@ -538,8 +518,8 @@ describe("[V-C2C2-01] teamsAdmin namespace の必須キー確認", () => {
     // --------------------------------------------------------
     "teamsAdmin.eventListItem.openButton",
     "teamsAdmin.eventListItem.closedButton",
-    "teamsAdmin.eventListItem.saveButton",
-    "teamsAdmin.eventListItem.saving",
+    "teamsAdmin.eventListItem.confirmOpen",
+    "teamsAdmin.eventListItem.confirmClose",
 
     // --------------------------------------------------------
     // BulkChangeModal.tsx
@@ -548,7 +528,6 @@ describe("[V-C2C2-01] teamsAdmin namespace の必須キー確認", () => {
     "teamsAdmin.bulkChange.empty",
     "teamsAdmin.bulkChange.statusOpen",
     "teamsAdmin.bulkChange.statusClosed",
-    "teamsAdmin.bulkChange.statusUnset",
     "teamsAdmin.bulkChange.competitionLabel",
     "teamsAdmin.bulkChange.openButton",
     "teamsAdmin.bulkChange.closedButton",
@@ -801,8 +780,8 @@ describe("[V-C2C2-03] Phase 1-C-1 / 1-C-2-A / 1-C-2-B / 1-C-2-C-1 必須キー�
     "goals.form.competitionLabel",
     // Phase 1-C-2-C-1: teams (メンバー向け)
     "teams.page.title",
-    "teams.tabs.attendance",
-    "teams.tabs.members",
+    "teams.mobile.tabAttendance",
+    "teams.mobile.tabMembers",
     "teams.members.title",
     "teams.attendanceStatus.present",
     "teams.attendanceStatus.absent",

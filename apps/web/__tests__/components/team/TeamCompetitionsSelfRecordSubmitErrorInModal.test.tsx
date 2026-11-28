@@ -130,7 +130,8 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 // 実 RecordLogForm を通す (スタブ化しない)。これが旧 [V-D4C-04] との決定的な違い。
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 const ROW = {
   id: "competition-1",

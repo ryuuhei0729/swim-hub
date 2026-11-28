@@ -9,8 +9,6 @@ import {
   PlusIcon,
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import { formatTimeBest } from "@/utils/formatters";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntryAPI } from "@apps/shared/api/entries";
@@ -152,7 +150,6 @@ export default function TeamCompetitionEntryModal({
     style_id: number;
     entry_time: number | null;
     note: string | null;
-    created_at: string;
     users: { id: string; name: string } | null;
     styles: { id: number; name_jp: string; distance: number } | null;
   };
@@ -232,7 +229,6 @@ export default function TeamCompetitionEntryModal({
             style_id: entry.style_id,
             entry_time: entry.entry_time,
             note: entry.note,
-            created_at: entry.created_at,
             users: user,
             styles: style,
           });
@@ -481,21 +477,23 @@ export default function TeamCompetitionEntryModal({
                     data.isAdmin (実際のロール) を使う。TeamCompetitions.tsx の isAdmin prop は
                     ルート (/teams vs /teams-admin) 固定値のため、実ロールと食い違う場合がある
                     (実ロール admin のユーザーが /teams/[teamId] を開いた場合等)。
-                    admin 用ボタンは既存の「エントリー代理一括入力」ボタン (D4 でカードから移設)
-                    と同じ挙動・対象URLのため R1 のような状態ガードは付けない。
+                    admin 用ボタンは mobile (TeamCompetitionEntryModal.tsx) と同じく受付中 (open)
+                    のときだけ表示する (swimhub-tasks #60)。
                     非admin 用ボタンは着地先 (CompetitionTabModal のエントリータブ) が
                     実際に編集可能な状態のときだけ表示する (R1 と同じ canEditOrDeleteEntry)。 */}
                 <div className="mb-6">
                   {data.isAdmin ? (
-                    <button
-                      type="button"
-                      onClick={handleAdminBulkEntryClick}
-                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                      data-testid="team-competition-entry-bulk-button"
-                    >
-                      <ClipboardDocumentCheckIcon className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                      {t("competitionEntryModal.adminBulkEntryButton")}
-                    </button>
+                    data.competition.entry_status === "open" && (
+                      <button
+                        type="button"
+                        onClick={handleAdminBulkEntryClick}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                        data-testid="team-competition-entry-bulk-button"
+                      >
+                        <ClipboardDocumentCheckIcon className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                        {t("competitionEntryModal.adminBulkEntryButton")}
+                      </button>
+                    )
                   ) : (
                     canEditOrDeleteEntry(data.competition.entry_status, data.competition.date) && (
                       <button
@@ -595,9 +593,6 @@ export default function TeamCompetitionEntryModal({
                                       </button>
                                     </div>
                                   )}
-                                  <div className="text-right text-xs text-gray-400 whitespace-nowrap">
-                                    {format(new Date(entry.created_at), "M月d日 HH:mm", { locale: ja })}
-                                  </div>
                                 </div>
                               </div>
                             </div>

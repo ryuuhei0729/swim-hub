@@ -94,15 +94,12 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 const openSelfRecordForm = async (user: ReturnType<typeof userEvent.setup>) => {
-  // 対象大会 (目的の大会) は日付が最も古く(rank51)、一覧の3ページ目
-  // (pageSize=20, 51件中41〜51件目) に表示される。「次のページ」を2回押してページ3まで進む。
-  await screen.findAllByRole("button", { name: /自分の記録を追加|自己記録を追加/ });
-  await user.click(screen.getByRole("button", { name: "次のページ" }));
-  await screen.findByRole("button", { name: "ページ 2" });
-  await user.click(screen.getByRole("button", { name: "次のページ" }));
+  // 対象大会 (目的の大会) は日付が最も古い (rank51)。一覧の取得・段階読み込みは
+  // TeamSchedule 側の関心事なので、ここではテスト用の描画で全件を出し、カードのタイトルで待つ
   await screen.findByText("目的の大会");
 
   // 一覧は日付降順で描画されるため、最も古い対象大会 (rank51) は常に配列の最後に来る。

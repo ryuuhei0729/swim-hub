@@ -238,9 +238,9 @@ export function TeamCompetitionEntryModal({
         </View>
 
         {/* 種目エントリー導線。非admin は自分のエントリー入力へ、admin は代理入力へ (要件B後半)。
-            web (apps/web/components/team/TeamCompetitionEntryModal.tsx の canEditOrDeleteEntry)
-            も受付中(open)の大会でのみ自分のエントリー導線を表示する方針であり、これに揃えて
-            受付中以外では導線を表示しない (admin の代理入力ボタンも同じ条件に揃える)。
+            どちらも受付中(open)の大会でのみ表示する。web も同じ条件
+            (apps/web/components/team/TeamCompetitionEntryModal.tsx: 本人用は canEditOrDeleteEntry、
+            代理入力ボタンは entry_status === "open")。
             D10 改訂: 「自分のエントリー0件で非表示」ルールはユーザーが撤回したため、
             自分のエントリー件数に関係なく status === "open" のみで表示する
             (admin/非admin ともに、この条件だけで分岐しない)。 */}

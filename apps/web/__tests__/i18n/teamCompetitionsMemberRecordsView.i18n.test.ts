@@ -14,6 +14,11 @@
  *     - teams.competitions.card.addable             ("追加可能")
  *     - teams.competitions.card.viewRecordsAriaLabel ("{title}の記録を閲覧")
  *
+ *   【swimhub-tasks #104 (2026-11-28)】mobile に合わせてカードに記録件数を出さなくなったため、
+ *   recordCount / tapForDetails / noRecords / addable は削除した (カードは記録の有無に関わらず
+ *   押せるので aria-label の viewRecordsAriaLabel だけが残る)。削除したキーが残っていない
+ *   ことも確認する。
+ *
  *   キー名の実装権限は Web Developer にあるため、Developer が別名を採用した場合は
  *   この既存契約テストと `TeamCompetitionsMemberRecordsView.test.tsx` の双方が赤くなる
  *   (どちらかだけ直す部分実装を許さない)。
@@ -117,12 +122,16 @@ function setsEqual(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-const NEW_KEYS = [
+const NEW_KEYS = ["teams.competitions.card.viewRecordsAriaLabel"] as const;
+
+// swimhub-tasks #104 でカードから外した表示のキー (使わなくなったので全ロケールから消す)
+const REMOVED_KEYS = [
   "teams.competitions.card.recordCount",
   "teams.competitions.card.tapForDetails",
   "teams.competitions.card.noRecords",
   "teams.competitions.card.addable",
-  "teams.competitions.card.viewRecordsAriaLabel",
+  "teams.competitions.card.entryCount",
+  "teams.competitions.card.createdBy",
 ] as const;
 
 describe("[Phase A2 / web] TeamCompetitions 利用者ビュー記録閲覧解放 — 新規 i18n キー5ロケール網羅", () => {
@@ -139,6 +148,13 @@ describe("[Phase A2 / web] TeamCompetitions 利用者ビュー記録閲覧解放
     },
   );
 
+  it.each(LOCALES)("%s: カードから外した表示のキーが残っていない", (locale) => {
+    const messages = LOCALE_MESSAGES[locale];
+    for (const key of REMOVED_KEYS) {
+      expect(getByPath(messages, key), `${locale}.json に "${key}" が残っている`).toBeUndefined();
+    }
+  });
+
   it("en.json の新規キーに日本語が含まれない (翻訳漏れゼロ)", () => {
     for (const key of NEW_KEYS) {
       const value = getByPath(enMessages, key);
@@ -147,7 +163,7 @@ describe("[Phase A2 / web] TeamCompetitions 利用者ビュー記録閲覧解放
     }
   });
 
-  it.each(["teams.competitions.card.recordCount", "teams.competitions.card.viewRecordsAriaLabel"] as const)(
+  it.each(["teams.competitions.card.viewRecordsAriaLabel"] as const)(
     '"%s" が要求する引数名の集合が ja を基準に全ロケールで過不足なく一致する' +
       " (ICU plural/select の制御引数名も含めて構文的に比較する。単純な部分文字列一致では" +
       " ICU 文字列内のネストしたリテラル `{count}` を拾って偽陽性の緑になるため使わない)",

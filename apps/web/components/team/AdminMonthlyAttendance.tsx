@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
 import { useAttendanceModal } from "@/hooks/useAttendanceModal";
+import type { TeamEvent } from "@swim-hub/shared/types";
 import { EventListItem } from "@/components/admin-attendance/EventListItem";
 import { BulkChangeModal } from "@/components/admin-attendance/BulkChangeModal";
 import { AttendanceStatusModal } from "@/components/admin-attendance/AttendanceStatusModal";
@@ -22,12 +23,9 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
     events,
     loading,
     error,
-    editStates,
     savingEventIds,
     loadFutureEvents,
-    handleStatusChange,
-    handleSaveEvent,
-    handleBulkUpdate,
+    changeStatus,
   } = useAdminAttendance(supabase, teamId);
 
   const attendanceModal = useAttendanceModal(supabase, teamId);
@@ -36,12 +34,22 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
     loadFutureEvents();
   }, [loadFutureEvents]);
 
-  const handleBulkUpdateWrapper = async (
-    selectedEventIds: Set<string>,
-    status: "open" | "closed",
-  ) => {
-    await handleBulkUpdate(selectedEventIds, status);
-    setIsBulkModalOpen(false);
+  // 受付中 / 締切 を選んだら、確認のうえ即保存する (mobile と同じ流れ)
+  const handleStatusChange = useCallback(
+    (event: TeamEvent, status: "open" | "closed") => {
+      const confirmed = window.confirm(
+        t(status === "open" ? "eventListItem.confirmOpen" : "eventListItem.confirmClose"),
+      );
+      if (!confirmed) return;
+      void changeStatus([event.id], status);
+    },
+    [changeStatus, t],
+  );
+
+  const handleBulkUpdate = async (selectedEventIds: Set<string>, status: "open" | "closed") => {
+    const ok = await changeStatus(selectedEventIds, status);
+    if (ok) setIsBulkModalOpen(false);
+    return ok;
   };
 
   if (loading) {
@@ -92,26 +100,15 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
-          {events.map((event) => {
-            const editState = editStates[event.id] || {
-              attendanceStatus: event.attendance_status || null,
-            };
-            const isSaving = savingEventIds.has(event.id);
-            const hasChanges = event.attendance_status !== editState.attendanceStatus;
-
-            return (
-              <EventListItem
-                key={`${event.type}-${event.id}`}
-                event={event}
-                editState={editState}
-                isSaving={isSaving}
-                hasChanges={hasChanges}
-                onStatusChange={handleStatusChange}
-                onSave={handleSaveEvent}
-                onClick={() => attendanceModal.openModal(event)}
-              />
-            );
-          })}
+          {events.map((event) => (
+            <EventListItem
+              key={`${event.type}-${event.id}`}
+              event={event}
+              isSaving={savingEventIds.has(event.id)}
+              onStatusChange={handleStatusChange}
+              onClick={() => attendanceModal.openModal(event)}
+            />
+          ))}
         </div>
       )}
 
@@ -120,7 +117,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
         isOpen={isBulkModalOpen}
         events={events}
         onClose={() => setIsBulkModalOpen(false)}
-        onBulkUpdate={handleBulkUpdateWrapper}
+        onBulkUpdate={handleBulkUpdate}
       />
 
       {/* 出欠状況モーダル */}

@@ -15,9 +15,8 @@
  *              usePracticeStore の状態 (isOpen=true) が閉じられる (mount 時 closeAll)
  *   [V-D4P-04] 安全策: TeamPractices アンマウント時、usePracticeStore が閉じられる
  *              (unmount 時 closeAll。他画面へ遷移してもモーダルが残留しない)
- *   [V-D4P-05] admin でも「自分のログを追加」ボタンが表示される (admin/非admin問わず
- *              全メンバーの導線であることの確認。既存の管理者向け「練習記録追加」ボタンとは
- *              別ボタンであること = 2つの追加ボタンが共存する)
+ *   [V-D4P-05] 管理者ビューには「自分のログを追加」を出さない (swimhub-tasks #112 で変更。
+ *              自分の分は利用者ビューで入力する。mobile と同じ)。管理者向け「練習記録追加」は出る
  *
  * 【jsdom 描画リスクに関するメモ】
  * PracticeTabModal 自体は重量コンポーネント (usePracticeTabSave 等) なので、本テストの
@@ -65,7 +64,8 @@ vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "member-1" }, supabase: buildSupabaseMock() }),
 }));
 
-import TeamPractices from "@/components/team/TeamPractices";
+// 練習カードと操作は予定タブ (TeamSchedule) と同じ useTeamPracticeActions。一覧の取得はテスト用の描画側
+import { TeamPractices } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamPractices — 自己ログ導線 + ストア安全策 (D4)", () => {
   beforeEach(() => {
@@ -125,13 +125,12 @@ describe("TeamPractices — 自己ログ導線 + ストア安全策 (D4)", () =>
     expect(usePracticeStore.getState().isOpen).toBe(false);
   });
 
-  it("[V-D4P-05] admin でも「自分のログを追加」ボタンが表示される (管理者用追加ボタンと共存)", async () => {
+  it("[V-D4P-05] 管理者ビューには「自分のログを追加」を出さず「練習記録追加」だけを出す", async () => {
     render(<TeamPractices teamId="team-1" isAdmin={true} />);
 
     expect(
-      screen.getByRole("button", { name: /自分のログを追加|自分の練習を記録/ }),
-    ).toBeInTheDocument();
-    // 既存の管理者向け「代理登録」ボタンも引き続き存在すること (2つのボタンが共存)
-    expect(screen.getAllByRole("button").length).toBeGreaterThan(1);
+      screen.queryByRole("button", { name: /自分のログを追加|自分の練習を記録/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "練習記録追加" }).length).toBeGreaterThan(0);
   });
 });

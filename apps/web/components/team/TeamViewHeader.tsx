@@ -11,9 +11,10 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  BellIcon,
   CheckIcon,
-  ClipboardDocumentIcon,
   ChevronDownIcon,
+  Cog6ToothIcon,
   PlusIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
@@ -46,15 +47,19 @@ export interface TeamViewHeaderProps {
    * ヘッダーより下の本文だけを入れ替える (ヘッダーは作り直さない)
    */
   onToggleView: () => void;
-  /** 招待コード (利用者・管理者どちらのビューでも右側に出す) */
-  inviteCode?: string | null;
+  /** お知らせを開く。未指定なら (承認待ちのチームなど) ボタンを出さない */
+  onOpenAnnouncements?: () => void;
+  /** チーム設定 (チーム情報・招待コード・記録色・脱退) を開く。未指定ならボタンを出さない */
+  onOpenSettings?: () => void;
 }
 
 /**
  * チーム画面のヘッダー (利用者ビュー・管理者ビュー共通)。
  * - チーム名を押すと所属チームの一覧が開き、別チームへの切替・作成・参加ができる
- * - 管理者にだけ「利用者 / 管理者」の表示切替スイッチを出す
- * - 右側に招待コード (コピー可)
+ * - 承認待ちのチームも選べる (開くと「承認待ち」の案内が出る。swimhub-tasks #101)
+ * - 右側にお知らせ・チーム設定のアイコンと、管理者にだけ「利用者 / 管理者」の表示切替スイッチ
+ *
+ * 招待コードはヘッダーには出さず、チーム設定の中だけに出す (mobile と同じ。swimhub-tasks #102)。
  *
  * モバイルのチームタブ (TeamDetailView のヘッダー + TeamSwitcherSheet) と同じ操作感にしている。
  */
@@ -64,11 +69,10 @@ export default function TeamViewHeader({
   isCurrentUserAdmin,
   isAdminView,
   onToggleView,
-  inviteCode,
+  onOpenAnnouncements,
+  onOpenSettings,
 }: TeamViewHeaderProps) {
   const t = useTranslations("teams");
-  const tAdmin = useTranslations("teamsAdmin");
-  const [isCopied, setIsCopied] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { supabase } = useAuth();
@@ -128,13 +132,6 @@ export default function TeamViewHeader({
     [router, teamId],
   );
 
-  const handleCopyInviteCode = useCallback(() => {
-    if (!inviteCode) return;
-    void navigator.clipboard.writeText(inviteCode);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  }, [inviteCode]);
-
   const viewLabel = isAdminView
     ? t("mobile.adminToggle.admin")
     : t("mobile.adminToggle.user");
@@ -142,7 +139,7 @@ export default function TeamViewHeader({
   return (
     <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 左: チーム名 (= 切替メニューを開くボタン) とそのすぐ右の 利用者/管理者 スイッチ */}
+        {/* 左: チーム名 (= 切替メニューを開くボタン) */}
         <div className="flex min-w-0 flex-auto items-center gap-3 sm:gap-4">
           <div className="relative flex min-w-0">
             <button
@@ -215,22 +212,37 @@ export default function TeamViewHeader({
                       <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-500">
                         {t("mobile.switcher.pendingGroup")}
                       </p>
-                      {pendingTeams.map((membership) => (
-                        <div
-                          key={membership.team_id}
-                          role="menuitem"
-                          aria-disabled="true"
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-400"
-                        >
-                          <span className="flex-1 truncate">
-                            {membership.teams?.name ||
-                              t("mobile.fallbackTeamName")}
-                          </span>
-                          <span className="shrink-0 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
-                            {t("mobile.statusPending")}
-                          </span>
-                        </div>
-                      ))}
+                      {pendingTeams.map((membership) => {
+                        const selected = membership.team_id === teamId;
+                        return (
+                          <button
+                            key={membership.team_id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={selected}
+                            onClick={() => openTeam(membership)}
+                            className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors ${
+                              selected
+                                ? "bg-blue-50 font-semibold text-blue-700"
+                                : "text-gray-900 hover:bg-gray-50"
+                            }`}
+                            data-testid={`team-switcher-option-${membership.team_id}`}
+                          >
+                            <span className="flex-1 truncate">
+                              {membership.teams?.name || t("mobile.fallbackTeamName")}
+                            </span>
+                            <span className="shrink-0 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-normal text-yellow-800">
+                              {t("mobile.statusPending")}
+                            </span>
+                            {selected && (
+                              <CheckIcon
+                                className="h-4 w-4 shrink-0 text-blue-600"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
                     </>
                   )}
                 </div>
@@ -266,7 +278,34 @@ export default function TeamViewHeader({
               </div>
             )}
           </div>
+        </div>
 
+        {/* 右: お知らせ・チーム設定・利用者 / 管理者 の表示切替 (管理者のみ) */}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {onOpenAnnouncements && (
+            <button
+              type="button"
+              onClick={onOpenAnnouncements}
+              aria-label={t("mobile.headerAnnouncements")}
+              title={t("mobile.headerAnnouncements")}
+              className="rounded-md p-1.5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="team-header-announcements"
+            >
+              <BellIcon className="h-6 w-6" aria-hidden="true" />
+            </button>
+          )}
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label={t("mobile.headerSettings")}
+              title={t("mobile.headerSettings")}
+              className="rounded-md p-1.5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="team-header-settings"
+            >
+              <Cog6ToothIcon className="h-6 w-6" aria-hidden="true" />
+            </button>
+          )}
           {/* 利用者 / 管理者 の表示切替 (管理者のみ) */}
           {isCurrentUserAdmin && (
             <div className="flex shrink-0 items-center gap-2">
@@ -293,38 +332,6 @@ export default function TeamViewHeader({
             </div>
           )}
         </div>
-
-        {/* 右: 招待コード */}
-        {inviteCode && (
-          <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5">
-            <div className="flex flex-row items-center gap-2">
-              <span className="block text-xs font-medium text-gray-700 whitespace-nowrap">
-                {tAdmin("client.inviteCodeLabel")}
-              </span>
-              <input
-                type="text"
-                value={inviteCode}
-                readOnly
-                aria-label={tAdmin("client.inviteCodeLabel")}
-                className="w-28 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm text-xs font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                data-testid="team-invite-code"
-              />
-              <button
-                type="button"
-                onClick={handleCopyInviteCode}
-                className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                title={tAdmin("common.copyTitle")}
-                aria-label={tAdmin("common.copyTitle")}
-              >
-                {isCopied ? (
-                  <CheckIcon className="h-3 w-3 text-green-600" />
-                ) : (
-                  <ClipboardDocumentIcon className="h-3 w-3" />
-                )}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <TeamCreateModal
@@ -338,10 +345,12 @@ export default function TeamViewHeader({
       <TeamJoinModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={() => {
-          // 参加申請は承認待ちになるので、メニューの「承認待ち」に出るよう一覧だけ取り直す
+        onSuccess={(joinedTeamId) => {
+          // 参加申請は承認待ちになる。メニューの「承認待ち」に出るよう一覧を取り直し、
+          // そのチーム (承認待ちの案内) を開く (mobile と同じ)
           void queryClient.invalidateQueries({ queryKey: teamKeys.list() });
           setIsJoinModalOpen(false);
+          if (joinedTeamId) router.push(teamViewHref(joinedTeamId, false));
         }}
       />
     </div>

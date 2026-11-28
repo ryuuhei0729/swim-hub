@@ -164,13 +164,9 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin/非admin 
       expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/c-1/entries?origin=admin");
     });
 
-    // 実装実測 (TeamCompetitionEntryModal.tsx:443-451, コメント明記):
-    // 非admin の self-button は canEditOrDeleteEntry (entry_status==="open" かつ未来日) で
-    // ガードされるが、admin の bulk-button は「カードから移設した旧ボタンと同じ挙動」を
-    // 意図的に維持するため entry_status によるガードを一切付けていない
-    // (R9 の「admin は日付を問わず到達できる」設計と対称)。したがって「admin/非admin
-    // いずれも非表示になる」という旧スケルトンの想定は現行実装と矛盾するため、
-    // 非admin (ガードされる) と admin (ガードされない) を分けて検証する。
+    // 非admin の self-button は canEditOrDeleteEntry (entry_status==="open" かつ未来日) で、
+    // admin の bulk-button は entry_status==="open" でガードする
+    // (swimhub-tasks #60: mobile と同じく代理エントリーは受付中のときだけ)。
     it("entry_status が open 以外のとき、非admin の self-button は表示されない", async () => {
       renderModal("user", "before");
       await screen.findByTestId("team-competition-entry-modal");
@@ -178,11 +174,16 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin/非admin 
       expect(screen.queryByTestId("team-competition-entry-bulk-button")).not.toBeInTheDocument();
     });
 
-    it("[非退行] entry_status が open 以外でも、admin の bulk-button は表示され続ける (状態ガード無し)", async () => {
-      renderModal("admin", "closed");
-      const bulkButton = await screen.findByTestId("team-competition-entry-bulk-button");
-      expect(bulkButton).toBeInTheDocument();
-      expect(screen.queryByTestId("team-competition-entry-self-button")).not.toBeInTheDocument();
-    });
+    it.each(["before", "closed"] as const)(
+      "entry_status が %s のとき、admin の bulk-button は表示されない (受付中のときだけ)",
+      async (status) => {
+        renderModal("admin", status);
+        await screen.findByTestId("team-competition-entry-modal");
+        // 受付状況の表示 (読み込み完了) を待ってから判定する
+        await screen.findByTestId("team-competition-entry-status-select");
+        expect(screen.queryByTestId("team-competition-entry-bulk-button")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("team-competition-entry-self-button")).not.toBeInTheDocument();
+      },
+    );
   });
 });

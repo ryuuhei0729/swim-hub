@@ -12,12 +12,15 @@ import { useEffect } from "react";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts";
-import type { TeamTabType } from "@/components/team/TeamTabs";
-import type { TeamAdminTabType } from "@/components/team/TeamAdminTabs";
-import { teamGroupsWithCountQueryOptions } from "@/components/team/group-management/hooks/useTeamGroups";
+import {
+  DEFAULT_TEAM_TAB,
+  TEAM_TAB_IDS,
+  type TeamTabType,
+} from "@/components/team/teamTabDefs";
+import { getScheduleToday } from "@/utils/teamSchedule";
 import { useOptionalQueryClient } from "./useOptionalQueryClient";
-import { teamPracticesPageQueryOptions } from "./teamPracticeQueries";
-import { teamCompetitionsPageQueryOptions } from "./teamCompetitionQueries";
+import { teamUpcomingPracticesQueryOptions } from "./teamPracticeQueries";
+import { teamUpcomingCompetitionsQueryOptions } from "./teamCompetitionQueries";
 import {
   approvedTeamMembersQueryOptions,
   teamGroupSortDataQueryOptions,
@@ -33,33 +36,7 @@ export const TEAM_TAB_PREFETCH_DELAY_MS = 500;
  */
 const PREFETCH_STALE_TIME_MS = 30 * 1000;
 
-/** タブの並び順 (TeamTabs / TeamAdminTabs の定義と同じ順)。「隣のタブ」の判定に使う */
-const MEMBER_TAB_ORDER = [
-  "attendance",
-  "members",
-  "practices",
-  "competitions",
-  "rankings",
-  "settings",
-] as const satisfies readonly TeamTabType[];
-
-const ADMIN_TAB_ORDER = [
-  "attendance",
-  "announcements",
-  "members",
-  "groups",
-  "practices",
-  "competitions",
-  "rankings",
-  "goals",
-  "bulk-register",
-  "settings",
-] as const satisfies readonly TeamAdminTabType[];
-
-const DEFAULT_TAB = "attendance";
-
 type TeamView = "member" | "admin";
-type AnyTeamTab = TeamTabType | TeamAdminTabType;
 
 interface PrefetchContext {
   queryClient: QueryClient;
@@ -91,15 +68,17 @@ const membersPrefetcher: TabPrefetcher = {
     ]),
 };
 
-const practicesPrefetcher: TabPrefetcher = {
-  primaryKey: (ctx) => teamPracticesPageQueryOptions(ctx.supabase, ctx.teamId, 1).queryKey,
-  prefetch: (ctx) => prefetchWith(ctx, teamPracticesPageQueryOptions(ctx.supabase, ctx.teamId, 1)),
-};
-
-const competitionsPrefetcher: TabPrefetcher = {
-  primaryKey: (ctx) => teamCompetitionsPageQueryOptions(ctx.supabase, ctx.teamId, 1).queryKey,
-  prefetch: (ctx) =>
-    prefetchWith(ctx, teamCompetitionsPageQueryOptions(ctx.supabase, ctx.teamId, 1)),
+// 予定タブは今日以降の練習・大会を最初に出す (過去は「過去」を開いたときだけ取る)
+const schedulePrefetcher: TabPrefetcher = {
+  primaryKey: (ctx) =>
+    teamUpcomingPracticesQueryOptions(ctx.supabase, ctx.teamId, getScheduleToday()).queryKey,
+  prefetch: (ctx) => {
+    const today = getScheduleToday();
+    return Promise.all([
+      prefetchWith(ctx, teamUpcomingPracticesQueryOptions(ctx.supabase, ctx.teamId, today)),
+      prefetchWith(ctx, teamUpcomingCompetitionsQueryOptions(ctx.supabase, ctx.teamId, today)),
+    ]);
+  },
 };
 
 const myAttendancePrefetcher: TabPrefetcher = {
@@ -111,39 +90,32 @@ const myAttendancePrefetcher: TabPrefetcher = {
       : prefetchWith(ctx, myMonthListQueryOptions(ctx.supabase, ctx.teamId, ctx.userId)),
 };
 
-const groupsPrefetcher: TabPrefetcher = {
-  primaryKey: (ctx) => teamGroupsWithCountQueryOptions(ctx.supabase, ctx.teamId).queryKey,
-  prefetch: (ctx) => prefetchWith(ctx, teamGroupsWithCountQueryOptions(ctx.supabase, ctx.teamId)),
-};
-
 /**
- * ビューごとの先読み可能なタブ。ここに無いタブ (ランキング・設定・お知らせ・
- * 管理者の出欠など) は先読みしない (それぞれ別の仕組みでキャッシュしているか、
- * 編集フォームなのでキャッシュしない)。
+ * ビューごとの先読み可能なタブ。ここに無いタブ (その他・管理者の出欠など) は先読みしない
+ * (それぞれ別の仕組みでキャッシュしているか、開いてから取れば十分なため)。
+ * 管理者ビューのメンバータブは「メンバー / グループ」切替の既定がメンバーなので、
+ * 利用者ビューと同じものを先読みする。
  */
-const PREFETCHERS: Record<TeamView, Partial<Record<AnyTeamTab, TabPrefetcher>>> = {
+const PREFETCHERS: Record<TeamView, Partial<Record<TeamTabType, TabPrefetcher>>> = {
   member: {
-    attendance: myAttendancePrefetcher,
     members: membersPrefetcher,
-    practices: practicesPrefetcher,
-    competitions: competitionsPrefetcher,
+    schedule: schedulePrefetcher,
+    attendance: myAttendancePrefetcher,
   },
   admin: {
     members: membersPrefetcher,
-    groups: groupsPrefetcher,
-    practices: practicesPrefetcher,
-    competitions: competitionsPrefetcher,
+    schedule: schedulePrefetcher,
   },
 };
 
 /**
  * 先読みするタブ = 既定タブ + 開いているタブの左右の隣 (開いているタブ自身は除く)。
- * 先読みの仕組みが無いタブは除く。
+ * 先読みの仕組みが無いタブは除く。タブの並びは両ビューで同じ (teamTabDefs.ts)。
  */
-export function getTeamTabsToPrefetch(view: TeamView, activeTab: AnyTeamTab): AnyTeamTab[] {
-  const order: readonly AnyTeamTab[] = view === "admin" ? ADMIN_TAB_ORDER : MEMBER_TAB_ORDER;
+export function getTeamTabsToPrefetch(view: TeamView, activeTab: TeamTabType): TeamTabType[] {
+  const order = TEAM_TAB_IDS;
   const index = order.indexOf(activeTab);
-  const candidates: AnyTeamTab[] = [DEFAULT_TAB];
+  const candidates: TeamTabType[] = [DEFAULT_TEAM_TAB];
   if (index > 0) candidates.push(order[index - 1]!); // index > 0 を確認済み
   if (index >= 0 && index < order.length - 1) candidates.push(order[index + 1]!); // 範囲確認済み
   const prefetchers = PREFETCHERS[view];
@@ -164,7 +136,7 @@ function isOffline(): boolean {
  */
 export function useTeamTabPrefetch(
   teamId: string,
-  activeTab: AnyTeamTab,
+  activeTab: TeamTabType,
   view: TeamView,
   enabled: boolean = true,
 ) {

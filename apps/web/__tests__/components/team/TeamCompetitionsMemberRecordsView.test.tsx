@@ -17,6 +17,11 @@
  *          L837 aria-label のハードコード日本語4+1箇所を i18n 化する
  *          (新規キーの実装は Web Developer 担当。QA はキー存在を検証するのみ)
  *
+ * 【swimhub-tasks #103 / #104 (2026-11-28) で仕様変更】
+ *   mobile に合わせ、記録が0件でもカードを押せば記録一覧を開く (0件なら一覧側で空表示)。
+ *   カードの記録情報ブロック (件数/タップで詳細/登録記録なし/追加可能) とエントリー件数は
+ *   出さなくなった。[V-W3][V-W5][V-W6][V-W7] は新仕様に合わせて書き換えている。
+ *
  * Verification Checklist マッピング:
  *   [V-W1]  非admin: hasRecords=true のカードをクリックすると記録一覧モーダルが開く
  *   [V-W2]  非admin: 同カードで Enter/Space キー操作でもモーダルが開く (L828 onKeyDown)
@@ -158,7 +163,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲覧できる (Phase A2)", () => {
   describe("[V-W1][V-W2] 非admin: hasRecords=true のカードはクリック/キーボードでモーダルが開く", () => {
@@ -225,22 +231,23 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
     });
   });
 
-  describe("[V-W3] 非admin: hasRecords=false のカードはクリックしてもモーダルが開かない (既知の残差異・非退行)", () => {
-    it("記録0件のカードは role=button を持たず、クリックしても recordsModalSpy が visible で呼ばれない", async () => {
+  describe("[V-W3] 非admin: 記録0件のカードもクリックすると記録一覧モーダルが開く (#103)", () => {
+    it("記録0件のカードも role=button を持ち、クリックで recordsModalSpy が isOpen=true で呼ばれる", async () => {
       vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([NO_RECORDS_ROW]),
       }));
+      const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録なし大会");
 
-      // canViewRecords = hasRecords (false) のため role=button が付与されない
-      const titleEl = screen.getByText("記録なし大会");
-      const card = titleEl.closest('[role="button"]');
-      expect(card, "hasRecords=false のカードに role=button が付いてはいけない").toBeNull();
+      const ariaLabel = interpolateJa("teams.competitions.card.viewRecordsAriaLabel", {
+        title: "記録なし大会",
+      });
+      await user.click(screen.getByRole("button", { name: ariaLabel }));
 
-      expect(mocks.recordsModalSpy).not.toHaveBeenCalledWith(
-        expect.objectContaining({ isOpen: true }),
+      expect(mocks.recordsModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ isOpen: true, competitionId: "competition-no-records" }),
       );
     });
   });
@@ -280,35 +287,49 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
     });
   });
 
-  describe("[V-W5] 非admin にも記録情報ブロックが i18n キー経由で表示される", () => {
-    it("記録1件以上: 登録記録件数とタップで詳細の文言が新規キーから表示される", async () => {
+  describe("[V-W5] カードに記録件数・エントリー件数・作成者・作成日時を出さず、水路を出す (#104)", () => {
+    it("記録・エントリーがあっても件数は出さない", async () => {
+      const rowWithEntries = {
+        ...WITH_RECORDS_ROW,
+        entries: [{ id: "e1", user_id: "member-1", style_id: 1, entry_time: null }],
+      };
       vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
-        supabase: buildSupabaseMock([WITH_RECORDS_ROW]),
+        supabase: buildSupabaseMock([rowWithEntries]),
       }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録あり大会");
 
-      const expectedCount = interpolateJa("teams.competitions.card.recordCount", { count: 1 });
-      expect(screen.getByText(expectedCount)).toBeInTheDocument();
-      expect(
-        screen.getByText(resolveJaKey("teams.competitions.card.tapForDetails")),
-      ).toBeInTheDocument();
+      expect(screen.queryByText(/登録記録/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/エントリー: 1件/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/作成者/)).not.toBeInTheDocument();
+      // 作成日時 (created_at: 7/20) を "M/d HH:mm" で出さない
+      expect(screen.queryByText(/^7\/20 \d{2}:\d{2}$/)).not.toBeInTheDocument();
     });
 
-    it("記録0件: 登録記録なし/追加可能の文言が新規キーから表示される", async () => {
+    it("場所の後ろに水路 (25m/50m) を出す", async () => {
       vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
-        supabase: buildSupabaseMock([NO_RECORDS_ROW]),
+        supabase: buildSupabaseMock([
+          { ...WITH_RECORDS_ROW, pool_type: 1 } as typeof WITH_RECORDS_ROW,
+        ]),
       }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
-      await screen.findByText("記録なし大会");
+      await screen.findByText("記録あり大会");
+
+      expect(screen.getByText("県営プール (50m)")).toBeInTheDocument();
+    });
+
+    it("場所が無いときは水路の名前と距離を出す", async () => {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([{ ...WITH_RECORDS_ROW, place: null } as unknown as typeof WITH_RECORDS_ROW]),
+      }));
+      render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
+      await screen.findByText("記録あり大会");
 
       expect(
-        screen.getByText(resolveJaKey("teams.competitions.card.noRecords")),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(resolveJaKey("teams.competitions.card.addable")),
+        screen.getByText(`${resolveJaKey("teams.competitionRecordsModal.poolTypeShort")} (25m)`),
       ).toBeInTheDocument();
     });
   });
@@ -336,37 +357,23 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
       );
     });
 
-    it("admin: hasRecords=false のカードは引き続きクリック不可 (残差異が admin 側にも一貫している)", async () => {
+    it("admin: 記録0件のカードもクリックで記録一覧モーダルが開く (#103)", async () => {
       vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([NO_RECORDS_ROW]),
       }));
+      const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
       await screen.findByText("記録なし大会");
 
-      const titleEl = screen.getByText("記録なし大会");
-      expect(titleEl.closest('[role="button"]')).toBeNull();
-    });
-  });
+      const ariaLabel = interpolateJa("teams.competitions.card.viewRecordsAriaLabel", {
+        title: "記録なし大会",
+      });
+      await user.click(screen.getByRole("button", { name: ariaLabel }));
 
-  describe("[V-W7] Out of Scope: エントリー件数表示 (既存バグ) は非退行のみ確認", () => {
-    it("非admin でも「エントリー: {n}件」が表示される (元から isAdmin ガード外の既存挙動。今回のスコープ外)", async () => {
-      const rowWithEntries = {
-        ...NO_RECORDS_ROW,
-        id: "competition-with-entries",
-        title: "エントリーあり大会",
-        entries: [{ id: "e1", user_id: "member-1", style_id: 1, entry_time: null }],
-      };
-      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
-        user: { id: "member-1" },
-        supabase: buildSupabaseMock([rowWithEntries]),
-      }));
-      render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
-      await screen.findByText("エントリーあり大会");
-
-      // Out of Scope の既存バグそのものは直さない。表示され続けることだけ確認する
-      // (テキストは既存実装のハードコード文字列であり本スプリントの検証対象ではない)。
-      expect(screen.getByText(/エントリー: 1件/)).toBeInTheDocument();
+      expect(mocks.recordsModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ isOpen: true, competitionId: "competition-no-records" }),
+      );
     });
   });
 });

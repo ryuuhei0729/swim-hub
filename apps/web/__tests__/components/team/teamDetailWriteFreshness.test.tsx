@@ -1,19 +1,18 @@
 /**
  * チーム画面の React Query 化 — 保存・削除の直後に「保存前の内容」を出さない
  *
- *   [W-1] 2 ページ目で保存して 1 ページ目に戻したとき、キャッシュの古い 1 ページ目を
- *         表示せず、読み込み表示 → 最新の 1 ページ目 になる
+ *   [W-1] 予定タブで「過去」を閉じてから保存・削除すると、表示していない過去の一覧の
+ *         キャッシュは捨て、開き直したとき古い一覧を出さずに 読み込み表示 → 最新 になる
  *   [W-2] 自分のログを保存したら、その練習の詳細モーダルのキャッシュも落とす
  *         (既存の練習への再送信 / 新規作成の両方)
- *   [W-3] 出欠タブの月別サマリは、ユーザーが確定するまで取得しない (読み込み表示のまま)
- *   [W-4] 月別サマリはクエリキーの基準月を起点に取得する
+ *   [W-3] 出欠タブの自分の出欠一覧は、ユーザーが確定するまで取得しない (読み込み表示のまま)
+ *   [W-4] 自分の出欠一覧はクエリキーの基準日を起点に取得する
  */
 import React from "react";
 import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import {
   createTestQueryClient,
   renderHookWithI18n,
@@ -101,10 +100,15 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamPractices from "@/components/team/TeamPractices";
-import { useMonthList } from "@/components/team/monthly-attendance/hooks/useMonthList";
-
-const PAGE_SIZE = 20;
+// 練習カードと操作は予定タブ (TeamSchedule) と同じ useTeamPracticeActions。一覧の取得はテスト用の描画側
+import { TeamPractices } from "@/__tests__/utils/teamScheduleCardRenderers";
+import { useMyAttendanceList } from "@/components/team/monthly-attendance/hooks/useMyAttendanceList";
+import TeamSchedule from "@/components/team/TeamSchedule";
+import { getScheduleToday } from "@/utils/teamSchedule";
+import {
+  buildScheduleSupabaseMock,
+  practiceRow as schedulePracticeRow,
+} from "@/__tests__/utils/teamScheduleSupabaseMock";
 
 const practiceRow = (id: string, title: string, date = "2026-07-20") => ({
   id,
@@ -153,14 +157,6 @@ function buildPagedSupabaseMock(initialRows: Row[]) {
   return { supabase: { from }, state };
 }
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((r) => {
-    resolve = r;
-  });
-  return { promise, resolve };
-}
-
 describe("TeamPractices — 保存後に保存前の内容を出さない", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -170,75 +166,60 @@ describe("TeamPractices — 保存後に保存前の内容を出さない", () =
     mocks.selfLogParams.editingPracticeId = null;
   });
 
-  it("[W-1] 2 ページ目で保存して 1 ページ目に戻すと、古い 1 ページ目を出さずに最新を読み込む", async () => {
-    const rows = Array.from({ length: PAGE_SIZE + 1 }, (_, i) =>
-      practiceRow(`p-${i + 1}`, `練習${i + 1}`),
-    );
-    const mock = buildPagedSupabaseMock(rows);
+  async function renderScheduleWithClosedPast() {
+    const mock = buildScheduleSupabaseMock({
+      practices: [
+        schedulePracticeRow("p-up", "予定の練習", "2099-01-01"),
+        schedulePracticeRow("p-past", "過去の練習", "2000-01-01"),
+      ],
+    });
     vi.mocked(useAuth).mockReturnValue(
       buildAuthContext({ user: { id: "admin-1" }, supabase: mock.supabase }),
     );
     const queryClient = createTestQueryClient();
     const user = userEvent.setup();
+    const pastKey = teamDetailKeys.practicePast("team-1", getScheduleToday());
 
-    render(<TeamPractices teamId="team-1" isAdmin={true} />, { queryClient });
-    expect(await screen.findByText("練習1")).toBeInTheDocument();
+    render(<TeamSchedule teamId="team-1" isAdmin={true} />, { queryClient });
+    expect(await screen.findByText("予定の練習")).toBeInTheDocument();
+    // 「過去」を開いて閉じる (過去の一覧はキャッシュに残る)
+    await user.click(screen.getByRole("switch", { name: "過去" }));
+    expect(await screen.findByText("過去の練習")).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "過去" }));
+    expect(await screen.findByText("予定の練習")).toBeInTheDocument();
+    expect(queryClient.getQueryData(pastKey)).toBeDefined();
+    return { mock, queryClient, user, pastKey };
+  }
 
-    // 2 ページ目へ (1 ページ目はキャッシュに残る)
-    await user.click(screen.getByRole("button", { name: "ページ 2" }));
-    expect(await screen.findByText("練習21")).toBeInTheDocument();
-    expect(queryClient.getQueryData(teamDetailKeys.practicePage("team-1", 1, PAGE_SIZE))).toBeDefined();
+  it("[W-1] 保存すると、表示していない過去の一覧を捨て、開き直したとき最新を読み込む", async () => {
+    const { mock, queryClient, user, pastKey } = await renderScheduleWithClosedPast();
 
-    // 2 ページ目の練習を編集して保存。サーバー上では 1 ページ目の先頭が変わっている
+    // 今日以降の練習を編集して保存。サーバー上では過去の練習も変わっている
     await user.click(screen.getAllByTestId("team-practice-edit-button")[0]!);
-    mock.state.rows = [practiceRow("p-0", "保存後の練習"), ...rows];
-    const page1 = deferred<ListResult>();
-    mock.state.nextList = (start) => (start === 0 ? page1.promise : null);
+    mock.state.rows.practices = [
+      schedulePracticeRow("p-up", "予定の練習", "2099-01-01"),
+      schedulePracticeRow("p-past", "保存後の過去の練習", "2000-01-01"),
+    ];
     await user.click(await screen.findByText("basic-submit"));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalled());
-    // 1 ページ目に戻ったが、再取得が終わるまで保存前の 1 ページ目は出ない
-    await waitFor(() =>
-      expect(
-        queryClient.getQueryState(teamDetailKeys.practicePage("team-1", 1, PAGE_SIZE))
-          ?.fetchStatus,
-      ).toBe("fetching"),
-    );
-    expect(screen.queryByText("練習1")).not.toBeInTheDocument();
-    expect(screen.queryByText("練習21")).not.toBeInTheDocument();
+    await waitFor(() => expect(queryClient.getQueryData(pastKey)).toBeUndefined());
 
-    await act(async () => {
-      page1.resolve({ data: mock.state.rows.slice(0, PAGE_SIZE), error: null });
-    });
-    expect(await screen.findByText("保存後の練習")).toBeInTheDocument();
+    // 開き直すと、保存前の過去の一覧は出さずに最新を読み込む
+    await user.click(screen.getByRole("switch", { name: "過去" }));
+    expect(screen.queryByText("過去の練習")).not.toBeInTheDocument();
+    expect(await screen.findByText("保存後の過去の練習")).toBeInTheDocument();
   });
 
-  it("[W-1] 2 ページ目で削除すると、表示していない 1 ページ目のキャッシュは捨てる", async () => {
-    const rows = Array.from({ length: PAGE_SIZE + 1 }, (_, i) =>
-      practiceRow(`p-${i + 1}`, `練習${i + 1}`),
-    );
-    const mock = buildPagedSupabaseMock(rows);
-    vi.mocked(useAuth).mockReturnValue(
-      buildAuthContext({ user: { id: "admin-1" }, supabase: mock.supabase }),
-    );
-    const queryClient = createTestQueryClient();
-    const user = userEvent.setup();
-
-    render(<TeamPractices teamId="team-1" isAdmin={true} />, { queryClient });
-    expect(await screen.findByText("練習1")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "ページ 2" }));
-    expect(await screen.findByText("練習21")).toBeInTheDocument();
+  it("[W-1] 削除すると、表示していない過去の一覧のキャッシュは捨てる", async () => {
+    const { mock, queryClient, user, pastKey } = await renderScheduleWithClosedPast();
 
     await user.click(screen.getAllByTestId("team-practice-delete-button")[0]!);
-    mock.state.rows = rows.slice(0, PAGE_SIZE);
+    mock.state.rows.practices = [schedulePracticeRow("p-past", "過去の練習", "2000-01-01")];
     await user.click(await screen.findByTestId("confirm-delete-button"));
 
-    await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith("p-21"));
-    await waitFor(() =>
-      expect(
-        queryClient.getQueryData(teamDetailKeys.practicePage("team-1", 1, PAGE_SIZE)),
-      ).toBeUndefined(),
-    );
+    await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith("p-up"));
+    await waitFor(() => expect(queryClient.getQueryData(pastKey)).toBeUndefined());
   });
 
   describe("[W-2] 自分のログの保存後に練習詳細モーダルのキャッシュを落とす", () => {
@@ -284,8 +265,8 @@ describe("TeamPractices — 保存後に保存前の内容を出さない", () =
   });
 });
 
-describe("出欠タブの月別サマリ", () => {
-  /** fetchMyMonthList の 2 本 (練習・大会の日付) を模す。イベントが無いので月ごとの集計は走らない */
+describe("出欠タブの自分の出欠一覧", () => {
+  /** fetchMyAttendanceList の 2 本 (練習・大会) を模す。イベントが無いので出欠の取得は走らない */
   function buildMonthListSupabaseMock() {
     const gte = vi.fn();
     const from = vi.fn(() => ({
@@ -301,16 +282,12 @@ describe("出欠タブの月別サマリ", () => {
     return { supabase: { from } as unknown as SupabaseClient, from, gte };
   }
 
-  const attendanceAPI = {
-    getMyAttendancesByMonth: vi.fn(),
-  } as unknown as AttendanceAPI;
-
   it("[W-3] ユーザーが確定するまで取得せず読み込み表示のまま、確定後に 1 回だけ取得する", async () => {
     const { supabase, from } = buildMonthListSupabaseMock();
 
     const { result, rerender } = renderHookWithI18n(
       ({ userId }: { userId: string | null }) =>
-        useMonthList("team-1", supabase, attendanceAPI, userId),
+        useMyAttendanceList("team-1", supabase, userId),
       { initialProps: { userId: null as string | null } },
     );
 
@@ -320,26 +297,23 @@ describe("出欠タブの月別サマリ", () => {
     });
     expect(from).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(true);
-    // loadMonthList (refetch) も null では取得しない
-    await act(async () => {
-      await result.current.loadMonthList();
-    });
-    expect(from).not.toHaveBeenCalled();
 
     rerender({ userId: "user-1" });
     await waitFor(() => expect(result.current.loading).toBe(false));
     // 練習・大会の 2 本 = 1 回分の取得
     expect(from).toHaveBeenCalledTimes(2);
-    expect(result.current.monthList).toEqual([]);
+    expect(result.current.items).toEqual([]);
   });
 
-  it("[W-4] クエリキーの基準月を起点に取得する", async () => {
+  it("[W-4] クエリキーの基準日を起点に取得する (過去のイベントは取らない)", async () => {
     const { supabase, gte } = buildMonthListSupabaseMock();
-    const options = myMonthListQueryOptions(supabase, "team-1", "user-1", "2027-03");
+    const options = myMonthListQueryOptions(supabase, "team-1", "user-1", "2027-03-15");
 
-    expect(options.queryKey).toEqual(teamDetailKeys.myMonthList("team-1", "user-1", "2027-03"));
+    expect(options.queryKey).toEqual(
+      teamDetailKeys.myMonthList("team-1", "user-1", "2027-03-15"),
+    );
     await options.queryFn();
-    expect(gte).toHaveBeenCalledWith("2027-03-01");
+    expect(gte).toHaveBeenCalledWith("2027-03-15");
     expect(gte).toHaveBeenCalledTimes(2);
   });
 

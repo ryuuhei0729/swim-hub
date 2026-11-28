@@ -66,7 +66,7 @@ describe("teamMemberGoals.* の5言語パリティ", () => {
 });
 
 describe("タブ名キー", () => {
-  for (const key of ["teamsAdmin.tabs.goals", "teams.mobile.tabGoals"]) {
+  for (const key of ["teams.mobile.others.goalsTitle", "teams.mobile.tabGoals"]) {
     for (const [name, tree] of LOCALES) {
       it(`${name}: ${key} が空でない文字列`, () => {
         const v = lookup(tree, key);

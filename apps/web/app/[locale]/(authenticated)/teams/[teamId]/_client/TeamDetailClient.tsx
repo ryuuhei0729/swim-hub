@@ -2,13 +2,18 @@
 
 import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import TeamTabs from "@/components/team/TeamTabs";
 import MemberDetailModal from "@/components/team/MemberDetailModal";
+import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
+import TeamOthersTab from "@/components/team/TeamOthersTab";
+import type { TeamSubScreen, TeamTabType } from "@/components/team/teamTabDefs";
+import type { TeamMembership } from "@apps/shared/types";
+import { usePendingMemberCountQuery } from "@/hooks/queries/teamMemberQueries";
+import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
 
 // タブコンテンツは一度に1つしか表示されないため遅延読み込み。
 //
@@ -16,230 +21,164 @@ import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 // `next/dynamic` はオプション無しだと Suspense 境界を作らず (loadable.js の
 // `hasSuspenseBoundary = !opts.ssr || !!opts.loading` が false → Wrap が Fragment)、
 // 初回クリックのチャンク取得によるサスペンドが `page.tsx` の `<Suspense>`
-// (このコンポーネントより上) まで伝播する。React は隠したツリーの effect を破棄するため
-// 下の `useEffect(..., [reset])` の cleanup が走ってストアが初期化され、
-// 押したタブが既定値 (出欠) へ戻ってしまう。2回目はチャンクがキャッシュ済みで
+// (このコンポーネントより上) まで伝播する。React は隠したツリーの state を捨てるため、
+// 押したタブが元に戻ったように見える。2回目はチャンクがキャッシュ済みで
 // サスペンドしないため効く ＝「初回だけ効かない」症状になる。
 // `loading` を渡すと境界がここにローカル化され、この伝播が起きなくなる。
 // 詳細は TabLoadingSkeleton.tsx の docstring を参照。**外さないこと。**
 const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"), {
   loading: TabLoadingSkeleton,
 });
-const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"), {
-  loading: TabLoadingSkeleton,
-});
-const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"), {
-  loading: TabLoadingSkeleton,
-});
-const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"), {
+const TeamGroupManagement = dynamic(
+  () => import("@/components/team/group-management/TeamGroupManagement"),
+  { loading: TabLoadingSkeleton },
+);
+const TeamSchedule = dynamic(() => import("@/components/team/TeamSchedule"), {
   loading: TabLoadingSkeleton,
 });
 const MyMonthlyAttendance = dynamic(() => import("@/components/team/MyMonthlyAttendance"), {
   loading: TabLoadingSkeleton,
 });
-const TeamSettingsTab = dynamic(() => import("@/components/team/settings/TeamSettingsTab"), {
+const AdminMonthlyAttendance = dynamic(() => import("@/components/team/AdminMonthlyAttendance"), {
   loading: TabLoadingSkeleton,
 });
-import type { MemberDetail } from "@/components/team/MemberDetailModal";
-import { isTeamTabType } from "@/components/team/TeamTabs";
-import { TeamMembership, TeamWithMembers } from "@apps/shared/types";
-import type { LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
-import { useTeamDetailStore } from "@/stores/form/teamDetailStore";
-import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
+
+/** メンバータブ (管理者ビュー) の表示切替 */
+type MembersSegment = "members" | "groups";
 
 interface TeamDetailClientProps {
   teamId: string;
-  initialTeam: TeamWithMembers | null;
   initialMembership: TeamMembership | null;
-  initialTab?: string;
+  /** 管理者ビューか (実際の role と AND を取った値) */
+  isAdminView: boolean;
+  activeTab: TeamTabType;
+  onTabChange: (tab: TeamTabType) => void;
+  /** タブの上に重ねる画面 (ランキング・目標・一括登録) を開く */
+  onOpenSubScreen: (screen: TeamSubScreen) => void;
 }
 
 /**
- * チーム画面の利用者ビュー (ヘッダーより下のタブと本文)。
- * ヘッダー (チーム名・表示切替・招待コード) は TeamPageClient が持ち、
- * 表示切替ではこのコンポーネントだけが管理者ビュー (TeamAdminClient) と入れ替わる。
+ * チーム画面のタブと本文 (利用者ビュー・管理者ビュー共通)。
+ * ヘッダー (チーム名・お知らせ・設定・表示切替) とタブの選択状態は TeamPageClient が持つ。
+ *
+ * タブの数は管理者ビューでも変えない (mobile の TeamDetailView と同じ)。管理者向けの機能は:
+ *   - 承認待ち・グループ管理 … メンバータブ (「メンバー / グループ」切替)
+ *   - 練習・大会の追加・一括登録 … 予定タブ
+ *   - 出欠の受付管理 … 出欠タブ (管理者ビューでは管理用の表示に切り替わる)
+ *   - メンバーの目標 … その他タブ
  */
 export default function TeamDetailClient({
   teamId,
-  initialTeam,
   initialMembership,
-  initialTab,
+  isAdminView,
+  activeTab,
+  onTabChange,
+  onOpenSubScreen,
 }: TeamDetailClientProps) {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const t = useTranslations("teams");
-  const { user } = useAuth();
+  const { user, supabase } = useAuth();
+  const [membersSegment, setMembersSegment] = useState<MembersSegment>("members");
+  // グループ管理は管理者ビューでのみ選べる。利用者ビューに戻したらメンバー表を出す
+  const activeMembersSegment: MembersSegment = isAdminView ? membersSegment : "members";
+  const [selectedMember, setSelectedMember] = useState<MemberDetail | null>(null);
   // メンバー詳細モーダルでの権限・泳者区分の変更を、開いたまま裏側の一覧
   // (TeamMemberManagement) にもバックグラウンドで反映するためのシグナル。
   // undefined のままなら一覧側は再取得しない
   const [membersRefreshSignal, setMembersRefreshSignal] = useState<number | undefined>(undefined);
 
-  const {
-    team,
-    loading,
-    activeTab,
-    selectedMember,
-    isMemberModalOpen,
-    setTeam,
-    setMembership,
-    setLoading,
-    setActiveTab,
-    openMemberModal,
-    closeMemberModal,
-    appliedTabParam,
-    setAppliedTabParam,
-    reset,
-  } = useTeamDetailStore();
+  const isMember = initialMembership !== null;
+  const isAdminMembership = initialMembership?.role === "admin";
 
   // 開いているタブの読み込みが終わったら、既定タブと隣のタブのデータを先読みする
   // (所属していないチームでは取得できないので先読みしない)
-  useTeamTabPrefetch(teamId, activeTab, "member", initialMembership !== null);
+  useTeamTabPrefetch(teamId, activeTab, isAdminView ? "admin" : "member", isMember);
 
-  // サーバー側から取得したデータをストアに設定
+  // 承認待ち数 (管理者ビューのメンバータブのバッジ)。承認・却下では
+  // invalidateTeamMemberQueries が teamKeys.pendingMembers ごと落とす
+  const pendingCountQuery = usePendingMemberCountQuery(
+    supabase,
+    teamId,
+    isAdminView && isAdminMembership,
+  );
+  const pendingCount = isAdminView ? (pendingCountQuery.data ?? 0) : 0;
+  const pendingCountError = pendingCountQuery.error;
   useEffect(() => {
-    setTeam(initialTeam);
-    setMembership(initialMembership);
-    setLoading(false);
-  }, [initialTeam, initialMembership, setTeam, setMembership, setLoading]);
+    if (pendingCountError) console.error("承認待ち数の取得に失敗:", pendingCountError);
+  }, [pendingCountError]);
 
-  // URLパラメータからタブを取得。
-  //
-  // 記録の目的は「同じ URL 値を再適用しないこと」。ユーザーがタブをクリックした後に
-  // 同じ値の effect が再実行されると、選んだタブが URL の値へ引き戻されてしまう。
-  //
-  // ⚠️ 観測した値は **空 (クエリなし) も含めて必ず記録する**。空を記録せず早期 return すると
-  // 「?tab=V → クエリなしのリンク → 戻るで ?tab=V」の3手目で記録がまだ "V" のままになり、
-  // URL は V を指しているのに画面が別タブのままになる (同一ルートのクエリ変化では
-  // アンマウントしない)。
-  //
-  // 🚨 **記録は useRef ではなくストア (appliedTabParam) に持ち、購読した値を deps に含める。**
-  // ストアは AuthProvider.clearAllClientState() からも reset() されるが、
-  // 記録を ref に置くと activeTab だけが初期化されて記録が生き残り、URL のタブが
-  // 二度と反映されなくなる。さらに `useStore.getState().appliedTabParam` で読むと
-  // (lint も通る自然な書き方に見えるが) reset しても deps が変化せず effect が
-  // 再実行されないため、同じバグが**レビューでもテストでも正しく見える形**で残る。
-  //
-  // 許可判定は TeamTabs.tsx の定義配列から導出した isTeamTabType が唯一の定義元。
-  //
-  // ⚠️ 残債務「タブクリックで URL を更新する」を実装する場合は必ず `router.replace(?tab=X)`
-  // を使うこと。`history.pushState` は Next の canonicalUrl を更新しないため
-  // `useSearchParams()` がその変化を一切見ず、URL と表示タブが乖離する。
-  useEffect(() => {
-    const tabParam = searchParams.get("tab") || initialTab || null;
-    if (appliedTabParam === tabParam) return;
-    setAppliedTabParam(tabParam);
-    if (tabParam && isTeamTabType(tabParam)) {
-      setActiveTab(tabParam);
-    }
-  }, [searchParams, initialTab, appliedTabParam, setAppliedTabParam, setActiveTab]);
-
-  // useTeamDetailStore はモジュールシングルトン。アンマウントで初期化しないと
-  // 直前に見ていたチームの team / activeTab が次のチームの初回レンダーに乗る
-  // (setTeam は上の effect = ペイント後に走るため 1 フレーム遅れる)。
-  // 以前は teamId prop しか使わないタブばかりで実害が無かったが、設定タブは
-  // チーム名と招待コードを表示し削除まで行うので、混線すると実害が出る。
-  //
-  // appliedTabParam もストアに入っているので、この reset だけで
-  // 「activeTab と 適用済みの ?tab=」が同時に初期化される (対で消える)。
-  useEffect(() => {
-    return () => {
-      reset();
-    };
-  }, [reset]);
-
-  // 表示用のデータ（ストアから取得、なければ初期データを使用）
-  const displayTeam = team || initialTeam;
-
-  if (loading && !displayTeam) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+  const renderMembersTab = () => (
+    <div>
+      {isAdminView && (
+        <div className="px-4 pt-4" role="tablist" aria-label={t("mobile.tabMembers")}>
+          <div className="flex rounded-lg bg-gray-200 p-0.5">
+            {(
+              [
+                ["members", "mobile.tabMembers"],
+                ["groups", "mobile.tabGroups"],
+              ] as const
+            ).map(([id, labelKey]) => {
+              const isActive = activeMembersSegment === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setMembersSegment(id)}
+                  data-testid={`team-members-segment-${id}`}
+                  className={`flex-1 rounded-md py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-white font-bold text-gray-900 shadow-sm"
+                      : "font-medium text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {t(labelKey)}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
+      {activeMembersSegment === "groups" ? (
+        <TeamGroupManagement teamId={teamId} />
+      ) : (
+        <TeamMemberManagement
+          teamId={teamId}
+          currentUserId={user?.id || ""}
+          // 承認待ちの承認・権限変更などの管理操作は管理者ビューでだけ出す
+          isCurrentUserAdmin={isAdminView}
+          onMembershipChange={() => {
+            // メンバー情報を再読み込み
+            router.refresh();
+          }}
+          onMemberClick={setSelectedMember}
+          membersRefreshSignal={membersRefreshSignal}
+        />
+      )}
+    </div>
+  );
 
-  if (!displayTeam) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t("detail.notFound.title")}</h1>
-          <p className="text-gray-600">{t("detail.notFound.description")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleMemberClick = (member: MemberDetail) => {
-    openMemberModal(member);
-  };
-
-  const handleCloseMemberModal = () => {
-    closeMemberModal();
-  };
-
-  // アクティブなタブのコンテンツをレンダリング（閲覧専用）
   const renderTabContent = () => {
     switch (activeTab) {
       case "members":
+        return renderMembersTab();
+      case "schedule":
         return (
-          <TeamMemberManagement
+          <TeamSchedule
             teamId={teamId}
-            currentUserId={user?.id || ""}
-            isCurrentUserAdmin={false}
-            onMembershipChange={() => {
-              // メンバー情報を再読み込み
-              router.refresh();
-            }}
-            onMemberClick={handleMemberClick}
-            membersRefreshSignal={membersRefreshSignal}
+            isAdmin={isAdminView}
+            onOpenBulkRegister={isAdminView ? () => onOpenSubScreen("bulkRegister") : undefined}
           />
         );
-      case "practices":
-        return <TeamPractices teamId={teamId} isAdmin={false} />;
-      case "competitions":
-        return <TeamCompetitions teamId={teamId} isAdmin={false} />;
-      case "rankings":
-        return <TeamRankings teamId={teamId} />;
       case "attendance":
-        return <MyMonthlyAttendance teamId={teamId} />;
-      case "settings":
-        // 🚨 **ストア (displayTeam) ではなく props の initialTeam だけを読む。**
-        // ストアはモジュールシングルトンなので、チーム A → B の遷移直後の 1 フレームは
-        // A の値を返しうる。設定タブは招待コードを表示し「<名前> を削除しますか？」と
-        // 確認して teamId prop のチームを消すため、混線すると
-        // 「A のコードが見える」「A と表示して B を消す」になる。
-        // initialTeam はこのページのレンダーごとに Server Component から渡る値で、
-        // teamId prop と必ず同じチームを指す。
-        if (!initialTeam) return null;
-        return (
-          <TeamSettingsTab
-            teamId={teamId}
-            teamName={initialTeam.name}
-            teamDescription={initialTeam.description}
-            inviteCode={initialTeam.invite_code}
-            isAdmin={initialMembership?.role === "admin"}
-            // getTeam() は承認待ち・退会済みを含む全メンバーシップを返す。脱退ガードは
-            // 「他に管理者が残るか」を数えるので、ここで在籍中のメンバーだけに絞る。
-            // 絞らないと退会済みの管理者を現役と数えて最後の管理者が抜けられてしまう。
-            //
-            // shared の TeamMembership.role は string 型なので、ガードが要求する
-            // "admin" | "user" に明示的に絞る (admin 以外は一般メンバー扱い)。
-            // `as` で迂回すると role が増えたときに型エラーで気付けない。
-            members={initialTeam.team_memberships
-              .filter(
-                (membership) => membership.status === "approved" && membership.is_active === true,
-              )
-              .map<LeaveGuardMember>((membership) => ({
-                user_id: membership.user_id,
-                role: membership.role === "admin" ? "admin" : "user",
-              }))}
-          />
+        return isAdminView ? (
+          <AdminMonthlyAttendance teamId={teamId} />
+        ) : (
+          <MyMonthlyAttendance teamId={teamId} />
         );
+      case "others":
+        return <TeamOthersTab isAdminView={isAdminView} onOpen={onOpenSubScreen} />;
       default:
         return null;
     }
@@ -247,27 +186,20 @@ export default function TeamDetailClient({
 
   return (
     <div>
-      {/* チーム名・招待コードのヘッダーカードは廃止した (2026-09-16)。
-          タブの上に常時2行占有していたのをやめ、招待コードは設定タブの
-          「チーム情報」カード内へ移設 (components/team/settings/TeamSettingsTab.tsx)。
-          チーム名と招待コードは TeamPageClient のヘッダー (TeamViewHeader) に1行で出す。 */}
+      <TeamTabs activeTab={activeTab} onTabChange={onTabChange} pendingCount={pendingCount} />
 
-      {/* タブナビゲーション */}
-      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={false} />
-
-      {/* タブコンテンツ */}
       <div className="bg-white rounded-lg shadow">{renderTabContent()}</div>
 
       {/* メンバー詳細モーダル */}
       <MemberDetailModal
-        isOpen={isMemberModalOpen}
-        onClose={handleCloseMemberModal}
+        isOpen={selectedMember !== null}
+        onClose={() => setSelectedMember(null)}
         member={selectedMember}
         teamId={teamId}
         currentUserId={user?.id || ""}
-        isCurrentUserAdmin={false}
+        isCurrentUserAdmin={isAdminView}
         onMembershipChange={() => {
-          // team 等サーバー由来のデータを更新
+          // team / pendingCount 等サーバー由来のデータを更新
           router.refresh();
           // メンバー一覧 (TeamMemberManagement) をバックグラウンドで最新化する。
           // モーダル自体の表示は displayMember (MemberDetailModal 内) が
