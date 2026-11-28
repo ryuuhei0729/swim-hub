@@ -81,8 +81,9 @@ describe("useCalendarQuery", () => {
     // 開始日と終了日が文字列形式であることを確認
     expect(typeof callArgs[0]).toBe("string");
     expect(typeof callArgs[1]).toBe("string");
-    // 1月の日付が含まれることを確認（タイムゾーンの影響を考慮）
-    expect(callArgs[0] + callArgs[1]).toMatch(/2025-01/);
+    // 見えている範囲全体 (日曜始まりの週で前月末・翌月初めを含む) を取る
+    // 2025年1月は 2024-12-29(日) 〜 2025-02-01(土)
+    expect(callArgs).toEqual(["2024-12-29", "2025-02-01"]);
   });
 
   it("APIが提供されていない場合、新しいAPIインスタンスを作成する", async () => {
@@ -133,9 +134,8 @@ describe("useCalendarQuery", () => {
     // 2月のクエリが実行されたことを確認
     expect(mockApi.getCalendarEntries).toHaveBeenCalled();
     const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0]!; // 直前の toHaveBeenCalled で呼び出しの存在は保証済み
-    // 2月の日付が含まれることを確認（タイムゾーンの影響を考慮）
-    const dateString = callArgs[0] + callArgs[1];
-    expect(dateString).toMatch(/2025-02/);
+    // 2025年2月の見えている範囲は 2025-01-26(日) 〜 2025-03-01(土)
+    expect(callArgs).toEqual(["2025-01-26", "2025-03-01"]);
   });
 
   it("エラーが発生した場合、エラー状態を返す", async () => {
@@ -318,7 +318,8 @@ describe("useCalendarQuery", () => {
 
       await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
       const requestedMonths = spy.mock.calls.map(([startDate]) => startDate).sort();
-      expect(requestedMonths).toEqual(["2024-12-01", "2025-01-01", "2025-02-01"]);
+      // 各月の見えている範囲の始まり (12月: 12/1(日)、1月: 12/29(日)、2月: 1/26(日))
+      expect(requestedMonths).toEqual(["2024-12-01", "2024-12-29", "2025-01-26"]);
     });
 
     it("先読み済みの月へ切り替えたときは、取り直さずにすぐデータを返す", async () => {
@@ -333,9 +334,9 @@ describe("useCalendarQuery", () => {
         { wrapper: createWrapper(), initialProps: { currentDate: new Date(2025, 0, 15) } },
       );
       await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
-      await waitFor(() => expect(result.current.data?.[0]?.id).toBe("2025-01-01"));
+      await waitFor(() => expect(result.current.data?.[0]?.id).toBe("2024-12-29"));
       const callsToFebruary = () =>
-        spy.mock.calls.filter(([startDate]) => startDate === "2025-02-01").length;
+        spy.mock.calls.filter(([startDate]) => startDate === "2025-01-26").length;
       await waitFor(() => expect(callsToFebruary()).toBe(1));
       // 先読みの結果がキャッシュに入るのを待つ
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -344,7 +345,7 @@ describe("useCalendarQuery", () => {
 
       // 読み込み中を挟まず、切り替えた直後のレンダーで2月のデータが返る
       expect(result.current.isPending).toBe(false);
-      expect(result.current.data?.[0]?.id).toBe("2025-02-01");
+      expect(result.current.data?.[0]?.id).toBe("2025-01-26");
       expect(callsToFebruary()).toBe(1);
     });
 
@@ -361,7 +362,7 @@ describe("useCalendarQuery", () => {
 
       const requestedMonths = spy.mock.calls.map(([startDate]) => startDate);
       expect(requestedMonths).not.toContain("2024-12-01");
-      expect(requestedMonths).not.toContain("2025-02-01");
+      expect(requestedMonths).not.toContain("2025-01-26");
     });
   });
 });
