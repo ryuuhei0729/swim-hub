@@ -19,8 +19,8 @@
  *              usePracticeStore の状態 (isOpen=true) が閉じられる (mount 時 closeAll)
  *   [V-D4P-04] 安全策: TeamPractices アンマウント時、usePracticeStore が閉じられる
  *              (unmount 時 closeAll。他画面へ遷移してもモーダルが残留しない)
- *   [V-D4P-05] admin のカードには「記録追加」を出さない (カードのクリックで一括入力画面へ
- *              進む。モバイルの admin も一括入力へ進む)
+ *   [V-D4P-05] admin のカードには「記録追加」を出さない (admin のログ入力は
+ *              「記録代理入力」ボタンから一括入力へ進む)
  *
  * 【jsdom 描画リスクに関するメモ】
  * PracticeTabModal 自体は重量コンポーネント (usePracticeTabSave 等) なので、本テストの
@@ -164,11 +164,11 @@ describe("TeamPractices — 自己ログ導線 + ストア安全策 (D4)", () =>
     expect(usePracticeStore.getState().isOpen).toBe(false);
   });
 
-  it("[V-D4P-05] admin のカードには「記録追加」を出さない (カードのクリックで一括入力へ進む)", async () => {
+  it("[V-D4P-05] admin のカードには「記録追加」を出さない (「記録代理入力」から一括入力へ進む)", async () => {
     render(<TeamPractices teamId="team-1" isAdmin={true} />);
 
     expect(
-      await screen.findByRole("button", { name: /の練習記録を追加/ }),
+      await screen.findByRole("button", { name: "記録代理入力" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /練習に自分の記録を追加/ })).toBeNull();
   });

@@ -131,6 +131,10 @@ function buildSupabaseMock(
     builder.eq = vi.fn(() =>
       tableResponses.eq ? Promise.resolve(tableResponses.eq) : builder,
     );
+    // メンバー一覧は .eq() の後に .neq("role", "guardian") で終わる (保護者を除外)
+    builder.neq = vi.fn(() =>
+      tableResponses.eq ? Promise.resolve(tableResponses.eq) : builder,
+    );
     builder.order = vi.fn(() => Promise.resolve(tableResponses.order ?? defaultResponse));
     builder.single = vi.fn(() => Promise.resolve(tableResponses.single ?? defaultResponse));
     return builder;

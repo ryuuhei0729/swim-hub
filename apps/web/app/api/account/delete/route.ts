@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 const DELETE_STORAGE_MAX_ATTEMPTS = 3;
 const DELETE_STORAGE_RETRY_BASE_DELAY_MS = 500;
@@ -115,6 +116,8 @@ export async function DELETE(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     const userId = user.id;
     const adminClient = createAdminClient();

@@ -764,6 +764,13 @@
       "defaultError": "エラーが発生しました。時間をおいて再度お試しください。",
       "loginFailed": "ログインに失敗しました。入力内容を確認してから再度お試しください。",
       "genericError": "エラーが発生しました。時間をおいて再度お試しください。"
+    },
+    "guardianAppOnly": {
+      "title": "アプリでご利用ください",
+      "description": "保護者アカウントは SwimHub アプリ専用です。スマートフォンの SwimHub アプリからログインしてください。",
+      "openAppStore": "App Store でアプリを入手",
+      "logout": "ログアウト",
+      "logoutFailed": "ログアウトに失敗しました。もう一度お試しください。"
     }
   },
   "pricing": {
@@ -1119,7 +1126,7 @@
       "entryBefore": "エントリーの受付はまだ始まっていません",
       "personalNoEntries": "出る種目を登録しておきましょう",
       "enter": "エントリーする",
-      "registerEvents": "種目を登録",
+      "registerEvents": "エントリー",
       "noneTitle": "予定している大会はありません",
       "noneDescription": "大会を登録すると、大会までの日数とエントリー種目、目標との差がここに出ます",
       "addCompetition": "＋ 大会を登録",
@@ -2857,6 +2864,10 @@
         "switchedToAdmin": "管理者ビューに切り替えました",
         "switchedToUser": "利用者ビューに切り替えました"
       },
+      "guardian": {
+        "badge": "保護者版",
+        "logoutButton": "ログアウト"
+      },
       "pendingApproveConfirmTitle": "承認確認",
       "pendingApproveConfirmMessage": "{name}を承認しますか？",
       "pendingRejectConfirmTitle": "拒否確認",
@@ -3121,6 +3132,8 @@
         "viewAriaLabel": "{date}の練習記録を閲覧",
         "editButton": "編集",
         "deleteButton": "削除",
+        "recordBulkButton": "記録代理入力",
+        "viewTimesAriaLabel": "{date}のタイムを表示",
         "addLogButton": "記録追加",
         "addLogAriaLabel": "{date}の練習に自分の記録を追加"
       }
@@ -3683,6 +3696,23 @@
         "Fly": "バタフライ",
         "IM": "個人メドレー"
       }
+    },
+    "practiceTimes": {
+      "titleSuffix": " のタイム",
+      "openAria": "{title} のタイムを表示",
+      "loading": "読み込み中...",
+      "loadError": "練習タイムの取得に失敗しました",
+      "empty": "まだ記録がありません",
+      "memberCount": "{count}人",
+      "averageLabel": "平均",
+      "fastest": "最速 {time}",
+      "recordedCount": "{recorded}/{total}本",
+      "noTime": "タイム未記録",
+      "setLabel": "{set}セット",
+      "setAverage": "平均 {time}",
+      "memo": "メモ",
+      "unknownUser": "不明",
+      "rowAria": "{name} 平均 {time}"
     },
     "competitionRecordsModal": {
       "titleSuffix": " - 記録一覧",

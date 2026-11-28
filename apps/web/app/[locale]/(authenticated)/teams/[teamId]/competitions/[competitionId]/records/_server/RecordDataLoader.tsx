@@ -10,6 +10,7 @@ import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
 import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
 import type { BestTime } from "@apps/shared/types/ui";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 
 interface RecordDataLoaderProps {
   teamId: string;
@@ -152,7 +153,9 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true),
+        .eq("is_active", true)
+        // 保護者アカウントは代理入力の対象ではない (非泳者の一覧にも出さない)
+        .neq("role", GUARDIAN_ROLE),
 
       // 既存のRecordを取得
       supabase

@@ -60,6 +60,7 @@ function buildSupabase(rpc?: unknown) {
     const b: Record<string, unknown> = {};
     b.select = vi.fn(() => b);
     b.eq = vi.fn(() => b);
+    b.neq = vi.fn(() => b);
     b.order = vi.fn(() => Promise.resolve(r.order ?? { data: null, error: null }));
     b.single = vi.fn(() => Promise.resolve(r.single ?? { data: null, error: null }));
     return b;

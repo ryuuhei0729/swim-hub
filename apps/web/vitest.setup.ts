@@ -9,6 +9,17 @@ import { afterEach, vi } from "vitest";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
+// 保護者アカウントの書き込み拒否 (lib/guardian-guard.ts) は、API ルートのテストでは既定で
+// 「保護者ではない」とする。ルートごとのテストが service_role クライアントのモックに
+// team_memberships の問い合わせまで用意しなくて済むようにするため。
+// 保護者のときの挙動は __tests__/lib/guardian-guard.test.ts (vi.unmock で実物) と、
+// ルート側のテストで rejectIfGuardian の戻り値を差し替えて確かめる。
+vi.mock("@/lib/guardian-guard", () => ({
+  isGuardianUser: vi.fn(async () => false),
+  rejectIfGuardian: vi.fn(async () => null),
+  guardianForbiddenResponse: vi.fn(),
+}));
+
 // 各テスト後にクリーンアップ (モックの呼び出し履歴は vitest.config の clearMocks が各テスト前に消す)
 afterEach(() => {
   cleanup();

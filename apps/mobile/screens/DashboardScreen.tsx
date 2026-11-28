@@ -298,7 +298,7 @@ export const DashboardScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() }),
       // チーム内フィードバックの未読 (受信ポップアップ)。ダッシュボードを表示するたびに確認する
       queryClient.invalidateQueries({ queryKey: recordFeedbackKeys.unread(user?.id) }),
-      // カルーセルのフォーカスポイント (別端末・Web での追加・編集を拾う)
+      // フォーカスポイント (別端末・Web での追加・編集を拾う)
       queryClient.invalidateQueries({ queryKey: focusPointKeys.all }),
     ]);
   }, [refetch, refetchTeams, refetchColorSettings, queryClient, user?.id]);
@@ -430,7 +430,9 @@ export const DashboardScreen: React.FC = () => {
             onRetry={() => refetch()}
           />
           <DashboardNoticesSection teams={teams} />
-          {/* 次の大会・前回の練習・フォーカスポイントを横に並べ、スワイプで切り替える。
+          {/* フォーカスポイントは泳ぐ前に毎回目に入るよう、カルーセルに入れず常に出す */}
+          <FocusPointCard compactEmpty style={styles.focusPointCard} />
+          {/* 次の大会・前回の練習を横に並べ、スワイプで切り替える。
               前回の練習が無ければ出さない。最初に見せるカードは useDashboardInitialCard が選ぶ */}
           <DashboardCardCarousel
             initialIndex={lastPractice ? initialCard.initialIndex : 0}
@@ -450,7 +452,6 @@ export const DashboardScreen: React.FC = () => {
                 style={styles.carouselCard}
               />
             )}
-            <FocusPointCard key="focus-points" style={[styles.carouselCard, styles.focusPointCard]} />
           </DashboardCardCarousel>
           <View style={styles.calendar}>
             <CalendarView
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
   carouselCard: {
     flex: 1,
   },
-  // FocusPointCard は外側の余白を持たないので、カルーセルの他のカードと同じ余白をここで付ける
+  // FocusPointCard は外側の余白を持たないので、ホームの他のカードと同じ余白をここで付ける
   focusPointCard: {
     marginHorizontal: 16,
     marginTop: 12,

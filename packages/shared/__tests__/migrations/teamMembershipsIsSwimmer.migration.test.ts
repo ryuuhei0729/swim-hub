@@ -29,12 +29,15 @@ const MIGRATIONS_DIR = path.join(REPO_ROOT, "supabase/migrations");
 // 未適用の既存3件 (Issue #49 コメントで実測済み)。新規 migration はこれらより後の日付にすること。
 const LATEST_KNOWN_PENDING_TIMESTAMP = "20260910000001";
 
+// 対象は is_swimmer 列を「追加する」migration。後続の migration が is_swimmer を参照するだけ
+// (例: 20261129000000_add_guardian_role.sql の「保護者は非泳者」CHECK 制約) なら対象外にする
+// (それらは関数本体などに INSERT を含みうるため、DML 無しの検証を当てると誤検知になる)。
 function findIsSwimmerMigrationFiles(): string[] {
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
   return files
     .filter((f) => {
       const sql = readFileSync(path.join(MIGRATIONS_DIR, f), "utf8");
-      return /is_swimmer/i.test(sql);
+      return /ADD\s+COLUMN\s+(IF\s+NOT\s+EXISTS\s+)?"?is_swimmer"?/i.test(sql);
     })
     .sort();
 }

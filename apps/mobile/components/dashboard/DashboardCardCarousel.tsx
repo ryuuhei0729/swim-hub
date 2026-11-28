@@ -30,8 +30,30 @@ interface DashboardCardCarouselProps {
   ready?: boolean;
 }
 
+/** 次のカード (先頭以外では前のカード) を画面の端に覗かせる幅 */
+const PEEK = 28;
 /**
- * ホームのカードを横に並べ、1枚ずつスワイプで切り替える。下のドットで今の位置を示す。
+ * 各カードが持つ左右の余白 (marginHorizontal)。隣り合うページをこの分だけ重ね、
+ * カードの間隔を画面の端の余白と同じにする (重ねないと間隔が2倍になる)
+ */
+const CARD_MARGIN = 16;
+
+/**
+ * 各カードで止まるスクロール位置。ページは画面より PEEK だけ狭く、隣のページと CARD_MARGIN だけ
+ * 重ねて並べる。止まる位置は各ページの左端で、最後のページは右端に揃えて前のカードを左に覗かせる
+ */
+const getSnapOffsets = (width: number, count: number): number[] => {
+  const pageWidth = Math.max(0, width - PEEK);
+  const contentWidth = count * pageWidth - (count - 1) * CARD_MARGIN;
+  const maxOffset = Math.max(0, contentWidth - width);
+  return Array.from({ length: count }, (_, i) =>
+    Math.min(i * (pageWidth - CARD_MARGIN), maxOffset),
+  );
+};
+
+/**
+ * ホームのカードを横に並べ、1枚ずつスワイプで切り替える。
+ * 隣のカードを端に少し覗かせてスワイプできることを示し、下のドットで今の位置を示す。
  * カードが1枚だけならカルーセルにせず、そのまま出す。
  * 各ページの高さは一番高いカードに揃う (横スクロールの中身は行方向で、ページが縦に伸びる)。
  */
@@ -68,17 +90,24 @@ const CarouselPager: React.FC<{ cards: React.ReactElement[]; initialIndex: numbe
   const startAppliedRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  const pageWidth = Math.max(0, width - PEEK);
+  const offsets = getSnapOffsets(width, cards.length);
+  const offsetAt = (i: number) => offsets[i] ?? 0;
+
   // 幅が変わったら、今のカードの位置に合わせ直す (そのままだとカードが半分ずれて見える)
   useEffect(() => {
-    scrollRef.current?.scrollTo({ x: indexRef.current * width, animated: false });
-  }, [width]);
+    const x = getSnapOffsets(width, cards.length)[indexRef.current] ?? 0;
+    scrollRef.current?.scrollTo({ x, animated: false });
+  }, [width, cards.length]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (width <= 0) return;
-    const next = Math.max(
-      0,
-      Math.min(cards.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)),
-    );
+    const x = e.nativeEvent.contentOffset.x;
+    // 止まる位置が一番近いカードを今のカードとする
+    let next = 0;
+    offsets.forEach((offset, i) => {
+      if (Math.abs(offset - x) < Math.abs(offsetAt(next) - x)) next = i;
+    });
     indexRef.current = next;
     setIndex(next);
   };
@@ -88,7 +117,7 @@ const CarouselPager: React.FC<{ cards: React.ReactElement[]; initialIndex: numbe
   const applyStartIndex = () => {
     if (startAppliedRef.current) return;
     startAppliedRef.current = true;
-    if (startIndex > 0) scrollRef.current?.scrollTo({ x: startIndex * width, animated: false });
+    if (startIndex > 0) scrollRef.current?.scrollTo({ x: offsetAt(startIndex), animated: false });
   };
 
   return (
@@ -96,16 +125,21 @@ const CarouselPager: React.FC<{ cards: React.ReactElement[]; initialIndex: numbe
       <ScrollView
         ref={scrollRef}
         horizontal
-        pagingEnabled
+        snapToOffsets={offsets}
+        decelerationRate="fast"
+        disableIntervalMomentum
         showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: startIndex * width, y: 0 }}
+        contentOffset={{ x: offsetAt(startIndex), y: 0 }}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         onContentSizeChange={applyStartIndex}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
         {cards.map((card, i) => (
-          <View key={card.key ?? i} style={[styles.page, { width }]}>
+          <View
+            key={card.key ?? i}
+            style={[styles.page, { width: pageWidth }, i > 0 && { marginLeft: -CARD_MARGIN }]}
+          >
             {card}
           </View>
         ))}
@@ -114,7 +148,7 @@ const CarouselPager: React.FC<{ cards: React.ReactElement[]; initialIndex: numbe
         {cards.map((card, i) => (
           <Pressable
             key={card.key ?? i}
-            onPress={() => scrollRef.current?.scrollTo({ x: i * width, animated: true })}
+            onPress={() => scrollRef.current?.scrollTo({ x: offsetAt(i), animated: true })}
             accessibilityRole="button"
             accessibilityLabel={t("dashboard.cardCarousel.goTo", { index: i + 1 })}
             accessibilityState={{ selected: i === index }}

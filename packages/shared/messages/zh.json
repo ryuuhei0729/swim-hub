@@ -764,6 +764,13 @@
       "defaultError": "发生错误。请稍后重试。",
       "loginFailed": "登录失败。请检查输入内容后重试。",
       "genericError": "发生错误。请稍后重试。"
+    },
+    "guardianAppOnly": {
+      "title": "请使用应用",
+      "description": "家长账户仅可在 SwimHub 应用中使用。请在智能手机上的 SwimHub 应用中登录。",
+      "openAppStore": "在 App Store 获取应用",
+      "logout": "退出登录",
+      "logoutFailed": "退出登录失败，请重试。"
     }
   },
   "pricing": {
@@ -1119,7 +1126,7 @@
       "entryBefore": "报名尚未开始",
       "personalNoEntries": "先登记要参加的项目吧",
       "enter": "报名",
-      "registerEvents": "登记项目",
+      "registerEvents": "报名",
       "noneTitle": "暂无即将进行的比赛",
       "noneDescription": "登记比赛后，这里会显示距比赛的天数、报名项目以及与目标的差距",
       "addCompetition": "+ 登记比赛",
@@ -2857,6 +2864,10 @@
         "switchedToAdmin": "已切换到管理员视图",
         "switchedToUser": "已切换到成员视图"
       },
+      "guardian": {
+        "badge": "家长版",
+        "logoutButton": "退出登录"
+      },
       "pendingApproveConfirmTitle": "确认审批",
       "pendingApproveConfirmMessage": "是否审批通过 {name}？",
       "pendingRejectConfirmTitle": "确认拒绝",
@@ -3121,6 +3132,8 @@
         "viewAriaLabel": "查看{date}的训练记录",
         "editButton": "编辑",
         "deleteButton": "删除",
+        "recordBulkButton": "代为录入成绩",
+        "viewTimesAriaLabel": "查看{date}的训练时间",
         "addLogButton": "添加记录",
         "addLogAriaLabel": "为{date}的训练添加我的记录"
       }
@@ -3683,6 +3696,23 @@
         "Fly": "蝶泳",
         "IM": "个人混合泳"
       }
+    },
+    "practiceTimes": {
+      "titleSuffix": " - 训练时间",
+      "openAria": "查看 {title} 的训练时间",
+      "loading": "正在加载...",
+      "loadError": "获取训练时间失败",
+      "empty": "暂无记录",
+      "memberCount": "{count}人",
+      "averageLabel": "平均",
+      "fastest": "最快 {time}",
+      "recordedCount": "{recorded}/{total}趟",
+      "noTime": "未记录时间",
+      "setLabel": "第{set}组",
+      "setAverage": "平均 {time}",
+      "memo": "备注",
+      "unknownUser": "未知",
+      "rowAria": "{name} 平均 {time}"
     },
     "competitionRecordsModal": {
       "titleSuffix": " - 记录列表",

@@ -6,6 +6,7 @@ import { getServerUser } from "@/lib/supabase-server";
 import PracticeLogClient from "../_client/PracticeLogClient";
 import { PracticeTag, Practice } from "@apps/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 
 interface PracticeLogDataLoaderProps {
   teamId: string;
@@ -135,7 +136,9 @@ export default async function PracticeLogDataLoader({
       `,
       )
       .eq("team_id", teamId)
-      .eq("is_active", true),
+      .eq("is_active", true)
+      // 保護者アカウントは代理入力の対象ではない (非泳者の一覧にも出さない)
+      .neq("role", GUARDIAN_ROLE),
 
     // 既存のPractice_Logを取得
     supabase

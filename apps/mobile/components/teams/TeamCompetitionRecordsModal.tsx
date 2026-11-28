@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from "react-native";
-import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +12,7 @@ import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
-import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
+import { MemberAvatar as RowAvatar } from "./MemberAvatar";
 import BestTimeBadge from "@/components/records/BestTimeBadge";
 import { RecordFeedbackSection } from "@/components/record-feedback/RecordFeedbackSection";
 import { RecordFeedbackToggleButton } from "@/components/record-feedback/RecordFeedbackToggleButton";
@@ -105,42 +104,6 @@ const NO_RELAY_RECORDS: RelayRecordWithLegs[] = [];
 const AVATAR_SIZE = 28;
 /** リレー折りたたみ行 (チーム行) のアバタースタック1個あたりの直径 */
 const AVATAR_STACK_SIZE = 22;
-
-/**
- * private バケット内相対パスから署名付きURLを解決するアバター (モーダル内ローカル実装)。
- * mobile には汎用 Avatar コンポーネントが存在しないため、
- * WaPointsCompareModal.tsx の WaPointsRankingRow と同じ行単位実装パターンを踏襲する
- * (Out of Scope: 汎用 Avatar.tsx の新設)。
- * path が null (未設定・退会・RLS 0件) でもクラッシュせずイニシャルへフォールバックする。
- */
-function RowAvatar({
-  path,
-  name,
-  size,
-}: {
-  path: string | null;
-  name: string;
-  size: number;
-}) {
-  const { url } = useSignedImageUrl("profile-images", path);
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
-  const dimensionStyle = { width: size, height: size, borderRadius: size / 2 };
-
-  if (url) {
-    return (
-      <Image
-        source={{ uri: url }}
-        style={[styles.avatarImage, dimensionStyle]}
-        contentFit="cover"
-      />
-    );
-  }
-  return (
-    <View style={[styles.avatarPlaceholder, dimensionStyle]}>
-      <Text style={[styles.avatarPlaceholderText, { fontSize: size * 0.45 }]}>{initial}</Text>
-    </View>
-  );
-}
 
 /**
  * リレーのチーム行 (折りたたみ時) 用、4人のアバターを重ね合わせたスタック表示。
@@ -878,18 +841,6 @@ const styles = StyleSheet.create({
   splitToggleText: {
     fontSize: 12,
     color: "#2563EB",
-  },
-  avatarImage: {
-    backgroundColor: "#E5E7EB",
-  },
-  avatarPlaceholder: {
-    backgroundColor: "#E5E7EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarPlaceholderText: {
-    color: "#6B7280",
-    fontWeight: "700",
   },
   avatarStack: {
     flexDirection: "row",

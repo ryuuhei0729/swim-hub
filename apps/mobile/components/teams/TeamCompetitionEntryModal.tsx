@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
 import { teamDetailKeys } from "@/hooks/teamDetailQueries";
+import { useIsGuardian } from "@/hooks/useIsGuardian";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { EntryWithDetails } from "@swim-hub/shared/types";
 import { formatTimeBest } from "@apps/shared/utils/time";
@@ -94,6 +95,8 @@ export function TeamCompetitionEntryModal({
 }: TeamCompetitionEntryModalProps) {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
+  // 保護者版 (閲覧専用) ではエントリー一覧を見るだけにする (自分のエントリー導線を出さない)
+  const isGuardian = useIsGuardian();
   const entryApi = useMemo(
     () => new EntryAPI(supabase as SupabaseClient),
     [supabase],
@@ -245,6 +248,7 @@ export function TeamCompetitionEntryModal({
             自分のエントリー件数に関係なく status === "open" のみで表示する
             (admin/非admin ともに、この条件だけで分岐しない)。 */}
         {status === "open" &&
+          !isGuardian &&
           (isAdmin ? (
             <Pressable
               style={styles.selfEntryButton}

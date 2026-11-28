@@ -14,6 +14,16 @@ import { fetchTeamMembers } from "../../utils/team";
 import { createSupabaseMock } from "./supabase-mock";
 
 describe("fetchTeamMembers", () => {
+  it("保護者アカウント (role = guardian) を出欠の対象から外すクエリにしている", async () => {
+    const supabaseMock = createSupabaseMock();
+    supabaseMock.queueTable("team_memberships", [{ data: [] }]);
+
+    await fetchTeamMembers(supabaseMock.client, "team-1");
+
+    const builder = supabaseMock.getBuilder("team_memberships");
+    expect(builder.neq).toHaveBeenCalledWith("role", "guardian");
+  });
+
   it("select() に渡す文字列に birthday が含まれる（未select化の検出）", async () => {
     const supabaseMock = createSupabaseMock();
     supabaseMock.queueTable("team_memberships", [{ data: [] }]);

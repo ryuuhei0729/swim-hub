@@ -9,6 +9,7 @@ import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import nodePath from "path";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     // 画像アップロードは Free / Premium 双方で許可（動画のみ Premium 限定）
     const formData = await request.formData();
@@ -104,6 +107,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     const { searchParams } = new URL(request.url);
     const path = searchParams.get("path");

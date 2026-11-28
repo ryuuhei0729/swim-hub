@@ -18,6 +18,8 @@ export interface TeamTabsProps {
   pendingCount?: number;
   /** 自分の出欠未回答の件数（出欠タブにバッジ表示。下のタブバーの「チーム」バッジの内訳） */
   attendanceCount?: number;
+  /** 保護者版 (閲覧専用) の表示。guardianVisible のタブだけを出す */
+  guardianMode?: boolean;
 }
 
 /**
@@ -34,9 +36,12 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
   isAdmin = false,
   pendingCount = 0,
   attendanceCount = 0,
+  guardianMode = false,
 }) => {
   const { t } = useTranslation();
-  const visibleTabs = TEAM_TAB_DEFS.filter((tab) => !tab.adminOnly || isAdmin);
+  const visibleTabs = TEAM_TAB_DEFS.filter(
+    (tab) => (!tab.adminOnly || isAdmin) && (!guardianMode || tab.guardianVisible),
+  );
 
   return (
     <View style={styles.container} accessibilityRole="tablist">

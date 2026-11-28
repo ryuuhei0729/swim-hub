@@ -10,6 +10,7 @@ import { format, isValid, parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { isPoolType, type Competition, type Style } from "@apps/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import EntriesClient, { type ExistingEntryDisplay } from "../_client/EntriesClient";
 
@@ -130,7 +131,9 @@ export default async function EntriesDataLoader({
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true),
+        .eq("is_active", true)
+        // 保護者アカウントは代理入力の対象ではない (非泳者の一覧にも出さない)
+        .neq("role", GUARDIAN_ROLE),
 
       // 既存のエントリーを取得（退会済みメンバーの表示名フォールバック用に users を join）
       supabase
