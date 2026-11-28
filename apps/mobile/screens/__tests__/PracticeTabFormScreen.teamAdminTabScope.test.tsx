@@ -243,6 +243,8 @@ function makePracticeFixture(logs: unknown[] = []): PracticeWithLogs {
 function makeLog(id: string, distance: number) {
   return {
     id,
+    // 開いている管理者自身のログ (チーム練習では自分のログだけを読み込むため、持ち主を明示する)
+    user_id: ADMIN_VIEWER_ID,
     practice_id: PRACTICE_ID,
     style: "Fr",
     swim_category: "Swim",

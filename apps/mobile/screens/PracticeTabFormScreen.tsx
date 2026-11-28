@@ -191,11 +191,9 @@ export const PracticeTabFormScreen: React.FC = () => {
   );
   const isEditMode = !!resolvedPracticeId;
 
-  // ---- 練習の所有者・所属チーム (編集権限判定用) ----
-  // CompetitionTabFormScreen の competitionOwnerId/competitionTeamId と同型。
+  // ---- 練習の所属チーム (編集権限判定用) ----
   // route.params にチームIDは無いため、初期値は null (個人練習として扱う) とし、
   // 編集時の既存データ取得で practices.team_id (source of truth) を反映する。
-  const [practiceOwnerId, setPracticeOwnerId] = useState<string | null>(null);
   const [practiceTeamId, setPracticeTeamId] = useState<string | null>(teamId ?? null);
 
   // ---- 練習タブ state ----
@@ -326,25 +324,23 @@ export const PracticeTabFormScreen: React.FC = () => {
   }, [isEditMode, practiceTeamId, origin, isCurrentUserPracticeTeamAdmin]);
 
   // canEditPracticeLogs: log タブ (practice_logs の追加・編集・「+」ボタン・Save ボタン) 用。
-  // こちらは今スプリント以前の旧ロジックをそのまま維持する (practices ではなく
-  // practice_logs の INSERT/UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id,
-  // auth.uid())) と同じ条件。practice_logs 側は今スプリントで変更していない)。
-  // 一般メンバーが他人のチーム練習に自分のログを追加する経路は RLS が最終防衛線として
-  // 弾くため実害は無いが (Sprint Contract 2 修正ラウンド2で実測済み)、UI 側で
-  // 「編集不可と分かる」旧体験 (「+」非表示・フィールド disabled・バナー表示) を
-  // 変更前と同一に保つために admin/owner 判定を維持する。
+  // チーム練習のログは「本人の分だけ書ける」(20261130000000_team_practice_logs_self_write.sql /
+  // swimhub-tasks#139)。チーム練習では自分のログだけを読み込むので (下の初期化)、
+  // そのチームの現役メンバーなら log タブを編集できる。他のメンバーのログはここには出さない
+  // (他人の分はチーム画面の詳細で読む)。メンバーでない (退会済みなど) ときは読むだけにする。
+  const isCurrentUserPracticeTeamMember = useMemo(() => {
+    if (!user || !practiceTeamId || !practiceTeamMembers) return false;
+    return practiceTeamMembers.some((m) => m.user_id === user.id);
+  }, [user, practiceTeamId, practiceTeamMembers]);
   const canEditPracticeLogs = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の練習
     if (!practiceTeamId) return true; // 個人の練習は常に自分のもの
-    if (user && practiceOwnerId === user.id) return true;
-    return isCurrentUserPracticeTeamAdmin;
-  }, [isEditMode, practiceTeamId, practiceOwnerId, user, isCurrentUserPracticeTeamAdmin]);
+    return isCurrentUserPracticeTeamMember;
+  }, [isEditMode, practiceTeamId, isCurrentUserPracticeTeamMember]);
   // チーム練習の log タブ編集権限確定待ち (未確定のまま編集可能 UI を出さないための
   // ローディングガード。旧実装と同型)。
   // ここに origin === "teamAdmin" を足してはならない: canEditPracticeLogs は origin を
-  // 見ない。作成者本人 (owner) なら短絡して true になるが、非 owner の場合は
-  // isCurrentUserPracticeTeamAdmin — つまりメンバー一覧 — が答えを決めるため、
-  // 個人画面でも確定を待つ必要がある。
+  // 見ず、メンバー一覧が答えを決めるため、個人画面でも確定を待つ必要がある。
   const isResolvingPracticePermission =
     isEditMode && !!practiceTeamId && isPracticeTeamMembersLoading;
   // メンバー一覧の取得が失敗し、練習タブの編集可否が確定できない状態。
@@ -424,9 +420,7 @@ export const PracticeTabFormScreen: React.FC = () => {
             return;
           }
 
-          // 編集権限判定 (practices UPDATE RLS と同条件をクライアントでも反映する。
-          // CompetitionTabFormScreen の competitionOwnerId/competitionTeamId と同型)。
-          setPracticeOwnerId(practiceWithLogs.user_id);
+          // 編集権限判定 (practices UPDATE RLS と同条件をクライアントでも反映する)。
           setPracticeTeamId(practiceWithLogs.team_id ?? null);
           // iOSカレンダー同期用に読み込んだ行を保持しておく (同一スコープの取得元を
           // 1本化する。usePracticesQuery の個人スコープ一覧に対する .find() だと
@@ -456,7 +450,13 @@ export const PracticeTabFormScreen: React.FC = () => {
             });
           });
 
-          const logs = practiceWithLogs.practice_logs ?? [];
+          // チーム練習には他のメンバーのログも付く。自分のログだけを読み込み、保存の差分も
+          // 自分のログだけを対象にする (他人のログを更新・削除しない。swimhub-tasks#140)。
+          // 個人練習のログは持ち主のものなので絞らない。
+          const allLogs = practiceWithLogs.practice_logs ?? [];
+          const logs = practiceWithLogs.team_id
+            ? allLogs.filter((log) => log.user_id === user?.id)
+            : allLogs;
           if (logs.length === 0) {
             // ログなし: 空ドラフト1件
             const emptyMenus = [createDefaultMenu()];
@@ -913,6 +913,8 @@ export const PracticeTabFormScreen: React.FC = () => {
 
       if (savedPracticeId) {
         const api = new PracticeAPI(supabase);
+        // 練習ログ・タイムの持ち主は常に呼び出し元本人 (チーム練習のログは本人の分だけ書ける)
+        const logOwnerId = user?.id;
         // ログの追加/更新があったか。ログ変更が無い保存ではマイルストーン判定を走らせない
         let hasLogChanges = false;
 
@@ -973,15 +975,9 @@ export const PracticeTabFormScreen: React.FC = () => {
               rep_number: ti.repNumber,
               time: ti.time,
             })),
-            // 練習の所有者 (代理編集時は対象メンバー、通常は呼び出し元本人)。
-            // このループは menu.existingLogId を持つメニューのみが対象 = 必ず編集モード。
-            // 編集モードは初期化 (getTeamScopedPracticeById 成功) までローディング画面のまま
-            // 保存ボタン自体が描画されないため、ここに到達する時点で practiceOwnerId は
-            // 必ず非 null (setPracticeOwnerId は setLoadingExisting(false) と同じ then 内で
-            // 呼ばれ、失敗時は goBack() のみで loadingExisting を解除しない)。
-            // つまり `?? user?.id` はこの呼び出しに限れば型を合わせるためだけの防御的分岐で、
-            // 現状の到達条件では発火しない。
-            practiceOwnerId ?? user?.id,
+            // ログの持ち主 = 呼び出し元本人。チーム練習でも読み込むのは自分のログだけなので、
+            // 既存ログのタイムの持ち主も本人になる (代理入力は一括入力画面で行う)。
+            logOwnerId,
           );
           const { error: tagError } = await supabase.rpc("replace_practice_log_tags", {
             p_practice_log_id: menu.existingLogId,
@@ -998,14 +994,9 @@ export const PracticeTabFormScreen: React.FC = () => {
           const circleSec = Number(menu.circleSec) || 0;
           const circleTime = circleMin * 60 + circleSec;
           // 空・不正値は web と同じフォールバック (距離100 / 本数1 / セット1)
-          // user_id: 練習の所有者 (代理入力時は対象メンバー、通常は呼び出し元本人)。
-          // 新規作成モード (practiceOwnerId が null のまま) では新しい practice 自体が
-          // 常に呼び出し元を所有者として作成される (createPracticeMutation -> PracticeAPI
-          // .createPractice が user_id: user.id を強制する。team_id を渡しても作成者は
-          // 変わらない) ため、`?? user?.id` はここでは常に呼び出し元本人を指し、
-          // 代理入力の所有者と衝突しない。既存練習に新規メニューを追加する場合
-          // (管理者による代理入力の本題) は practiceOwnerId が対象メンバーの id で
-          // 非 null のため、そちらが優先される。
+          // user_id: 呼び出し元本人。以前は練習の所有者 (practiceOwnerId) にしていたため、
+          // 管理者が作ったチーム練習にメンバーが足したログが管理者のものになっていた。
+          // 他のメンバーの分の代理入力は一括入力画面 (TeamPracticeLogBulkForm) で行う。
           const logData = {
             practice_id: savedPracticeId,
             style: menu.style,
@@ -1015,7 +1006,7 @@ export const PracticeTabFormScreen: React.FC = () => {
             set_count: Number(menu.sets) || 1,
             circle: circleTime > 0 ? circleTime : null,
             note: menu.note.trim() || null,
-            user_id: practiceOwnerId ?? user?.id,
+            user_id: logOwnerId,
           };
           // 前回の保存で作成済みなら更新、未作成なら ID を決めて作成する。どちらでも
           // このメニューに対応するログは1件だけになる (再保存での二重登録を防ぐ)
@@ -1050,7 +1041,7 @@ export const PracticeTabFormScreen: React.FC = () => {
               rep_number: ti.repNumber,
               time: ti.time,
             })),
-            practiceOwnerId ?? user?.id,
+            logOwnerId,
           );
           // 作成済みのログを再保存するときは、タグを全部外した場合も空で置き換える
           if (menu.tags.length > 0 || alreadyCreatedLogId) {
@@ -1126,7 +1117,6 @@ export const PracticeTabFormScreen: React.FC = () => {
     isEditMode,
     canEditPracticeDetails,
     isResolvingPracticePermission,
-    practiceOwnerId,
     user,
     practiceTab,
     newImageFiles,
