@@ -123,6 +123,33 @@ describe("RecordFeedbackSection", () => {
     expect(mocks.markRead).toHaveBeenCalledWith({ recordId: "rec-1" });
   });
 
+  it("表示した時点で自分宛ての未読だった FB に「NEW」を出し、既読になった後もこの表示の間は出し続ける", () => {
+    mocks.feedbacks = [
+      makeFeedback({ id: "fb-new", read_at: null }),
+      makeFeedback({ id: "fb-old", author_name: "コーチB" }),
+    ];
+    const { rerender } = renderWithI18n(<RecordFeedbackSection recordId="rec-1" />);
+    const badges = screen.getAllByTestId("record-feedback-new-badge");
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveTextContent("NEW");
+    expect(screen.getAllByTestId("record-feedback-item")[0]).toContainElement(badges[0]!);
+
+    // 既読化が反映されて取り直された後も消えない
+    mocks.feedbacks = [
+      makeFeedback({ id: "fb-new", read_at: "2026-11-28T00:00:00Z" }),
+      makeFeedback({ id: "fb-old", author_name: "コーチB" }),
+    ];
+    rerender(<RecordFeedbackSection recordId="rec-1" />);
+    expect(screen.getAllByTestId("record-feedback-new-badge")).toHaveLength(1);
+  });
+
+  it("他人宛ての未読 (管理者が見たとき) には「NEW」を出さない", () => {
+    mocks.userId = "coach-2";
+    mocks.feedbacks = [makeFeedback({ read_at: null })];
+    renderWithI18n(<RecordFeedbackSection recordId="rec-1" />);
+    expect(screen.queryByTestId("record-feedback-new-badge")).not.toBeInTheDocument();
+  });
+
   it("既読済みなら既読化を呼ばない", () => {
     mocks.feedbacks = [makeFeedback()];
     renderWithI18n(<RecordFeedbackSection recordId="rec-1" />);

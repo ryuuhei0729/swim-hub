@@ -53,6 +53,9 @@ export default function RecordFeedbackSection({
   const [editing, setEditing] = useState<RecordFeedback | null>(null);
   const [deleting, setDeleting] = useState<RecordFeedback | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // 表示した時点で自分宛ての未読だった FB。既読にした後も、この表示の間は「NEW」を出し続ける
+  // (mobile の RecordFeedbackSection と同じ)
+  const [newIds, setNewIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const feedbacks = useMemo(() => feedbacksQuery.data ?? [], [feedbacksQuery.data]);
   const hasUnreadForMe = feedbacks.some(
@@ -70,8 +73,12 @@ export default function RecordFeedbackSection({
       .join(",")}`;
     if (markedKeyRef.current === key) return;
     markedKeyRef.current = key;
+    const unreadIds = feedbacks
+      .filter((f) => f.recipient_id === currentUserId && f.read_at === null)
+      .map((f) => f.id);
+    setNewIds((prev) => new Set([...prev, ...unreadIds]));
     markRead({ recordId });
-  }, [hasUnreadForMe, feedbacks, recordId, markRead]);
+  }, [hasUnreadForMe, feedbacks, recordId, markRead, currentUserId]);
 
   if (feedbacksQuery.isPending) {
     return showWhenEmpty ? (
@@ -122,6 +129,14 @@ export default function RecordFeedbackSection({
                     <span className="font-semibold text-gray-800">
                       {feedback.author_name ?? t("unknownAuthor")}
                     </span>
+                    {newIds.has(feedback.id) && (
+                      <span
+                        className="ml-1.5 inline-block rounded-full bg-violet-600 px-1.5 py-px text-[10px] font-bold leading-4 text-white"
+                        data-testid="record-feedback-new-badge"
+                      >
+                        {t("newLabel")}
+                      </span>
+                    )}
                     <span className="ml-2">{formatFeedbackDate(feedback.created_at)}</span>
                     {isEdited(feedback) && (
                       <span className="ml-2 text-gray-400" data-testid="record-feedback-edited">
