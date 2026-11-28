@@ -39,6 +39,8 @@ export interface PracticeDetailsProps {
   teamId?: string | null;
   teamName?: string | undefined;
   onShowAttendance?: () => void;
+  /** チーム練習・大会: チーム画面の予定タブでメンバー全員の記録を開く (「チームの記録を見る」) */
+  onShowTeamRecords?: () => void;
   /** カレンダー記録色設定から解決された練習の表示色(hex)。未指定時はデフォルト緑 */
   color?: string;
   /**
@@ -70,6 +72,8 @@ export interface CompetitionDetailsProps {
   teamId?: string | null;
   teamName?: string | undefined;
   onShowAttendance?: () => void;
+  /** チーム練習・大会: チーム画面の予定タブでメンバー全員の記録を開く (「チームの記録を見る」) */
+  onShowTeamRecords?: () => void;
   /** カレンダー記録色設定から解決された大会の表示色(hex)。未指定時はデフォルト青 */
   color?: string;
   /**
@@ -109,6 +113,8 @@ export interface CompetitionWithEntryProps {
   onEditEntry?: () => void;
   onDeleteEntry?: (entryId: string) => void;
   onClose?: () => void;
+  /** チーム練習・大会: チーム画面の予定タブでメンバー全員の記録を開く (「チームの記録を見る」) */
+  onShowTeamRecords?: () => void;
   /** カレンダー記録色設定から解決された大会の表示色(hex)。未指定時はデフォルト青 */
   color?: string;
 }
@@ -124,6 +130,11 @@ export interface AttendanceModalProps {
 
 // AttendanceButtonのProps
 export interface AttendanceButtonProps {
+  onClick: () => void;
+}
+
+// TeamRecordsButtonのProps
+export interface TeamRecordsButtonProps {
   onClick: () => void;
 }
 

@@ -974,7 +974,8 @@
       "recordMemoLabel": "备注",
       "recordsLoading": "正在加载记录...",
       "recordsEmpty": "暂无记录",
-      "entryTypeCompetition": "比赛"
+      "entryTypeCompetition": "比赛",
+      "viewTeamRecords": "查看团队记录"
     },
     "deleteConfirm": {
       "title": "删除记录",

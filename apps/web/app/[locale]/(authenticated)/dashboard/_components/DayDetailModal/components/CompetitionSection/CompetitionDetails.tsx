@@ -43,6 +43,7 @@ import type {
   PoolType,
 } from "@apps/shared/types";
 import { AttendanceButton } from "../AttendanceSection";
+import { TeamRecordsButton } from "../TeamRecordsSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
 import type { CompetitionDetailsProps } from "../../types";
 import { RecordAPI } from "@apps/shared/api/records";
@@ -84,6 +85,7 @@ export function CompetitionDetails({
   teamId,
   teamName,
   onShowAttendance,
+  onShowTeamRecords,
   color,
   targetRecordId,
 }: CompetitionDetailsProps) {
@@ -226,7 +228,7 @@ export function CompetitionDetails({
         {/* Competition全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span
                 className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
                   isDefaultColor
@@ -256,6 +258,9 @@ export function CompetitionDetails({
               </span>
               {isTeamCompetition && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
+              )}
+              {isTeamCompetition && teamId && onShowTeamRecords && (
+                <TeamRecordsButton onClick={onShowTeamRecords} />
               )}
             </div>
             {(place || poolType != null || note) && (

@@ -974,7 +974,8 @@
       "recordMemoLabel": "메모",
       "recordsLoading": "기록을 불러오는 중...",
       "recordsEmpty": "기록이 없습니다",
-      "entryTypeCompetition": "대회"
+      "entryTypeCompetition": "대회",
+      "viewTeamRecords": "팀 기록 보기"
     },
     "deleteConfirm": {
       "title": "기록 삭제",

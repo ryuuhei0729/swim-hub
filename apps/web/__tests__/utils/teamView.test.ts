@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
 import {
+  readTeamScheduleLink,
   resolveTeamToOpen,
   shouldOpenAsAdmin,
+  teamScheduleItemHref,
   teamViewHref,
   teamViewSearch,
 } from "@/utils/teamView";
@@ -28,6 +30,30 @@ describe("teamViewHref", () => {
     expect(teamViewHref("t1", false, "practices")).toBe("/teams/t1?tab=schedule");
     expect(teamViewHref("t1", false, "goals")).toBe("/teams/t1?tab=others");
     expect(teamViewHref("t1", true, "nope")).toBe("/teams/t1?view=admin");
+  });
+});
+
+describe("teamScheduleItemHref / readTeamScheduleLink", () => {
+  it("予定タブを開き、練習・大会の ID をクエリに載せる", () => {
+    expect(teamScheduleItemHref("t1", { kind: "practice", id: "p1" })).toBe(
+      "/teams/t1?tab=schedule&practice=p1",
+    );
+    expect(teamScheduleItemHref("t1", { kind: "competition", id: "c1" })).toBe(
+      "/teams/t1?tab=schedule&competition=c1",
+    );
+  });
+
+  it("クエリから開く練習・大会を読む (無ければ null)", () => {
+    expect(readTeamScheduleLink(new URLSearchParams("tab=schedule&practice=p1"))).toEqual({
+      kind: "practice",
+      id: "p1",
+    });
+    expect(readTeamScheduleLink(new URLSearchParams("competition=c1"))).toEqual({
+      kind: "competition",
+      id: "c1",
+    });
+    expect(readTeamScheduleLink(new URLSearchParams("tab=schedule&practice="))).toBeNull();
+    expect(readTeamScheduleLink(null)).toBeNull();
   });
 });
 

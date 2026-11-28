@@ -16,7 +16,7 @@ import {
   type TeamTabType,
 } from "@/components/team/teamTabDefs";
 import { useTeamViewStore } from "@/stores/team/teamViewStore";
-import { teamViewSearch } from "@/utils/teamView";
+import { TEAM_SCHEDULE_LINK_PARAMS, readTeamScheduleLink, teamViewSearch } from "@/utils/teamView";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import type { TeamMembership, TeamWithMembers } from "@apps/shared/types";
 import TeamDetailClient from "./TeamDetailClient";
@@ -45,6 +45,8 @@ interface TeamPageClientProps {
  *
  * 開くタブの決め方: `?tab=` があればそれ (旧タブの ID は新しいタブへ読み替える)、
  * 無ければそのチームで最後に開いていたタブ (localStorage)、それも無ければメンバー。
+ * `?tab=schedule&practice=<id>` / `&competition=<id>` なら、予定タブでその練習・大会の詳細も開く
+ * (ダッシュボードの日付詳細の「チームの記録を見る」から)。開いたらそのクエリは URL から外す。
  *
  * お知らせ・チーム設定・ランキング・メンバーの目標・一括登録は、タブの上に重ねて開く
  * (mobile ではスタックに積む別画面)。
@@ -113,6 +115,16 @@ export default function TeamPageClient({
   useEffect(() => {
     if (isTabReady && isMember) storeTab(teamId, activeTab);
   }, [isTabReady, isMember, storeTab, teamId, activeTab]);
+
+  // 予定タブで詳細を開く練習・大会。予定タブを開いているときだけ渡す
+  const scheduleLink = activeTab === "schedule" ? readTeamScheduleLink(searchParams) : null;
+  const handleScheduleLinkHandled = useCallback(() => {
+    // 再読み込み・タブの切り替えで同じ詳細をまた開かないよう、URL から外す (`?tab=` などは残す)
+    const params = new URLSearchParams(window.location.search);
+    for (const name of TEAM_SCHEDULE_LINK_PARAMS) params.delete(name);
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, []);
 
   const handleTabChange = useCallback((tab: TeamTabType) => {
     setActiveTab(tab);
@@ -226,6 +238,8 @@ export default function TeamPageClient({
           activeTab={activeTab}
           onTabChange={handleTabChange}
           onOpenSubScreen={setSubScreen}
+          scheduleLink={scheduleLink}
+          onScheduleLinkHandled={handleScheduleLinkHandled}
         />
       ) : null}
     </div>

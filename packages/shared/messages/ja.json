@@ -974,7 +974,8 @@
       "recordMemoLabel": "メモ",
       "recordsLoading": "記録を読み込み中...",
       "recordsEmpty": "記録がありません",
-      "entryTypeCompetition": "大会"
+      "entryTypeCompetition": "大会",
+      "viewTeamRecords": "チームの記録を見る"
     },
     "deleteConfirm": {
       "title": "記録を削除",

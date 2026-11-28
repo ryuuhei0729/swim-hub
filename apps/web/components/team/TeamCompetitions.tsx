@@ -103,6 +103,8 @@ export interface TeamCompetitionActions {
   modals: React.ReactNode;
   /** 管理者ビュー: 大会を追加 */
   openAddForm: () => void;
+  /** 記録一覧を開く (カードを押したときと同じ。外からのリンク用) */
+  openRecords: (competition: TeamCompetition) => void;
   /** 保存・削除の失敗 (一覧の代わりに表示する) */
   error: string | null;
   clearError: () => void;
@@ -369,10 +371,10 @@ export function useTeamCompetitionActions({
   };
 
   // 記録一覧モーダルを開く
-  const handleOpenRecords = (competition: TeamCompetition) => {
+  const handleOpenRecords = useCallback((competition: TeamCompetition) => {
     setSelectedCompetitionForRecords(competition);
     setShowRecordsModal(true);
-  };
+  }, []);
 
   // 利用者ビュー向け: 自分の記録を追加(RecordLogForm を competitionId 付きで開く)。
   // 管理者ビューには出さない (mobile と同じく代理入力ボタンだけ。swimhub-tasks #112)
@@ -1048,6 +1050,7 @@ export function useTeamCompetitionActions({
     renderCard,
     modals,
     openAddForm: handleAddCompetition,
+    openRecords: handleOpenRecords,
     error,
     clearError: () => setError(null),
   };

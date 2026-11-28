@@ -971,7 +971,8 @@
       "recordMemoLabel": "Note",
       "recordsLoading": "Loading records...",
       "recordsEmpty": "No records yet",
-      "entryTypeCompetition": "Competition"
+      "entryTypeCompetition": "Competition",
+      "viewTeamRecords": "View team records"
     },
     "deleteConfirm": {
       "title": "Delete Record",

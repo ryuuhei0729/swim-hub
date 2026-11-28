@@ -1,4 +1,5 @@
 export { AttendanceButton, AttendanceModal } from "./AttendanceSection";
+export { TeamRecordsButton } from "./TeamRecordsSection";
 export { PracticeDetails } from "./PracticeSection";
 export { RecordSplitTimes, CompetitionDetails, CompetitionWithEntry } from "./CompetitionSection";
 // NOTE: DeleteConfirmModal は /practice, /competition 履歴タブからも共有するため

@@ -974,7 +974,8 @@
       "recordMemoLabel": "Notiz",
       "recordsLoading": "Einträge werden geladen...",
       "recordsEmpty": "Noch keine Einträge",
-      "entryTypeCompetition": "Wettkampf"
+      "entryTypeCompetition": "Wettkampf",
+      "viewTeamRecords": "Team-Ergebnisse ansehen"
     },
     "deleteConfirm": {
       "title": "Eintrag löschen",

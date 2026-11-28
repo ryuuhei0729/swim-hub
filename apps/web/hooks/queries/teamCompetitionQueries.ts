@@ -101,16 +101,8 @@ function isValidEntryStatus(
 ): status is "before" | "open" | "closed" {
   return status === "before" || status === "open" || status === "closed";
 }
-/** チームの大会 (エントリーの概要を含む) を、予定タブの範囲 (今日以降 / 過去の 1 ページ) で取得する */
-export async function fetchTeamCompetitions(
-  supabase: SupabaseClient,
-  teamId: string,
-  range: TeamScheduleRange,
-): Promise<TeamCompetition[]> {
-  const base = supabase
-    .from("competitions")
-    .select(
-      `
+/** 予定タブの大会カードに使う列 (一覧と 1 件取得で共通) */
+const TEAM_COMPETITION_LIST_SELECT = `
             id,
             user_id,
             team_id,
@@ -129,8 +121,17 @@ export async function fetchTeamCompetitions(
               style_id,
               entry_time
             )
-          `,
-    )
+          `;
+
+/** チームの大会 (エントリーの概要を含む) を、予定タブの範囲 (今日以降 / 過去の 1 ページ) で取得する */
+export async function fetchTeamCompetitions(
+  supabase: SupabaseClient,
+  teamId: string,
+  range: TeamScheduleRange,
+): Promise<TeamCompetition[]> {
+  const base = supabase
+    .from("competitions")
+    .select(TEAM_COMPETITION_LIST_SELECT)
     .eq("team_id", teamId);
 
   const { data, error } =
@@ -143,6 +144,26 @@ export async function fetchTeamCompetitions(
 
   if (error) throw error;
   return mapToTeamCompetitions(data as RawCompetitionData[] | null);
+}
+
+/**
+ * チームの大会 1 件 (予定タブのカードと同じ形)。他のチームの大会・見つからないときは null。
+ * 外から予定タブの詳細を開くとき (`?competition=<id>`) に使う。過去の大会でも一覧の読み込み範囲に関係なく取れる
+ */
+export async function fetchTeamCompetitionById(
+  supabase: SupabaseClient,
+  teamId: string,
+  competitionId: string,
+): Promise<TeamCompetition | null> {
+  const { data, error } = await supabase
+    .from("competitions")
+    .select(TEAM_COMPETITION_LIST_SELECT)
+    .eq("team_id", teamId)
+    .eq("id", competitionId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? (mapToTeamCompetitions([data as RawCompetitionData])[0] ?? null) : null;
 }
 
 /** 今日以降の大会 (日付の近い順・全件) */
