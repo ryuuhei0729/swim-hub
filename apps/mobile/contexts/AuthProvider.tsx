@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = (await supabase
           .from("user_subscriptions")
-          .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+          .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end, provider")
           .eq("id", userId)
           .single()) as {
           data: {
@@ -129,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             cancel_at_period_end: boolean | null;
             premium_expires_at: string | null;
             trial_end: string | null;
+            provider: string | null;
           } | null;
           error: unknown;
         };
@@ -139,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
           premiumExpiresAt: data.premium_expires_at ?? null,
           trialEnd: data.trial_end ?? null,
+          provider: (data.provider as SubscriptionInfo["provider"]) ?? null,
         };
       } catch {
         return null;

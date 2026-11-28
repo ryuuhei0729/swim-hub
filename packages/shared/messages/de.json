@@ -1920,6 +1920,8 @@
       "upgradeButton": "Auf Premium upgraden",
       "restoreButton": "Käufe wiederherstellen",
       "manageSubButton": "Abonnement verwalten",
+      "managedByWebTitle": "Im Web abonniert",
+      "managedByWebMessage": "Dieser Plan wurde im Web (swim-hub.app) abgeschlossen. Um ihn zu ändern oder zu kündigen, öffnen Sie die Einstellungen im Web.",
       "termsLink": "Nutzungsbedingungen",
       "privacyLink": "Datenschutzerklärung"
     },
@@ -1965,6 +1967,7 @@
         "processingButton": "Wird verarbeitet..."
       },
       "managePlanButton": "Tarif verwalten",
+      "managedByStore": "Sie haben über die App (App Store / Google Play) abonniert. Um Ihren Plan zu ändern oder zu kündigen, verwenden Sie die Abo-Einstellungen im App Store Ihres Smartphones.",
       "managePlanProcessing": "Wird verarbeitet..."
     },
     "googleCalendar": {

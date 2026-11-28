@@ -1920,6 +1920,8 @@
       "upgradeButton": "Premium으로 업그레이드",
       "restoreButton": "구매 복원하기",
       "manageSubButton": "구독 관리",
+      "managedByWebTitle": "웹에서 구독 중입니다",
+      "managedByWebMessage": "이 플랜은 웹(swim-hub.app)에서 구독했습니다. 플랜 변경 및 해지는 웹의 설정 화면에서 해 주세요.",
       "termsLink": "이용약관",
       "privacyLink": "개인정보 처리방침"
     },
@@ -1965,6 +1967,7 @@
         "processingButton": "처리 중..."
       },
       "managePlanButton": "플랜 관리",
+      "managedByStore": "앱(App Store / Google Play)에서 구독 중입니다. 플랜 변경 및 해지는 스마트폰 스토어의 구독 설정에서 해 주세요.",
       "managePlanProcessing": "처리 중..."
     },
     "googleCalendar": {

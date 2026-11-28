@@ -1920,6 +1920,8 @@
       "upgradeButton": "Premium にアップグレード",
       "restoreButton": "購入を復元する",
       "manageSubButton": "サブスクリプションを管理",
+      "managedByWebTitle": "Web で契約中です",
+      "managedByWebMessage": "このプランは Web（swim-hub.app）で契約しています。プランの変更・解約は Web の設定画面から行ってください。",
       "termsLink": "利用規約",
       "privacyLink": "プライバシーポリシー"
     },
@@ -1965,6 +1967,7 @@
         "processingButton": "処理中..."
       },
       "managePlanButton": "プランを管理",
+      "managedByStore": "アプリ（App Store / Google Play）で契約中です。プランの変更・解約はスマートフォンのストアのサブスクリプション設定から行ってください。",
       "managePlanProcessing": "処理中..."
     },
     "googleCalendar": {

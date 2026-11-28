@@ -1920,6 +1920,8 @@
       "upgradeButton": "升级到 Premium",
       "restoreButton": "恢复购买",
       "manageSubButton": "管理订阅",
+      "managedByWebTitle": "已在网页版订阅",
+      "managedByWebMessage": "此方案是在网页版（swim-hub.app）订阅的。如需更改或取消，请在网页版的设置页面中操作。",
       "termsLink": "使用条款",
       "privacyLink": "隐私政策"
     },
@@ -1965,6 +1967,7 @@
         "processingButton": "处理中..."
       },
       "managePlanButton": "管理套餐",
+      "managedByStore": "您是通过应用（App Store / Google Play）订阅的。如需更改或取消方案，请在手机应用商店的订阅设置中操作。",
       "managePlanProcessing": "处理中..."
     },
     "googleCalendar": {

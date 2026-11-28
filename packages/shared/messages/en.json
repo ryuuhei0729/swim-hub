@@ -1917,6 +1917,8 @@
       "upgradeButton": "Upgrade to Premium",
       "restoreButton": "Restore purchases",
       "manageSubButton": "Manage subscription",
+      "managedByWebTitle": "Subscribed on the web",
+      "managedByWebMessage": "This plan was purchased on the web (swim-hub.app). To change or cancel it, go to Settings on the web.",
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy"
     },
@@ -1962,6 +1964,7 @@
         "processingButton": "Processing..."
       },
       "managePlanButton": "Manage plan",
+      "managedByStore": "You subscribed through the app (App Store / Google Play). To change or cancel your plan, use the subscription settings in your phone's app store.",
       "managePlanProcessing": "Processing..."
     },
     "googleCalendar": {

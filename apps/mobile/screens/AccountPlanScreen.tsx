@@ -139,7 +139,15 @@ export const AccountPlanScreen: React.FC = () => {
             label={t("settings.mobile.manageSubButton")}
             tone="action"
             accessory="external"
-            onPress={() => Linking.openURL(STORE_SUBSCRIPTIONS_URL)}
+            onPress={() =>
+              // Web (Stripe) で契約したプランはストアに無く、開いても空の画面になるので案内する
+              subscription?.provider === "stripe"
+                ? Alert.alert(
+                    t("settings.mobile.managedByWebTitle"),
+                    t("settings.mobile.managedByWebMessage"),
+                  )
+                : Linking.openURL(STORE_SUBSCRIPTIONS_URL)
+            }
             accessibilityLabel={t("settings.mobile.manageSubAria")}
             testID="plan-manage"
           />
