@@ -60,7 +60,9 @@ const SPRINT_REQUIRED_KEYS = [
   "teams.competitions.card.deleteButton",
 
   // D4: 一般メンバーの自己ログ/自己記録追加ボタン
-  "teams.practices.selfLogButton",
+  // (練習はヘッダーのボタンをやめ、カードごとの「記録追加」にした。swimhub-tasks#57)
+  "teams.practices.card.addLogButton",
+  "teams.practices.card.addLogAriaLabel",
   "teams.competitions.selfRecordButton",
 
   // D6: 一括登録 手動入力モード

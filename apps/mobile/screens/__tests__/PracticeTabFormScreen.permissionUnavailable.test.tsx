@@ -282,6 +282,8 @@ const EDIT_RESTRICTED_MESSAGE = "この練習の情報はチーム管理者の�
 function makeLog() {
   return {
     id: LOG_ID,
+    // 作成者本人のログ (チーム練習では自分のログだけを読み込むため、持ち主を明示する)
+    user_id: OWNER_ID,
     practice_id: PRACTICE_ID,
     style: "Fr",
     swim_category: "Swim",

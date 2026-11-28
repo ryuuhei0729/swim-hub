@@ -3133,9 +3133,10 @@
         "editButton": "Bearbeiten",
         "deleteButton": "Löschen",
         "recordBulkButton": "Ergebnisse stellvertretend eingeben",
-        "viewTimesAriaLabel": "Zeiten für {date} anzeigen"
-      },
-      "selfLogButton": "Eigenes Protokoll hinzufügen"
+        "viewTimesAriaLabel": "Zeiten für {date} anzeigen",
+        "addLogButton": "Ergebnis hinzufügen",
+        "addLogAriaLabel": "Eigenes Ergebnis zum Training am {date} hinzufügen"
+      }
     },
     "practiceDetail": {
       "title": "Trainingsdetails",
@@ -3642,6 +3643,7 @@
       "creating": "Wird erstellt...",
       "createButton": "Erstellen",
       "updateFailed": "Aktualisieren des Team-Trainingseintrags fehlgeschlagen.",
+      "imageSaveFailed": "Das Training wurde gespeichert, aber die Bilder konnten nicht gespeichert werden",
       "deleteFailed": "Löschen des Team-Trainingseintrags fehlgeschlagen."
     },
     "competitionForm": {
@@ -3653,6 +3655,7 @@
       "authRequired": "Authentifizierung erforderlich",
       "createFailed": "Teamwettkampf konnte nicht erstellt werden",
       "updateFailed": "Teamwettkampf konnte nicht aktualisiert werden",
+      "imageSaveFailed": "Der Wettkampf wurde gespeichert, aber die Bilder konnten nicht gespeichert werden",
       "deleteFailed": "Teamwettkampf konnte nicht gelöscht werden",
       "competitionNameLabel": "Wettkampfname",
       "competitionNamePlaceholder": "z. B. Landesmeisterschaften (leer lassen für „Wettkampf“)",

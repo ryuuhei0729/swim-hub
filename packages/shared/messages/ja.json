@@ -3133,9 +3133,10 @@
         "editButton": "編集",
         "deleteButton": "削除",
         "recordBulkButton": "記録代理入力",
-        "viewTimesAriaLabel": "{date}のタイムを表示"
-      },
-      "selfLogButton": "自分のログを追加"
+        "viewTimesAriaLabel": "{date}のタイムを表示",
+        "addLogButton": "記録追加",
+        "addLogAriaLabel": "{date}の練習に自分の記録を追加"
+      }
     },
     "practiceDetail": {
       "title": "練習詳細",
@@ -3642,6 +3643,7 @@
       "creating": "作成中...",
       "createButton": "作成",
       "updateFailed": "チーム練習記録の更新に失敗しました",
+      "imageSaveFailed": "練習記録は保存されましたが、画像の保存に失敗しました",
       "deleteFailed": "チーム練習記録の削除に失敗しました"
     },
     "competitionForm": {
@@ -3653,6 +3655,7 @@
       "authRequired": "認証が必要です",
       "createFailed": "チーム大会の作成に失敗しました",
       "updateFailed": "チーム大会の更新に失敗しました",
+      "imageSaveFailed": "大会は保存されましたが、画像の保存に失敗しました",
       "deleteFailed": "チーム大会の削除に失敗しました",
       "competitionNameLabel": "大会名",
       "competitionNamePlaceholder": "例: 県大会（空欄の場合は「大会」と表示）",

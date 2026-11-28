@@ -3130,9 +3130,10 @@
         "editButton": "Edit",
         "deleteButton": "Delete",
         "recordBulkButton": "Enter records",
-        "viewTimesAriaLabel": "View times for {date}"
-      },
-      "selfLogButton": "Add My Log"
+        "viewTimesAriaLabel": "View times for {date}",
+        "addLogButton": "Add record",
+        "addLogAriaLabel": "Add my record to the practice on {date}"
+      }
     },
     "practiceDetail": {
       "title": "Practice Details",
@@ -3639,6 +3640,7 @@
       "creating": "Creating...",
       "createButton": "Create",
       "updateFailed": "Failed to update the team practice record.",
+      "imageSaveFailed": "The practice was saved, but the images could not be saved",
       "deleteFailed": "Failed to delete the team practice record."
     },
     "competitionForm": {
@@ -3650,6 +3652,7 @@
       "authRequired": "Authentication required",
       "createFailed": "Failed to create team competition",
       "updateFailed": "Failed to update team competition",
+      "imageSaveFailed": "The competition was saved, but the images could not be saved",
       "deleteFailed": "Failed to delete team competition",
       "competitionNameLabel": "Competition Name",
       "competitionNamePlaceholder": "e.g. Prefectural Championships (leave blank to show \"Competition\")",

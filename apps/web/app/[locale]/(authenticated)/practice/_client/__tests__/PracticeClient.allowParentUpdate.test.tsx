@@ -41,10 +41,11 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
 // 「どの値を渡すか」だけを見たいのでスタブ化する。
 vi.mock("@/components/forms/PracticeTabModal", () => ({
   __esModule: true,
-  default: (props: { isOpen: boolean; allowParentUpdate?: boolean }) =>
+  default: (props: { isOpen: boolean; allowParentUpdate?: boolean; logOwnerUserId?: string }) =>
     props.isOpen ? (
       <div data-testid="practice-tab-modal-stub">
         <span data-testid="tab-allow-parent-update">{String(props.allowParentUpdate)}</span>
+        <span data-testid="tab-log-owner-user-id">{props.logOwnerUserId ?? ""}</span>
       </div>
     ) : null,
 }));
@@ -129,6 +130,8 @@ describe("PracticeClient allowParentUpdate 導出", () => {
       expect(screen.getByTestId("practice-tab-modal-stub")).toBeInTheDocument();
     });
     expect(screen.getByTestId("tab-allow-parent-update")).toHaveTextContent("false");
+    // チーム練習には他のメンバーのログも付くので、自分のログだけを読み込ませる (swimhub-tasks#140)
+    expect(screen.getByTestId("tab-log-owner-user-id")).toHaveTextContent("user-1");
   });
 
   it("[SC4 / 非退行] 個人練習 (team_id なし) を編集すると allowParentUpdate=true が渡る", async () => {

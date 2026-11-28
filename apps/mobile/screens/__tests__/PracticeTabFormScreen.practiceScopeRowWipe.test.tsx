@@ -1063,13 +1063,11 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
 // 判定変数が2系統に分離された (PM裁定・修正ラウンド2):
 //   canEditPracticeDetails: basicData タブ用。新仕様 (= !practiceTeamId のみ、
 //     admin/owner 判定なし)。P-11/P-12/P-13/P-15 が担当。
-//   canEditPracticeLogs: log タブ用。Contract 2 以前の旧ロジックをそのまま維持
-//     (owner 本人 OR team admin)。一般メンバーは不可 — これは仕様であり、
-//     RLS 実測 (practice_logs INSERT WITH CHECK は p.user_id=auth.uid() の
-//     「本人」枝が practice_logs.user_id の値を一切見ないため、一般メンバーが
-//     他人のチーム練習にログを追加しようとしても両枝とも不成立で必ず拒否される)
-//     により「一般メンバーに解禁しても実害は無い」ことは確認済みだが、
-//     UX 上の「編集不可であることが明確に伝わる」旧体験を優先し admin/owner 判定を残す。
+//   canEditPracticeLogs: log タブ用。
+//     【2026-11-30 変更 (swimhub-tasks#139)】チーム練習のログは「本人の分だけ書ける」に
+//     なった (20261130000000_team_practice_logs_self_write.sql)。チーム練習では自分のログ
+//     だけを読み込むので、そのチームの現役メンバーなら一般メンバーでも log タブを編集できる。
+//     メンバーでない (退会済みなど) ときだけ読むだけになる。SC2-3 / SC2-3b / SC2-5 が担当。
 //
 // 「ボタンが無いこと」の assert は偽陽性になりやすいため、同じセレクタで
 // 「出るべきケース」(owner/admin) を対に置く。加えて、2つの判定変数の取り違えを
@@ -1139,9 +1137,8 @@ describe("PracticeTabFormScreen — SC2: チーム練習の log タブは Contra
   );
 
   it(
-    "[SC2-3] 一般メンバー (作成者でも admin でもない) は log タブで「メニュー追加」ボタンが出ず、" +
-      "制限バナーが表示される (Contract 2 以前と同じ挙動。SC2-1/SC2-2 でセレクタが機能する" +
-      "ことを確認済みのため、ここで見つからないのは偽陽性ではない)",
+    "[SC2-3] 一般メンバー (作成者でも admin でもない) も、チーム練習の log タブで" +
+      "「メニュー追加」ボタンが出て、制限バナーは出ない (自分のログは書ける。swimhub-tasks#139)",
     async () => {
       mocks.currentUserId = TEAM_GENERAL_VIEWER_ID;
       mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
@@ -1164,8 +1161,85 @@ describe("PracticeTabFormScreen — SC2: チーム練習の log タブは Contra
         { timeout: 15000 },
       );
 
+      expect(screen.queryByTestId("item-tab-add")).not.toBeNull();
+      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
+    },
+    15000,
+  );
+
+  it(
+    "[SC2-3b] チームのメンバーでない人 (退会済みなど) は log タブで「メニュー追加」ボタンが出ず、" +
+      "制限バナーが表示される (SC2-3 でセレクタが機能することを確認済みのため、偽陽性ではない)",
+    async () => {
+      mocks.currentUserId = TEAM_GENERAL_VIEWER_ID;
+      mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
+      mocks.routeParams.initialTab = "log";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [{ user_id: OTHER_MEMBER_OWNER_ID, role: "admin" }],
+        isLoading: false,
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue(structuredClone(teamOwnedByOtherFixture));
+
+      renderScreen();
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
+        },
+        { timeout: 15000 },
+      );
+
       expect(screen.queryByTestId("item-tab-add")).toBeNull();
       expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
+    },
+    15000,
+  );
+
+  it(
+    "[SC2-5] チーム練習を開くと自分のログだけを読み込み、他のメンバーのログはメニューに出さない" +
+      "(保存時に他人のログを更新・削除しないため。swimhub-tasks#140)",
+    async () => {
+      mocks.currentUserId = TEAM_GENERAL_VIEWER_ID;
+      mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
+      mocks.routeParams.initialTab = "log";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [
+          { user_id: TEAM_GENERAL_VIEWER_ID, role: "user" },
+          { user_id: OTHER_MEMBER_OWNER_ID, role: "user" },
+        ],
+        isLoading: false,
+      });
+      const makeTeamLog = (id: string, userId: string, note: string) => ({
+        id,
+        user_id: userId,
+        practice_id: TEAM_OWNED_PRACTICE_ID,
+        style: "Fr",
+        swim_category: "Swim",
+        distance: 100,
+        rep_count: 4,
+        set_count: 1,
+        circle: 90,
+        note,
+        video_path: null,
+        video_thumbnail_path: null,
+        practice_times: [],
+        practice_log_tags: [],
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue({
+        ...structuredClone(teamOwnedByOtherFixture),
+        practice_logs: [
+          makeTeamLog("plog-own", TEAM_GENERAL_VIEWER_ID, "自分のメニューのメモ"),
+          makeTeamLog("plog-other", OTHER_MEMBER_OWNER_ID, "他のメンバーのメニューのメモ"),
+        ],
+      });
+
+      renderScreen();
+
+      expect(await screen.findByDisplayValue("自分のメニューのメモ", {}, { timeout: 15000 })).toBeTruthy();
+      // メニューは1つずつタブで出るので、タブの数で「読み込んだのは自分の1件だけ」を確かめる
+      expect(screen.queryByTestId("item-tab-1")).not.toBeNull();
+      expect(screen.queryByTestId("item-tab-2")).toBeNull();
+      expect(screen.queryByDisplayValue("他のメンバーのメニューのメモ")).toBeNull();
     },
     15000,
   );

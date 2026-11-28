@@ -3133,9 +3133,10 @@
         "editButton": "편집",
         "deleteButton": "삭제",
         "recordBulkButton": "기록 대리 입력",
-        "viewTimesAriaLabel": "{date}의 연습 기록 보기"
-      },
-      "selfLogButton": "내 기록 추가"
+        "viewTimesAriaLabel": "{date}의 연습 기록 보기",
+        "addLogButton": "기록 추가",
+        "addLogAriaLabel": "{date} 연습에 내 기록 추가"
+      }
     },
     "practiceDetail": {
       "title": "연습 상세",
@@ -3642,6 +3643,7 @@
       "creating": "생성 중...",
       "createButton": "만들기",
       "updateFailed": "팀 연습 기록 업데이트에 실패했습니다",
+      "imageSaveFailed": "연습 기록은 저장되었지만 이미지 저장에 실패했습니다",
       "deleteFailed": "팀 연습 기록 삭제에 실패했습니다"
     },
     "competitionForm": {
@@ -3653,6 +3655,7 @@
       "authRequired": "인증이 필요합니다",
       "createFailed": "팀 대회 생성에 실패했습니다",
       "updateFailed": "팀 대회 수정에 실패했습니다",
+      "imageSaveFailed": "대회는 저장되었지만 이미지 저장에 실패했습니다",
       "deleteFailed": "팀 대회 삭제에 실패했습니다",
       "competitionNameLabel": "대회명",
       "competitionNamePlaceholder": "예: 도 대회 (비워두면 ‘대회’로 표시됩니다)",

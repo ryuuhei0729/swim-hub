@@ -24,6 +24,9 @@ import { format, isValid, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
+import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
+import { resolveGalleryImages } from "@/lib/image-url";
+import { hasParentImageChanges, saveParentImages } from "@/utils/parentImageSave";
 import { TeamPracticesAPI } from "@apps/shared/api/teams/practices";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import Pagination from "@/components/ui/Pagination";
@@ -46,7 +49,7 @@ const PracticeBasicForm = dynamic(
   },
 );
 
-// 練習ログタブモーダル(自己ログ導線)。重量コンポーネントなので開いた時にのみ import する
+// 練習ログタブモーダル(カードの「記録追加」導線)。重量コンポーネントなので開いた時にのみ import する
 const PracticeTabModal = dynamic(
   () => import("@/components/forms/PracticeTabModal"),
   {
@@ -109,6 +112,7 @@ export default function TeamPractices({
     availableTags,
     setAvailableTags,
     setEditingPracticeId,
+    setEditingData,
     openTabModal,
     closeTabModal,
     closeAll: closePracticeStoreAll,
@@ -142,22 +146,55 @@ export default function TeamPractices({
     openBasicForm(new Date());
   };
 
+  // 編集フォームに既存の画像を出すための取得。開き直したときに前の取得結果を反映しないよう番号で区別する
+  const editImageRequestIdRef = useRef(0);
+
   // 管理者向け: 既存の練習記録を編集(PracticeBasicForm を editData 付きで開く)
   const handleEditPractice = (e: React.MouseEvent, practice: TeamPractice) => {
     e.stopPropagation();
-    openBasicForm(new Date(practice.date), {
+    const baseEditData = {
       id: practice.id,
       type: "practice",
       date: practice.date,
       title: practice.title || "",
       place: practice.place || "",
       note: practice.note || "",
-    } as EditingData);
+    };
+    openBasicForm(new Date(practice.date), baseEditData as EditingData);
+
+    // 既存の画像は署名付き URL の解決を待たずにフォームを開き、解決後に editingData へ足す
+    // (ダッシュボードの編集と同じ。swimhub-tasks#58)
+    const requestId = ++editImageRequestIdRef.current;
+    void (async () => {
+      try {
+        const { data, error: imagePathsError } = await supabase
+          .from("practices")
+          .select("image_paths")
+          .eq("id", practice.id)
+          .single();
+        if (imagePathsError) throw imagePathsError;
+        const paths = (data as { image_paths: string[] | null } | null)?.image_paths ?? [];
+        if (paths.length === 0) return;
+        const images = await resolveGalleryImages("practice-images", paths);
+        const state = usePracticeStore.getState();
+        if (
+          editImageRequestIdRef.current !== requestId ||
+          !state.isBasicFormOpen ||
+          state.editingData?.id !== practice.id ||
+          images.length === 0
+        ) {
+          return;
+        }
+        setEditingData({ ...baseEditData, images } as EditingData);
+      } catch (err) {
+        console.error("練習の画像の取得に失敗:", err);
+      }
+    })();
   };
 
   const handlePracticeBasicSubmit = async (
     basicData: { date: string; title: string; place: string; note: string },
-    _imageData?: PracticeImageData,
+    imageData?: PracticeImageData,
     _continueToNext?: boolean,
   ) => {
     // ユーザーがログインしていない場合はエラーを表示して早期リターン
@@ -171,15 +208,16 @@ export default function TeamPractices({
     try {
       const api = new TeamPracticesAPI(supabase);
 
-      if (editingData?.id) {
-        await api.update(editingData.id, {
+      let practiceId = editingData?.id;
+      if (practiceId) {
+        await api.update(practiceId, {
           date: basicData.date,
           title: basicData.title || null,
           place: basicData.place || null,
           note: basicData.note || null,
         });
       } else {
-        await api.create({
+        const created = await api.create({
           user_id: user.id,
           team_id: teamId,
           date: basicData.date,
@@ -187,11 +225,24 @@ export default function TeamPractices({
           place: basicData.place || null,
           note: basicData.note || null,
         });
+        practiceId = created.id;
+      }
+
+      // 画像 (追加・削除)。練習本体は保存済みなので、失敗しても一覧は更新して理由を出す
+      let imageSaveFailed = false;
+      if (practiceId && imageData && hasParentImageChanges(imageData)) {
+        try {
+          await saveParentImages(supabase, "practice", practiceId, imageData);
+        } catch (imageErr) {
+          console.error("練習の画像の保存に失敗:", imageErr);
+          imageSaveFailed = true;
+        }
       }
 
       closeBasicForm();
-      await loadTeamPractices(editingData?.id);
+      await loadTeamPractices(practiceId);
       setCurrentPage(1);
+      if (imageSaveFailed) setError(t("practiceForm.imageSaveFailed"));
     } catch (err) {
       console.error("練習の保存に失敗:", err);
       setError(
@@ -230,9 +281,23 @@ export default function TeamPractices({
     }
   };
 
-  // 一般メンバー向け: 自分のログを追加(PracticeTabModal の practiceLog タブを開く)
-  const handleOpenSelfLog = () => {
-    openTabModal(new Date(), undefined, "practiceLog");
+  // 一般メンバー向け: カードの「記録追加」から、その練習に自分のログを付ける
+  // (PracticeTabModal の practiceLog タブを、既存の練習の編集モードで開く)。
+  // 練習の ID を渡さずに開くと、保存時に team_id 付きの新しい練習が作られてしまう
+  // (swimhub-tasks#57)。モバイルの TeamPracticeList の handleAddLog と同じ導線。
+  const handleOpenSelfLog = (practice: TeamPractice) => {
+    openTabModal(
+      new Date(practice.date),
+      {
+        id: practice.id,
+        type: "practice",
+        date: practice.date,
+        title: practice.title || "",
+        place: practice.place || "",
+        note: practice.note || "",
+      } as EditingData,
+      "practiceLog",
+    );
     // タグ選択肢を非同期取得(モーダルは即座に開く。失敗しても致命的ではない)
     (async () => {
       try {
@@ -246,8 +311,8 @@ export default function TeamPractices({
   };
 
   // 自分のログを保存した練習の ID。usePracticeTabSave の onSaved は引数を持たないので、
-  // 作成 (createPractice) / 既存練習への再送信 (onSave の editingPracticeId) の時点で控えておき、
-  // 保存後にその練習の詳細モーダルのキャッシュも落とす (保存前のログを表示しないため)
+  // onSave の editingPracticeId の時点で控えておき、保存後にその練習の詳細モーダルの
+  // キャッシュも落とす (保存前のログを表示しないため)
   const selfLogPracticeIdRef = useRef<string | null>(null);
 
   // 自分のログを追加した後、チームの練習一覧とその練習の詳細を再読込する
@@ -262,15 +327,11 @@ export default function TeamPractices({
   const handleSelfLogTabSave = usePracticeTabSave({
     supabase,
     user,
-    createPractice: async (practice) => {
-      const api = new TeamPracticesAPI(supabase);
-      const created = await api.create({
-        ...practice,
-        user_id: user!.id,
-        team_id: teamId,
-      });
-      selfLogPracticeIdRef.current = created.id;
-      return created;
+    // 「記録追加」は常に既存の練習 (editingPracticeId あり) に付けるため、練習は作らない。
+    // ここが呼ばれるのは練習 ID が無いまま保存したときだけで、それはチーム練習を
+    // 勝手に増やす不具合 (swimhub-tasks#57) なので止める。
+    createPractice: async () => {
+      throw new Error(t("practiceForm.createFailed"));
     },
     updatePractice: async (id, updates) => {
       const api = new TeamPracticesAPI(supabase);
@@ -288,9 +349,12 @@ export default function TeamPractices({
     setEditingPracticeId,
     closePracticeTabModal: closeTabModal,
     onSaved: handleSelfLogSaved,
+    // チーム練習の日付・場所などは管理者が「編集」から変える。ここではログだけ保存する
+    // (一般メンバーには practices の UPDATE 権限が無い)。PracticeTabModal にも同じ値を渡す
+    allowParentUpdate: false,
   });
 
-  // 既存の練習への保存 (子の保存に失敗したあとの再送信) でも対象の練習 ID を控える
+  // 保存先の練習 ID を控える
   const handleSelfLogSave = async (
     params: Parameters<typeof handleSelfLogTabSave>[0],
   ) => {
@@ -320,7 +384,7 @@ export default function TeamPractices({
     });
   };
 
-  // ヘッダーのアクションボタン(自分のログ追加・管理者向け追加)はデータ読み込み中でも
+  // ヘッダーのアクションボタン(管理者向け追加)はデータ読み込み中でも
   // 即座に操作できるよう、読み込み/エラー状態のゲートより外側で常に描画する。
   return (
     <>
@@ -331,14 +395,6 @@ export default function TeamPractices({
             {t("practices.title", { count: practices.length })}
           </h2>
           <div className="flex items-center gap-2">
-            {/* 一般メンバー含む全員向け: 自分のログを追加 */}
-            <button
-              onClick={handleOpenSelfLog}
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PlusIcon className="h-5 w-5 mr-1 sm:mr-2" />
-              {t("practices.selfLogButton")}
-            </button>
             {isAdmin && (
               <button
                 onClick={handleAddPractice}
@@ -519,6 +575,25 @@ export default function TeamPractices({
                           </button>
                         </div>
                       )}
+                      {!isAdmin && (
+                        // この練習に自分のログを付ける (管理者は「記録代理入力」から入力する)
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenSelfLog(practice);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          data-testid="team-practice-add-log-button"
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                          aria-label={t("practices.card.addLogAriaLabel", {
+                            date: practiceDate,
+                          })}
+                        >
+                          <PlusIcon className="h-3.5 w-3.5 mr-1" />
+                          {t("practices.card.addLogButton")}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -571,6 +646,7 @@ export default function TeamPractices({
                     (editingData as { title?: string | null }).title ?? null,
                   place: (editingData as { place?: string }).place,
                   note: (editingData as { note?: string }).note,
+                  images: (editingData as { images?: ExistingImage[] }).images,
                 }
               : undefined
           }
@@ -579,7 +655,7 @@ export default function TeamPractices({
         />
       </Suspense>
 
-      {/* 自分のログを追加(練習ログタブモーダル)。重量コンポーネントなので開いた時のみ import する */}
+      {/* 練習に自分のログを追加(練習ログタブモーダル)。重量コンポーネントなので開いた時のみ import する */}
       {isTabModalOpen && (
         <Suspense fallback={null}>
           <PracticeTabModal
@@ -593,6 +669,8 @@ export default function TeamPractices({
             setAvailableTags={setAvailableTags}
             isLoading={formLoading}
             initialTab={tabActiveTab}
+            allowParentUpdate={false}
+            logOwnerUserId={user?.id}
           />
         </Suspense>
       )}

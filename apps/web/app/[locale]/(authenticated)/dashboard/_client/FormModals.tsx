@@ -34,7 +34,7 @@ export function FormModals({
   onCompetitionTabSave,
   styles,
 }: FormModalsProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
 
   const {
     isOpen: isPracticeTabModalOpen,
@@ -396,6 +396,8 @@ export function FormModals({
         setAvailableTags={setAvailableTags}
         initialTab={practiceActiveTab}
         allowParentUpdate={allowPracticeParentUpdate}
+        // チーム練習には他のメンバーのログも付く。自分のログだけを読み込み・保存する (swimhub-tasks#140)
+        logOwnerUserId={user?.id}
       />
 
       {/* タブモーダル: 大会 (3タブ統合) */}

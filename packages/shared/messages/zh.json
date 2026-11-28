@@ -3133,9 +3133,10 @@
         "editButton": "编辑",
         "deleteButton": "删除",
         "recordBulkButton": "代为录入成绩",
-        "viewTimesAriaLabel": "查看{date}的训练时间"
-      },
-      "selfLogButton": "添加我的训练记录"
+        "viewTimesAriaLabel": "查看{date}的训练时间",
+        "addLogButton": "添加记录",
+        "addLogAriaLabel": "为{date}的训练添加我的记录"
+      }
     },
     "practiceDetail": {
       "title": "训练详情",
@@ -3642,6 +3643,7 @@
       "creating": "正在创建...",
       "createButton": "创建",
       "updateFailed": "更新团队训练记录失败",
+      "imageSaveFailed": "训练记录已保存，但图片保存失败",
       "deleteFailed": "删除团队训练记录失败"
     },
     "competitionForm": {
@@ -3653,6 +3655,7 @@
       "authRequired": "需要身份验证",
       "createFailed": "创建团队比赛失败",
       "updateFailed": "更新团队比赛失败",
+      "imageSaveFailed": "比赛已保存，但图片保存失败",
       "deleteFailed": "删除团队比赛失败",
       "competitionNameLabel": "比赛名称",
       "competitionNamePlaceholder": "例：省级比赛（留空时显示为“比赛”）",
