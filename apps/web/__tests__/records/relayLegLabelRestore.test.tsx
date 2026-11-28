@@ -7,7 +7,7 @@
  * 根本原因 (PM 確定・両アプリ共通):
  *   buildStyleEntriesFromExisting の復元経路 (Phase 2: メドレー / Phase 4: フリー二次検出) は
  *   `MemberRecord.relayLegLabel` に `undefined` を書く (buildStyleEntries.ts:239, :341)。
- *   ラベルが state に入るのはピッカーで新規選択した瞬間 (updateRelayEntry:245) だけなので、
+ *   ラベルが state に入るのは空の組を作った瞬間 (buildEmptyRelayEntry) だけなので、
  *   既存リレー記録を開くと「第N泳者」ラベルと「◯◯ RT」ラベルが空欄になる。
  *
  * 修正 (RecordClient.tsx):
@@ -40,7 +40,7 @@
  */
 
 import React from "react";
-import { renderWithQueryClient as render, screen, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
+import { renderWithQueryClient as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { Style } from "@apps/shared/types";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
@@ -160,7 +160,12 @@ function freeRelayRecordsViaPhase4() {
   ];
 }
 
-function renderRecordClient(existingRecords: ExistingRecordFixture[]) {
+type RecordEventSelection = NonNullable<Parameters<typeof RecordClient>[0]["selection"]>;
+
+function renderRecordClient(
+  existingRecords: ExistingRecordFixture[],
+  selection: RecordEventSelection,
+) {
   return render(
     <RecordClient
       teamId="team-1"
@@ -172,9 +177,13 @@ function renderRecordClient(existingRecords: ExistingRecordFixture[]) {
       styles={STYLES}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selection}
     />,
   );
 }
+
+const MEDLEY_4X50: RecordEventSelection = { kind: "relay", relayEventId: "relay_4x50_medley" };
+const FREE_4X50: RecordEventSelection = { kind: "relay", relayEventId: "relay_4x50_free" };
 
 /** legIndex 順に並ぶ「第N泳者」相当ラベル (LEG{n} {style}) を DOM 順に取得する */
 function getLegLabelsInOrder(): (string | null)[] {
@@ -189,71 +198,70 @@ function getReactionLabelsInOrder(): (string | null)[] {
 describe("RecordClient — リレーの第N泳者/RTラベル復元 (web 移植, mobile Sprint Contract 相当)", () => {
   describe("[V-01] メドレーリレー復元 (buildStyleEntriesFromExisting Phase 1/2 経路)", () => {
     it("4名分の第N泳者ラベルが legIndex 順 (背→平→バタ→自) に全て表示される (空欄にならない)", () => {
-      renderRecordClient(medleyRelayRecords());
+      renderRecordClient(medleyRelayRecords(), MEDLEY_4X50);
 
       expect(getLegLabelsInOrder()).toEqual(["LEG1 Ba", "LEG2 Br", "LEG3 Fly", "LEG4 Fr"]);
     });
 
     it("[V-03] RT ラベルも「(空) RT」ではなく正しい接頭辞付きで legIndex 順に表示される", () => {
-      renderRecordClient(medleyRelayRecords());
+      renderRecordClient(medleyRelayRecords(), MEDLEY_4X50);
 
       expect(getReactionLabelsInOrder()).toEqual(["LEG1 RT", "LEG2 RT", "LEG3 RT", "LEG4 RT"]);
     });
 
-    it("種目欄 select の表示値がリレーラベル (medleyRelaySuffix) のままで非退行", () => {
-      renderRecordClient(medleyRelayRecords());
+    it("入力画面の見出しがリレーラベル (medleyRelaySuffix) のままで非退行", () => {
+      renderRecordClient(medleyRelayRecords(), MEDLEY_4X50);
 
-      expect(screen.getByDisplayValue("50m×4 medleyRelaySuffix")).toBeDefined();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "50m×4 medleyRelaySuffix" }),
+      ).toBeDefined();
     });
   });
 
   describe("[V-02] フリーリレー復元 (buildStyleEntriesFromExisting Phase 4 二次検出経路)", () => {
     it("4名分の第N泳者ラベルが legIndex 順 (全て自由形) に全て表示される (空欄にならない)", () => {
-      renderRecordClient(freeRelayRecordsViaPhase4());
+      renderRecordClient(freeRelayRecordsViaPhase4(), FREE_4X50);
 
       expect(getLegLabelsInOrder()).toEqual(["LEG1 Fr", "LEG2 Fr", "LEG3 Fr", "LEG4 Fr"]);
     });
 
     it("[V-03] RT ラベルも正しい接頭辞付きで legIndex 順に表示される", () => {
-      renderRecordClient(freeRelayRecordsViaPhase4());
+      renderRecordClient(freeRelayRecordsViaPhase4(), FREE_4X50);
 
       expect(getReactionLabelsInOrder()).toEqual(["LEG1 RT", "LEG2 RT", "LEG3 RT", "LEG4 RT"]);
     });
 
-    it("種目欄 select の表示値がリレーラベル (freeRelaySuffix) のままで非退行", () => {
-      renderRecordClient(freeRelayRecordsViaPhase4());
+    it("入力画面の見出しがリレーラベル (freeRelaySuffix) のままで非退行", () => {
+      renderRecordClient(freeRelayRecordsViaPhase4(), FREE_4X50);
 
-      expect(screen.getByDisplayValue("50m×4 freeRelaySuffix")).toBeDefined();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "50m×4 freeRelaySuffix" }),
+      ).toBeDefined();
     });
   });
 
   describe("[非退行] 個人種目の表示に影響がない", () => {
-    it("リレー未検出の個人種目記録では、第N泳者ラベル/RTラベルが一切描画されず、種目欄は従来通り styleOptionLabel を表示する", () => {
-      renderRecordClient([
-        makeRecord({ id: "solo-1", userId: "user-30", name: "モモ", styleId: 2, time: 27.5, isRelaying: false }),
-      ]);
+    it("リレー未検出の個人種目記録では、第N泳者ラベル/RTラベルが一切描画されず、見出しは従来通り styleLabel を表示する", () => {
+      renderRecordClient(
+        [makeRecord({ id: "solo-1", userId: "user-30", name: "モモ", styleId: 2, time: 27.5, isRelaying: false })],
+        { kind: "individual", styleId: 2 },
+      );
 
       expect(screen.queryByText(/^LEG\d/)).toBeNull();
-      expect(screen.getByDisplayValue("50mFr")).toBeDefined();
+      expect(screen.getByRole("heading", { level: 1, name: "50mFr" })).toBeDefined();
     });
   });
 
-  describe("[非退行][V-05] ピッカーで新規にリレーを選択した直後も表示される", () => {
-    it("プレースホルダー行でメドレーリレーを新規選択すると、直後に第N泳者ラベルが表示される (updateRelayEntry 経路)", () => {
-      renderRecordClient([]);
-
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "relay:relay_4x50_medley" } });
+  describe("[非退行][V-05] 記録の無いリレー種目を開いた直後も表示される", () => {
+    it("記録の無いメドレーリレーを開くと、空の組の第N泳者ラベルが表示される (buildEmptyRelayEntry 経路)", () => {
+      renderRecordClient([], MEDLEY_4X50);
 
       expect(getLegLabelsInOrder()).toEqual(["LEG1 Ba", "LEG2 Br", "LEG3 Fly", "LEG4 Fr"]);
       expect(getReactionLabelsInOrder()).toEqual(["LEG1 RT", "LEG2 RT", "LEG3 RT", "LEG4 RT"]);
     });
 
-    it("プレースホルダー行でフリーリレーを新規選択した直後も同様に表示される", () => {
-      renderRecordClient([]);
-
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "relay:relay_4x50_free" } });
+    it("記録の無いフリーリレーを開いた直後も同様に表示される", () => {
+      renderRecordClient([], FREE_4X50);
 
       expect(getLegLabelsInOrder()).toEqual(["LEG1 Fr", "LEG2 Fr", "LEG3 Fr", "LEG4 Fr"]);
       expect(getReactionLabelsInOrder()).toEqual(["LEG1 RT", "LEG2 RT", "LEG3 RT", "LEG4 RT"]);

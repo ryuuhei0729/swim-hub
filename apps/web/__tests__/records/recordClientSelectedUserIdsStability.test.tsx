@@ -69,14 +69,6 @@ const STYLE_FREE_50: Style = {
   distance: 50,
 };
 
-const STYLE_BREAST_50: Style = {
-  id: 9,
-  name_jp: "平泳ぎ50m",
-  name: "Breaststroke",
-  style: "Br",
-  distance: 50,
-};
-
 const baseCompetition = {
   id: "comp-1",
   user_id: "user-1",
@@ -115,41 +107,6 @@ const existingRecords = [
   },
 ] as unknown as Parameters<typeof RecordClient>[0]["existingRecords"];
 
-// WV-21: 2つの種目エントリー (A: 自由形50m, B: 平泳ぎ50m) を持つ fixture。
-// A でモーダルを開いたまま B 側を編集し、A の選択が巻き戻らないことを確認する
-const existingRecordsTwoEntries = [
-  {
-    id: "record-a",
-    user_id: "user-1",
-    style_id: 2,
-    time: 30.0,
-    video_path: null,
-    note: null,
-    is_relaying: false,
-    reaction_time: null,
-    pool_type: null,
-    team_id: "team-1",
-    split_times: [],
-    users: { id: "user-1", name: "太郎", gender: 0 },
-    styles: { id: 2, name_jp: "自由形50m", distance: 50 },
-  },
-  {
-    id: "record-b",
-    user_id: "user-1",
-    style_id: 9,
-    time: 40.0,
-    video_path: null,
-    note: null,
-    is_relaying: false,
-    reaction_time: null,
-    pool_type: null,
-    team_id: "team-1",
-    split_times: [],
-    users: { id: "user-1", name: "太郎", gender: 0 },
-    styles: { id: 9, name_jp: "平泳ぎ50m", distance: 50 },
-  },
-] as unknown as Parameters<typeof RecordClient>[0]["existingRecords"];
-
 function renderRecordClient() {
   return render(
     <RecordClient
@@ -162,22 +119,7 @@ function renderRecordClient() {
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
-    />,
-  );
-}
-
-function renderRecordClientTwoEntries() {
-  return render(
-    <RecordClient
-      teamId="team-1"
-      competitionId="comp-1"
-      competition={baseCompetition}
-      teamName="テストチーム"
-      members={members}
-      existingRecords={existingRecordsTwoEntries}
-      styles={[STYLE_FREE_50, STYLE_BREAST_50]}
-      entries={[]}
-      bestTimesByUser={{}}
+      selection={{ kind: "individual", styleId: 2 }}
     />,
   );
 }
@@ -221,21 +163,16 @@ describe("RecordClient — selectedUserIds の参照安定化 [WV-19]", () => {
   );
 
   it(
-    "[WV-21] モーダルを開いたまま、別の種目エントリー (B) の入力値が更新されても、" +
-      "現在編集中のエントリー (A) で行ったチップ選択が巻き戻らない（人間の意図: 修正Fの" +
-      "回帰ガード。修正C ([styleEntries, currentStyleEntryId]) は styleEntries 全体を" +
-      "依存に持つため、A 以外の種目エントリー (B) がタイム入力等で更新されただけでも" +
-      "styleEntries の参照が変わり、A の memberRecords の中身が同じでも" +
-      "selectedUserIds が新しい配列インスタンスとして再計算されてしまう残存経路が" +
-      "あった (Reviewer指摘)。二段 useMemo による文字列キー経由の安定化で、" +
-      "この経路でも配列参照が変わらないことを確認する）",
+    "[WV-21] モーダルを開いたまま、同じ種目の選択済みメンバーのタイムが更新されても、" +
+      "モーダルで行ったチップ選択が巻き戻らない（人間の意図: 修正Fの回帰ガード。" +
+      "タイム入力のたびに entries の参照は変わるが、選択済みメンバー (memberUserId の並び) は" +
+      "変わらない。selectedUserIds を entries から素直に作ると新しい配列インスタンスとして" +
+      "再計算され、共有モーダルの未確定の選択が巻き戻る残存経路があった (Reviewer指摘)。" +
+      "二段 useMemo による文字列キー経由の安定化で、この経路でも配列参照が変わらないことを確認する）",
     () => {
-      renderRecordClientTwoEntries();
+      renderRecordClient();
 
-      // A (自由形50m) のメンバー選択モーダルを開く (1つ目の「メンバーを選択」ボタン)
-      const selectMemberButtons = screen.getAllByRole("button", { name: "record.selectMemberButton" });
-      expect(selectMemberButtons.length).toBe(2);
-      fireEvent.click(selectMemberButtons[0]!);
+      fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
 
       const jiroChip = screen.getByRole("button", { name: "次郎" });
       expect(jiroChip).toHaveAttribute("aria-pressed", "false");
@@ -245,13 +182,12 @@ describe("RecordClient — selectedUserIds の参照安定化 [WV-19]", () => {
         "true",
       );
 
-      // B (平泳ぎ50m) のタイム入力を編集する (A とは別のエントリーの setStyleEntries を
-      // 発火させる。styleEntries の参照は変わるが A の memberRecords の中身は変わらない)
+      // 選択済みの太郎のタイムを編集する (entries の参照は変わるが memberUserId の並びは変わらない)
       const timeInputs = screen.getAllByPlaceholderText("timePlaceholder");
-      expect(timeInputs.length).toBe(2);
-      fireEvent.change(timeInputs[1]!, { target: { value: "41.23" } });
+      expect(timeInputs.length).toBe(1);
+      fireEvent.change(timeInputs[0]!, { target: { value: "31.23" } });
 
-      // B の更新後も、A のモーダルで選んだ次郎の選択が巻き戻っていない
+      // タイムの更新後も、モーダルで選んだ次郎の選択が巻き戻っていない
       expect(screen.getByRole("button", { name: "次郎" })).toHaveAttribute(
         "aria-pressed",
         "true",

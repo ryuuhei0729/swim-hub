@@ -30,6 +30,7 @@ import {
   type RecordSaveSupabaseMock,
 } from "../utils/supabaseRecordSaveMock";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
@@ -103,7 +104,13 @@ const activeMembers = [
   { id: "user-2", user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎", gender: 0 } },
 ];
 
-function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0]["existingRecords"]) {
+type RecordClientProps = Parameters<typeof RecordClient>[0];
+
+/** selection を省略すると既存記録の最初の種目を開く。null なら種目一覧 */
+function renderRecordClient(
+  existingRecords: RecordClientProps["existingRecords"],
+  selection: RecordClientProps["selection"] = selectionOfFirstEvent(existingRecords, [STYLE_FREE_50]),
+) {
   return render(
     <RecordClient
       teamId="team-1"
@@ -115,6 +122,7 @@ function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0][
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selection}
     />,
   );
 }
@@ -176,7 +184,7 @@ describe("RecordClient — 空タイム行は保存されない (仕様#3の回�
       await waitFor(() => {
         // 方式E (2026-08-25確定): RecordClient は teams-admin/ からしか到達できないため、
         // 戻り先は無条件に /teams-admin/ に固定する (/teams/ の一般メンバー画面ではない)。
-        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
       });
 
       // record-1 は保存前から存在する既存行なので INSERT ではなく UPDATE される
@@ -284,18 +292,21 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
         styles={STYLES_FOR_RELAY}
         entries={[]}
         bestTimesByUser={{}}
+        selection={{ kind: "relay", relayEventId: "relay_4x50_free" }}
       />,
     );
   }
 
   it(
-    "4件のリレーレコードは1つの種目カード (entryHeader) にまとまり、4件に分裂しない" +
+    "4件のリレーレコードは1つの組 (4レグ) にまとまり、4件に分裂しない" +
       "（人間の意図: リレー検出された StyleEntry に将来のエントリーマージ機能が触れて" +
       "はならない、という仕様の前提となる現状の構造を固定する）",
     () => {
       renderWithRelay();
-      // 識別用の見出しキー (next-intl をモックしているためキー文字列がそのまま描画される)
-      expect(screen.getAllByText("entryHeader")).toHaveLength(1);
+      // 組が複数あるときだけ出る組の見出し (next-intl をモックしているためキー文字列が
+      // そのまま描画される) が出ない = 1組。その1組に泳者の選択欄が4つある
+      expect(screen.queryByText("record.groupNumber")).toBeNull();
+      expect(screen.getAllByRole("combobox")).toHaveLength(4);
     },
   );
 
@@ -309,7 +320,7 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
       fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
       await waitFor(() => {
-        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
       });
 
       // relay-record-0〜3 は保存前から存在する既存行なので INSERT は発生しない
@@ -345,7 +356,7 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
       fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
       await waitFor(() => {
-        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
       });
 
       const legScopeSelect = fake.inCalls.filter(
@@ -380,7 +391,8 @@ describe("RecordClient — 戻るボタンの遷移先 (V-01 方式E: 2026-08-25
       "RecordDataLoader は role !== 'admin' を server 側で redirect 済みのため、この画面に" +
       "到達できるのは常に admin だけであり、戻り先は teams-admin に固定してよい）",
     () => {
-      renderRecordClient([]);
+      // 種目一覧 (selection なし) の戻るボタン
+      renderRecordClient([], null);
 
       fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
 
@@ -388,4 +400,13 @@ describe("RecordClient — 戻るボタンの遷移先 (V-01 方式E: 2026-08-25
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
     },
   );
+
+  it("種目の入力画面の戻るボタンは、未入力なら確認なしで種目一覧へ戻る (mobile の種目詳細画面と同じ)", () => {
+    renderRecordClient([], { kind: "individual", styleId: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: "recordList.backToList" }));
+
+    expect(mocks.push).toHaveBeenCalledTimes(1);
+    expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
+  });
 });

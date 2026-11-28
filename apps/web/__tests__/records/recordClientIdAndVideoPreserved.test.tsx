@@ -240,6 +240,7 @@ describe("[V-03w] 編集保存での id / 動画列保持", () => {
         styles={[STYLE_FREE_50]}
         entries={[]}
         bestTimesByUser={{}}
+        selection={{ kind: "individual", styleId: 2 }}
       />,
     );
 
@@ -249,7 +250,7 @@ describe("[V-03w] 編集保存での id / 動画列保持", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
   }
 

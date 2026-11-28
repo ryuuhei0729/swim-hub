@@ -35,6 +35,7 @@ import {
   type RecordSaveSupabaseMock,
 } from "../utils/supabaseRecordSaveMock";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
@@ -103,6 +104,7 @@ function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0][
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selectionOfFirstEvent(existingRecords, [STYLE_FREE_50])}
     />,
   );
 }

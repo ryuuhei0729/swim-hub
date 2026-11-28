@@ -143,12 +143,12 @@ describe("チーム大会記録入力 — エントリー行初期反映機能 i
   );
 
   it.each(LOCALES)(
-    "%s: 既存の記録入力フォームの主要文言 (保存ボタン・種目ラベル) が破損していない" +
+    "%s: 既存の記録入力フォームの主要文言 (保存ボタン・種目一覧へ戻る) が破損していない" +
       "(人間の意図: エントリー行マージ機能の追加で既存キーを上書き・削除していないこと" +
       "を保証する)",
     (locale) => {
       const messages = LOCALE_MESSAGES[locale];
-      expect(getByPath(messages, "competition.records.eventLabel")).toBeTruthy();
+      expect(getByPath(messages, "teams.recordList.backToList")).toBeTruthy();
       expect(getByPath(messages, "competition.records.timePlaceholder")).toBeTruthy();
       expect(getByPath(messages, "teams.record.saveButton")).toBeTruthy();
     },

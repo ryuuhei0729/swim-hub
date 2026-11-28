@@ -101,6 +101,7 @@ function renderRecordClient(
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={{ kind: "individual", styleId: 2 }}
       {...overrides}
     />,
   );
@@ -165,7 +166,7 @@ describe("[V-04w] UPDATE 経路の動画添付 (web)", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     expect(calls.some((c) => c.url === "/api/storage/videos/upload-url")).toBe(true);
@@ -237,7 +238,7 @@ describe("[V-04w] UPDATE 経路の動画添付 (web)", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     // 太郎 (UPDATE) と次郎 (INSERT) の両方が保存された
@@ -286,7 +287,7 @@ describe("[V-04w] UPDATE 経路の動画添付 (web)", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     expect(calls.some((c) => c.url === "/api/storage/videos/upload-url")).toBe(false);

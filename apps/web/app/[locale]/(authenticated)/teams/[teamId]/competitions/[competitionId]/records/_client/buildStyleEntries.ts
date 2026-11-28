@@ -74,13 +74,13 @@ export interface ExistingRecord {
  * リレーの leg 境界スプリット (= 各 leg の累計タイム) を relaySplitTimes に復元する。
  *
  * 保存時、leg 境界スプリットは leg 内距離へ変換された結果その leg の種目距離と一致するため
- * 「ゴールタイム = split ではない」フィルタ (RecordClient の validSplitTimes) で必ず捨てられる。
+ * 「ゴールタイム = split ではない」フィルタ (saveStyleRecords の persistableSplitTimes) で必ず捨てられる。
  * つまり DB の split_times には leg 境界の値が存在しない。一方その値は各 leg の
  * `records.time` から算出した累計タイム (`cumulatives`) と完全に一致するので、ここで再生成する。
  * これをしないと、入力済みのリレーラップタイムが再オープン時に全て空欄になる。
  *
  * - 既に同じ距離のスプリットが保存されている場合は上書きしない (保存値を正とする)
- * - 最終境界 (合計距離) も含める。RecordClient の `handleRelaySplitTimeChange` は
+ * - 最終境界 (合計距離) も含める。RecordStyleDetail の `handleRelaySplitTimeChange` は
  *   4 境界すべてが揃って初めて leg タイムを再計算するため、欠けていると編集が壊れる
  * - id は純粋関数を保つため距離から決定的に生成する (crypto.randomUUID を使わない)
  */
@@ -156,7 +156,7 @@ function restoreGoalSplit(
  * 呼び出し側は leg 内距離の途中経過 (distance < legDist、真に "leg 内" と呼べる範囲) として
  * 保存された split_time のみを渡すこと。
  * - distance === legDist (leg 自身のゴール地点) は、保存時フィルタ
- *   (RecordClient の `!(raceDistance && st.distance === raceDistance)`) により本来
+ *   (saveStyleRecords の `!(raceDistance && st.distance === raceDistance)`) により本来
  *   DB へ永続化されない値だが、テスト用の合成データ等では split_time が record.time と
  *   厳密に一致し得る (leg 自身の finish = record.time なので当然の一致であり破損ではない)。
  *   これを対象に含めると `>=` の等号側で誤検知するため、除外する。
@@ -304,7 +304,7 @@ export function buildStyleEntriesFromExisting(
         })),
         // relayDef.legs (静的定義) と records (実データ) は別データ構造の位置対応であり、
         // 対応が崩れた場合でも無言で誤った styleId を埋め込まないよう optional chaining で
-        // 欠落を許容する (relayLegStyleId は元々 optional。消費側 RecordClient.tsx の
+        // 欠落を許容する (relayLegStyleId は元々 optional。消費側 RecordStyleDetail.tsx の
         // `mr.relayLegStyleId ?? entry.styleId` が既にフォールバックを持つ)
         relayLegStyleId: leg?.styleId,
         relayLegLabel: undefined,

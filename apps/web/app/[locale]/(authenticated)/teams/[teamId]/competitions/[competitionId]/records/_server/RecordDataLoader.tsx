@@ -10,10 +10,13 @@ import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
 import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
 import type { BestTime } from "@apps/shared/types/ui";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import type { RecordEventSelection } from "../_client/recordEventSelection";
 
 interface RecordDataLoaderProps {
   teamId: string;
   competitionId: string;
+  /** 開いている種目 (null なら種目一覧) */
+  selection?: RecordEventSelection | null;
 }
 
 interface TeamMember {
@@ -79,7 +82,11 @@ interface RecordWithDetails {
   } | null;
 }
 
-export default async function RecordDataLoader({ teamId, competitionId }: RecordDataLoaderProps) {
+export default async function RecordDataLoader({
+  teamId,
+  competitionId,
+  selection = null,
+}: RecordDataLoaderProps) {
   const [user, supabase, locale] = await Promise.all([
     getServerUser(),
     createAuthenticatedServerClient(),
@@ -280,6 +287,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       entries={entries}
       bestTimesByUser={bestTimesByUser}
       goalTargets={goalTargets}
+      selection={selection}
     />
   );
 }

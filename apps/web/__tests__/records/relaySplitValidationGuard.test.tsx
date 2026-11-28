@@ -24,6 +24,7 @@ import {
   type RecordSaveSupabaseMock,
 } from "../utils/supabaseRecordSaveMock";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
@@ -110,6 +111,7 @@ function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0][
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selectionOfFirstEvent(existingRecords, [STYLE_FREE_50])}
     />,
   );
 }
@@ -208,7 +210,7 @@ describe("RecordClient — リレー split の事前バリデーション (D3・
         // teams-admin/ からしか到達できない admin 専用画面のため、保存成功後の遷移先は
         // 無条件に /teams-admin/ に固定される。本テストの主眼は D3 バリデーションの検証だが、
         // 「保存が成功したこと」の確認として push 先も実測しているため、方式E に合わせて更新する。
-        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
       });
 
       // fixture (existingRecords) は保存前から存在する4行なので upsert 化後は
