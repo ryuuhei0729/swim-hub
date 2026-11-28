@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { cardSurface } from "@/constants/theme";
+import { env } from "@/lib/env";
 
 const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
@@ -57,9 +58,16 @@ export const EmailChangeSettings: React.FC = () => {
     setSuccess(false);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        email: trimmed,
-      });
+      // 確認メールの戻り先は web と同じ web の /api/auth/callback
+      // （token_hash を検証し、type=email_change から web のアカウント画面へ進める）
+      const { error: updateError } = await supabase.auth.updateUser(
+        {
+          email: trimmed,
+        },
+        {
+          emailRedirectTo: `${env.webApiUrl}/api/auth/callback`,
+        },
+      );
 
       if (updateError) {
         setError(updateError.message);

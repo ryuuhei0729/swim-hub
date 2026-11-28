@@ -266,7 +266,7 @@ describe("[DL-11] isEmailAuthCallback — 無関係キーのみ", () => {
 // ---- [DL-12] isEmailAuthCallback — FAIL (type=recovery 除外) --------------
 
 describe("[DL-12] isEmailAuthCallback — type=recovery は false", () => {
-  it("type=recovery かつ access_token あり でも false (recovery は別スプリント)", () => {
+  it("type=recovery かつ access_token あり でも false (recovery は web の /update-password で扱う)", () => {
     expect(
       isEmailAuthCallback(
         "swimhub://auth/callback#type=recovery&access_token=at123",
