@@ -37,6 +37,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess, 
 
   type AuthError = {
     status?: number;
+    code?: string;
     message?: string;
     error_description?: string;
     error?: string;
@@ -72,8 +73,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess, 
 
       // サインアップエラーの処理（OWASP準拠）
       if (action === "signup") {
-        if (msg.includes("user already registered")) {
-          return tErrors("userAlreadyRegistered");
+        // 登録済みメールアドレス: AuthProvider 側で identities=[] を検出して error 化している。
+        // 確認メールは届かないので、登録済みであることをはっきり伝える (mobile と同じ)
+        if (errorObj.code === "user_already_exists" || msg.includes("user already registered")) {
+          return t("supabaseErrors.userAlreadyRegistered");
         }
         // パスワード強度エラーの検出を拡張
         const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;

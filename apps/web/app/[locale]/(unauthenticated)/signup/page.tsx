@@ -17,6 +17,7 @@ export default function SignupPage() {
   const tSignup = useTranslations("auth.signup");
   const tErrors = useTranslations("auth.errors");
   const tAuth = useTranslations("auth");
+  const tLegal = useTranslations("auth.legal");
   const hasRedirectedRef = useRef(false);
 
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -125,6 +126,19 @@ export default function SignupPage() {
             {tAuth("switchToSignin")}
           </Link>
         </div>
+
+        {/* 利用規約・プライバシーポリシーへの同意 (mobile の登録開始画面と同じ文言) */}
+        <p className="text-center text-xs text-gray-500 leading-relaxed" data-testid="signup-legal-notice">
+          {tLegal("agreePrefix")}
+          <Link href="/terms" className="text-blue-600 underline hover:text-blue-800">
+            {tLegal("termsOfService")}
+          </Link>
+          {tLegal("conjunction")}
+          <Link href="/privacy" className="text-blue-600 underline hover:text-blue-800">
+            {tLegal("privacyPolicy")}
+          </Link>
+          {tLegal("agreeSuffix")}
+        </p>
       </div>
     </div>
   );

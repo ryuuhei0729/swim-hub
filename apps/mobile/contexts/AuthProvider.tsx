@@ -264,7 +264,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // サインアップ
-  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+  const signUp = useCallback(async (
+    email: string,
+    password: string,
+    name?: string,
+    gender?: number,
+    birthday?: string,
+  ) => {
     if (!supabase) {
       return {
         data: null,
@@ -280,6 +286,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name: name || "",
+            // web (apps/web/contexts/AuthProvider.tsx) と同じく user metadata に入れる
+            gender: gender ?? 0,
+            birthday: birthday || null,
           },
           emailRedirectTo: getRedirectUri(),
         },
