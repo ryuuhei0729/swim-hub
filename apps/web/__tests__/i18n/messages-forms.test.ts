@@ -508,10 +508,10 @@ describe("[V-CD-05] Phase 1-C-1 〜 1-C-2-C-2 必須キーのリグレッショ�
     "goals.page.title",
     // Phase 1-C-2-C-1: teams
     "teams.page.title",
-    "teams.tabs.attendance",
+    "teams.mobile.tabAttendance",
     // Phase 1-C-2-C-2: teamsAdmin
     "teamsAdmin.page.title",
-    "teamsAdmin.tabs.attendance",
+    "teamsAdmin.tabs.bulkRegister",
     "teamsAdmin.practiceLog.saveButton",
   ] as const;
 

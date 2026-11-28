@@ -26,6 +26,12 @@ import type { MainStackParamList } from "@/navigation/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
 import { formatTime } from "@/utils/formatters";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
+import {
+  formatQuickBuffer,
+  quickBufferToSeconds,
+  quickTypedCapacity,
+  seedFromSeconds,
+} from "@apps/shared/utils/quickTimeMask";
 
 type PracticeTimeFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeTimeForm">;
 type PracticeTimeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -45,58 +51,6 @@ interface TimeEntryWithDisplay extends TimeEntry {
 }
 
 const QUICK_INPUT_ACCESSORY_ID = "practice-time-quick-input-next";
-
-/** シード文字列を「分」部分と「十の位」部分に分解する ("1.2"→{minutePart:"1",tensDigitPart:"2"}, "3"→{minutePart:"",tensDigitPart:"3"}) */
-function splitQuickSeed(seed: string): { minutePart: string; tensDigitPart: string } {
-  const dotIndex = seed.lastIndexOf(".");
-  if (dotIndex === -1) return { minutePart: "", tensDigitPart: seed };
-  return { minutePart: seed.slice(0, dotIndex), tensDigitPart: seed.slice(dotIndex + 1) };
-}
-
-/**
- * シード + 追加入力 → 表示文字列。
- * 「シードの十の位を含めて2桁目」の直後に "." を自動挿入する (十の位+一の位 の次が小数第1位)。
- */
-function formatQuickBuffer(seed: string, typed: string): string {
-  const { tensDigitPart } = splitQuickSeed(seed);
-  const seedDigitCount = tensDigitPart ? 1 : 0;
-  let result = seed;
-  for (let i = 0; i < typed.length; i++) {
-    result += typed[i];
-    // この文字を追加した直後の合計桁数が2 (十の位+一の位) になったら "." を続ける
-    const totalDigitsSoFar = seedDigitCount + i + 1;
-    if (totalDigitsSoFar === 2) {
-      result += ".";
-    }
-  }
-  return result;
-}
-
-/** シード + 追加入力 → 秒数 (一の位まで揃っていない場合は0=未確定) */
-function quickBufferToSeconds(seed: string, typed: string): number {
-  const { minutePart, tensDigitPart } = splitQuickSeed(seed);
-  const secondsDigits = tensDigitPart + typed; // 十の位・一の位・小数第1位を最大3桁でつなげる
-  if (secondsDigits.length < 2) return 0;
-  const tens = Number(secondsDigits[0]);
-  const ones = Number(secondsDigits[1]);
-  const tenths = secondsDigits.length >= 3 ? Number(secondsDigits[2]) : 0;
-  const minutes = minutePart ? Number(minutePart) : 0;
-  return minutes * 60 + tens * 10 + ones + tenths / 10;
-}
-
-/** シード時点で埋まっている「十の位までの桁数」(0 or 1)。追加入力の残り枠数の計算に使う */
-function quickSeedDigitCount(seed: string): number {
-  return splitQuickSeed(seed).tensDigitPart ? 1 : 0;
-}
-
-/** 確定済みタイム (秒) → 次のセルへ引き継ぐシード ("3" または、分がある場合は "1.2") */
-function seedFromSeconds(seconds: number): string {
-  const whole = Math.floor(seconds);
-  const minutes = Math.floor(whole / 60);
-  const secsRemainder = whole % 60;
-  const tensDigit = Math.floor(secsRemainder / 10) % 10;
-  return minutes > 0 ? `${minutes}.${tensDigit}` : `${tensDigit}`;
-}
 
 /**
  * タイム入力画面
@@ -273,7 +227,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
           };
         }
         if (!/^[0-9]$/.test(key)) return t;
-        const cap = 3 - quickSeedDigitCount(seed);
+        const cap = quickTypedCapacity(seed);
         if (typed.length >= cap) return t;
         const nextTyped = typed + key;
         return {

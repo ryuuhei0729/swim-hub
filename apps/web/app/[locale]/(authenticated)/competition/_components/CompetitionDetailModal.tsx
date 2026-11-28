@@ -45,6 +45,8 @@ export interface CompetitionDetailModalProps {
   styleId?: number;
   styleName?: string;
   entryTime?: number | null;
+  /** 押した記録カードの記録ID。指定時はその記録1件だけを表示する (record モード) */
+  targetRecordId?: string;
   /** ダッシュボードと同じ CompetitionTabModal (competition タブ) を開く */
   onEditCompetition: (images?: GalleryImage[]) => void;
   /** 大会全体の削除 (確認モーダル経由) */
@@ -53,7 +55,7 @@ export interface CompetitionDetailModalProps {
   onOpenRecordTab: () => void;
   /** ダッシュボードと同じ CompetitionTabModal (entry タブ) を開く (entry モード) */
   onOpenEntryTab?: () => void;
-  /** 個別の大会記録削除 (即時削除、確認なし。ダッシュボードと同じ挙動) */
+  /** 個別の大会記録削除 (確認は CompetitionDetails 内で行う) */
   onDeleteRecord: (recordId: string) => Promise<void> | void;
   /** エントリー削除 (確認モーダル経由、entry モード) */
   onDeleteEntry?: (entryId: string) => Promise<void> | void;
@@ -81,6 +83,7 @@ export default function CompetitionDetailModal({
   styleId,
   styleName,
   entryTime,
+  targetRecordId,
   onEditCompetition,
   onDeleteCompetition,
   onOpenRecordTab,
@@ -176,6 +179,7 @@ export default function CompetitionDetailModal({
                 isTeamCompetition={isTeamCompetition}
                 teamId={teamId}
                 teamName={teamName}
+                targetRecordId={targetRecordId}
                 onEdit={(images) => onEditCompetition(images)}
                 onDelete={() => openCompetitionDeleteConfirm()}
                 onAddRecord={() => onOpenRecordTab()}

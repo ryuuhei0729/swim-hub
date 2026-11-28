@@ -12,7 +12,8 @@ export interface PracticeCardProps {
   practice: PracticeWithLogs;
   /** このカードが表示する練習ログ。ログ未登録の練習は null(ヘッダー行のみのカードになる) */
   log: PracticeLogWithTags | null;
-  onClick: (practice: PracticeWithLogs) => void;
+  /** 押したカードの練習と、そのカードのログ(詳細ではこのログ1件だけを表示する) */
+  onClick: (practice: PracticeWithLogs, log: PracticeLogWithTags | null) => void;
 }
 
 /**
@@ -22,11 +23,11 @@ export interface PracticeCardProps {
  * 1つの練習に複数ログがある場合は同じヘッダー(日付/タイトル/場所)のカードが
  * ログの数だけ並ぶ。2026-07-23〜07-28 の day-level 表示(1練習=1カードに全ログを
  * 行として詰め込む)は、大会タブとの粒度不一致というユーザー指摘により撤回した。
- * カードのクリック先は従来どおり練習全体 (PracticeDetailModal) なので、どのログの
- * カードから開いても同じ練習の全ログが載ったモーダルが開く。
+ * カードのクリック先は PracticeDetailModal で、押したカードのログ1件だけが載る
+ * (mobile の練習タブと同じ仕様)。
  *
  * 表示項目は mobile `apps/mobile/components/practices/PracticeItem.tsx` と同一
- * (日付+タイトル+場所 / そのログの距離×本数×セット+サークル+種目+タグ)。
+ * (日付+タイトル+場所+メニュー件数バッジ / そのログの距離×本数×セット+サークル+種目+タグ)。
  */
 export default function PracticeCard({ practice, log, onClick }: PracticeCardProps) {
   const t = useTranslations("practice");
@@ -44,13 +45,17 @@ export default function PracticeCard({ practice, log, onClick }: PracticeCardPro
     return styleValue;
   };
 
-  const handleClick = () => onClick(practice);
+  const handleClick = () => onClick(practice, log);
 
   const parsedDate = practice.date ? new Date(practice.date) : null;
   const formattedDate =
     parsedDate && isValid(parsedDate) ? format(parsedDate, "yyyy/MM/dd", { locale: ja }) : "-";
 
   const title = practice.title || t("client.practiceTitle");
+
+  // この練習に紐づくメニュー(ログ)数。2件以上のときだけバッジを出し、同じ練習のカードが
+  // ほかにも並んでいることを一覧上で分かるようにする (mobile PracticeItem と同じ条件)
+  const menuCount = practice.practice_logs?.length ?? 0;
 
   // このカードが担当する1ログ分の行(距離×本数×セット / サークル / 種目 / タグ)
   const logLine = buildPracticeLogLine(log, getStyleLabel, (distance, reps, sets) =>
@@ -82,6 +87,14 @@ export default function PracticeCard({ practice, log, onClick }: PracticeCardPro
         <span className="text-xs text-gray-500">{formattedDate}</span>
         <span className="text-base font-semibold text-gray-900">{title}</span>
         {practice.place && <span className="text-xs text-gray-500">{practice.place}</span>}
+        {menuCount >= 2 && (
+          <span
+            className="self-center shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700"
+            data-testid="practice-menu-count-badge"
+          >
+            {t("client.menuCount", { count: menuCount })}
+          </span>
+        )}
       </div>
 
       {/* 2行目: このカードのログの 距離×本数×セット・サークル・種目、タグ */}

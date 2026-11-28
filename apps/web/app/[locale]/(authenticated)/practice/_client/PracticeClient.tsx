@@ -21,7 +21,12 @@ import {
   useUpdatePracticeLogMutation,
   useDeletePracticeLogMutation,
 } from "@apps/shared/hooks/queries/practices";
-import type { PracticeTag, PracticeWithLogs, Style } from "@apps/shared/types";
+import type {
+  PracticeLogWithTags,
+  PracticeTag,
+  PracticeWithLogs,
+  Style,
+} from "@apps/shared/types";
 import { getStyleOrderIndex, toStyleCode } from "@apps/shared/utils/swimStyles";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
@@ -66,13 +71,14 @@ interface FilterDraft {
  * 行クリック時の詳細/編集/削除 UI/UX はダッシュボード (DayDetailModal 系) と統一している。
  * - 詳細表示: PracticeDetailModal (dashboard の PracticeDetails を再利用)
  * - 編集: dashboard と同じ PracticeTabModal
- * - 削除確認: dashboard と同じ DeleteConfirmModal (PracticeDetailModal 内で使用)
+ * - 削除確認: 練習全体は dashboard と同じ DeleteConfirmModal (PracticeDetailModal 内)、
+ *   メニュー単位は PracticeDetails 内の ConfirmDialog
  *
  * 一覧UI(2026-08-01): カードの粒度を 1練習ログ=1カード (log-level) とする。大会タブ
  * (CompetitionClient: 1記録=1カード) と粒度を揃えるためで、2026-07-23 に導入した
  * day-level(1練習=1カードに全ログを行として詰め込む)表示はユーザー指摘により撤回した。
- * クリック先は従来どおり練習全体 (PracticeDetailModal) なので、同じ練習のどのログの
- * カードを押しても全ログが載った同一モーダルが開く(mobile PracticesScreen とパリティ)。
+ * カードを押すと PracticeDetailModal に押したログ1件だけを表示する(mobile PracticesScreen の
+ * 「タップしたログ1件のみ」と同じ仕様。ダッシュボードの日別詳細はその日の全件のまま)。
  * 絞り込みシートは CompetitionClient.tsx と同型の draft/apply 方式。
  */
 export default function PracticeClient({
@@ -198,9 +204,10 @@ export default function PracticeClient({
     });
   };
 
-  // 詳細モーダルで表示中の練習日(行クリックで選択される練習日。day-level カードなので
-  // 選択単位は log ではなく practice そのもの)
+  // 詳細モーダルで表示中の練習(行クリックで選択される練習。編集・削除は練習単位で行う)
   const [selectedPractice, setSelectedPractice] = useState<PracticeWithLogs | null>(null);
+  // 詳細モーダルに出す練習ログ(押したカードのログ1件だけを表示する。ログ未登録の練習は null)
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   // 詳細モーダル内で個別ログを削除した際、PracticeDetails (dashboard 由来) の内部フェッチを
   // 強制的にやり直させるための remount キー
   const [modalNonce, setModalNonce] = useState(0);
@@ -435,13 +442,15 @@ export default function PracticeClient({
     setDisplayCount((count) => count + PAGE_INCREMENT);
   };
 
-  // 行クリック: ダッシュボードと同じ PracticeDetails を表示する詳細モーダルを開く
-  const handleRowClick = (practice: PracticeWithLogs) => {
+  // 行クリック: ダッシュボードと同じ PracticeDetails を、押したログ1件に絞って表示する詳細モーダルを開く
+  const handleRowClick = (practice: PracticeWithLogs, log: PracticeLogWithTags | null) => {
     setSelectedPractice(practice);
+    setSelectedLogId(log?.id ?? null);
   };
 
   const handleCloseDetailModal = () => {
     setSelectedPractice(null);
+    setSelectedLogId(null);
   };
 
   // 個人画面 (/practice) は team_id の有無から明示的に導出する (Sprint Contract 2)。
@@ -513,7 +522,7 @@ export default function PracticeClient({
     if (!selectedPractice) return;
     try {
       await deletePracticeMutation.mutateAsync(selectedPractice.id);
-      setSelectedPractice(null);
+      handleCloseDetailModal();
       await refetch();
     } catch (error) {
       console.error("練習記録の削除に失敗しました:", error);
@@ -522,48 +531,18 @@ export default function PracticeClient({
     }
   };
 
-  // 個別の練習ログ削除（カスケード: 削除後に残りログが0件なら親 practice も削除する）
-  // NOTE: この既存挙動（V-W-P05/06）は必ず維持すること
+  // 個別の練習ログ削除(PracticeDetails 内の確認ダイアログ経由で呼ばれる)。
+  // 残りのメニューが0件になっても練習本体は削除しない(mobile と同じ)。
+  // 詳細モーダルは押したログ1件だけを表示しているため、削除後は表示するものが無くなるので閉じる
   const handleDeletePracticeLog = async (logId: string) => {
     if (!selectedPractice) return;
-    const practiceId = selectedPractice.id;
     try {
       await deletePracticeLogMutation.mutateAsync(logId);
-
-      // 直近(削除前)の displayPractices から、削除対象の practiceId に紐づく現在の
-      // practice_logs を引き、削除したログを除いた残りログ数でカスケード判定する。
-      // displayPractices は startDate/endDate でスコープされた個人一覧のため、
-      // 対象の practice がここに含まれない(＝「不明」)ケースが起こりうる。
-      // その場合は「残りログ0件」と区別し、カスケード削除を発火させない
-      // (「不明」を「0件」として扱うと、他にログが残っていても親 practice ごと
-      // 削除してしまう破壊的なバグになる)。
-      const currentPractice = displayPractices.find((practice) => practice.id === practiceId);
-
-      if (currentPractice === undefined) {
-        console.warn(
-          "handleDeletePracticeLog: displayPractices から practiceId に一致する practice が" +
-            "見つからなかったため、カスケード削除の要否を判定できませんでした。ログ削除自体は" +
-            "成功しているため、親 practice は削除せずモーダルの表示のみ更新します。",
-          { practiceId, logId },
-        );
-        setModalNonce((n) => n + 1);
+      if (selectedLogId === logId) {
+        handleCloseDetailModal();
       } else {
-        const remainingLogs = currentPractice.practice_logs.filter((log) => log.id !== logId);
-
-        if (remainingLogs.length === 0) {
-          try {
-            await deletePracticeMutation.mutateAsync(practiceId);
-            setSelectedPractice(null);
-          } catch (practiceDeleteError) {
-            console.error("Practiceの削除に失敗しました:", practiceDeleteError);
-            const errorMessage = toUserFacingMessage(practiceDeleteError, t("client.deleteFailed"));
-            alert(t("client.saveError", { message: errorMessage }));
-          }
-        } else {
-          setModalNonce((n) => n + 1);
-        }
+        setModalNonce((n) => n + 1);
       }
-
       await refetch();
     } catch (error) {
       console.error("削除エラー:", error);
@@ -718,6 +697,7 @@ export default function PracticeClient({
           place={selectedPractice.place || undefined}
           isTeamPractice={!!selectedPractice.team_id}
           teamId={selectedPractice.team_id}
+          targetLogId={selectedLogId ?? undefined}
           onEditPractice={handleEditPractice}
           onDeletePractice={handleDeletePractice}
           onOpenPracticeLogTab={handleOpenPracticeLogTab}
