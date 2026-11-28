@@ -77,7 +77,12 @@ export default function TeamMemberManagement({
   const { pendingMembers, loading: loadingPending } = usePendingMembers(teamId, isCurrentUserAdmin, supabase);
 
   // 承認/却下アクション
-  const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange);
+  const {
+    handleApprove,
+    handleReject,
+    error: membershipActionError,
+    clearError: clearMembershipActionError,
+  } = useMembershipActions(teamId, onMembershipChange);
 
   // グループ別表示
   const { categories, activeCategory, toggleCategory, groupMembers, getCategoryLabel } = useMemberGroupSort(
@@ -208,6 +213,8 @@ export default function TeamMemberManagement({
           isLoading={loadingPending}
           onApprove={handleApproveWithRefresh}
           onReject={handleRejectWithRefresh}
+          actionError={membershipActionError}
+          onClearActionError={clearMembershipActionError}
         />
       )}
 
