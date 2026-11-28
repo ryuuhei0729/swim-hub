@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
 import { useAttendanceModal } from "@/hooks/useAttendanceModal";
+import { useMemberAnswerEditor } from "@/hooks/useMemberAnswerEditor";
 import type { TeamEvent } from "@swim-hub/shared/types";
 import { EventListItem } from "@/components/admin-attendance/EventListItem";
 import { BulkChangeModal } from "@/components/admin-attendance/BulkChangeModal";
@@ -16,7 +17,7 @@ export interface AdminMonthlyAttendanceProps {
 
 export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanceProps) {
   const t = useTranslations("teamsAdmin");
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const {
@@ -29,6 +30,8 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
   } = useAdminAttendance(supabase, teamId);
 
   const attendanceModal = useAttendanceModal(supabase, teamId);
+  // 出欠状況モーダルから、メンバーの回答を代わりに変更する (mobile と同じ。swimhub-tasks #61)
+  const editMemberAnswer = useMemberAnswerEditor(supabase, teamId);
 
   useEffect(() => {
     loadFutureEvents();
@@ -128,6 +131,8 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
         teamMembers={attendanceModal.teamMembers}
         loading={attendanceModal.loading}
         onClose={attendanceModal.closeModal}
+        onChangeMemberStatus={editMemberAnswer}
+        currentUserId={user?.id}
       />
     </div>
   );
