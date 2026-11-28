@@ -1,12 +1,9 @@
 /**
  * タイムフォーマット関数
- * 秒数を「分:秒.小数」形式に変換
+ * 秒数を「分:秒.小数」形式に変換する。web と同じ共通の関数を使い、小数第2位で丸めてから
+ * 分と秒に分ける (59.995 秒 → 1:00.00。丸めずに分けると「60.00」になる)
  */
-export const formatTime = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = (seconds % 60).toFixed(2);
-  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, "0")}` : remainingSeconds;
-};
+export { formatTime } from "@apps/shared/utils/time";
 
 /**
  * サークルタイムフォーマット関数
