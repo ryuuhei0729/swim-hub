@@ -38,7 +38,7 @@ describe("PendingMembersSection", () => {
 
     // ダイアログの「承認」(一覧の承認ボタンとは別) を押す
     const approveButtons = screen.getAllByRole("button", { name: "承認" });
-    fireEvent.click(approveButtons[approveButtons.length - 1]);
+    fireEvent.click(approveButtons[approveButtons.length - 1]!);
     await waitFor(() => expect(onApprove).toHaveBeenCalledWith("membership-1"));
   });
 
