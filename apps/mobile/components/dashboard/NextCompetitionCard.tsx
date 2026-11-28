@@ -41,7 +41,8 @@ interface NextCompetitionCardProps {
 /**
  * ホームの「次の大会」。
  * 状態は none (予定なし) / noEntries (エントリー未登録) / entries (エントリーあり) の3つで、
- * entries のときは種目ごとにベストと目標までの差を出す。目標が無い種目は「＋ 目標」に置き換え、
+ * entries のときは種目ごとにベストと目標までの差を出す (エントリータイムがあれば種目名の下に添える)。
+ * 目標が無い種目は「＋ 目標」に置き換え、
  * 押すとその大会・種目を選んだ状態で目標フォームを開く。
  */
 export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTeams, onOpenDay, style }) => {
@@ -208,13 +209,24 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
         <>
           {rows.map((row) => (
             <View key={row.entryId} style={styles.row}>
-              <View style={styles.rowEvent}>
-                <Text style={styles.rowEventText}>{formatNextCompetitionEvent(row.style)}</Text>
-                {row.isRelaying && (
-                  <Text style={styles.relayBadge}>{t("dashboard.nextCompetition.relay")}</Text>
-                )}
-                {!row.isRelaying && row.bestTime === null && (
-                  <Text style={styles.firstBadge}>{t("dashboard.nextCompetition.firstTime")}</Text>
+              <View style={styles.rowEventColumn}>
+                <View style={styles.rowEvent}>
+                  <Text style={styles.rowEventText}>{formatNextCompetitionEvent(row.style)}</Text>
+                  {row.isRelaying && (
+                    <Text style={styles.relayBadge}>{t("dashboard.nextCompetition.relay")}</Text>
+                  )}
+                  {!row.isRelaying && row.bestTime === null && (
+                    <Text style={styles.firstBadge}>{t("dashboard.nextCompetition.firstTime")}</Text>
+                  )}
+                </View>
+                {/* エントリータイム (web の「エントリー」列相当)。mobile は横幅が足りないので列を増やさず
+                    種目名の下に小さく添え、未入力の種目では行を足さない */}
+                {row.entryTime !== null && (
+                  <Text style={styles.rowEntryTime} numberOfLines={1}>
+                    {t("dashboard.nextCompetition.entryTime", {
+                      time: formatTimeBest(row.entryTime),
+                    })}
+                  </Text>
                 )}
               </View>
               {/* ベストが無い種目は「初」を付けるので、「ベスト —」は出さない (2026-11-07 ユーザー指定) */}
@@ -369,8 +381,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
   },
-  rowEvent: {
+  rowEventColumn: {
     flex: 1,
+  },
+  rowEvent: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -395,6 +409,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 6,
     overflow: "hidden",
+  },
+  rowEntryTime: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 1,
+    fontVariant: ["tabular-nums"],
   },
   rowBest: {
     fontSize: 12,

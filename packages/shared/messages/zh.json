@@ -1116,6 +1116,7 @@
       "columnTarget": "目标",
       "columnGap": "距目标",
       "best": "最佳 {time}",
+      "entryTime": "报名成绩 {time}",
       "target": "目标",
       "setGoal": "+ 设定目标",
       "setGoalShort": "+ 目标",

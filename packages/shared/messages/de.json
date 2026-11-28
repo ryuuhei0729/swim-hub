@@ -1116,6 +1116,7 @@
       "columnTarget": "Ziel",
       "columnGap": "Bis zum Ziel",
       "best": "Bestzeit {time}",
+      "entryTime": "Meldezeit {time}",
       "target": "Ziel",
       "setGoal": "+ Ziel festlegen",
       "setGoalShort": "+ Ziel",

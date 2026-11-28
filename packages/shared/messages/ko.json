@@ -1116,6 +1116,7 @@
       "columnTarget": "목표",
       "columnGap": "목표까지",
       "best": "베스트 {time}",
+      "entryTime": "엔트리 {time}",
       "target": "목표",
       "setGoal": "+ 목표 설정",
       "setGoalShort": "+ 목표",

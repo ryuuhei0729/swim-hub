@@ -1113,6 +1113,7 @@
       "columnTarget": "Goal",
       "columnGap": "To goal",
       "best": "Best {time}",
+      "entryTime": "Entry {time}",
       "target": "Goal",
       "setGoal": "+ Set goal",
       "setGoalShort": "+ Goal",
