@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-auth/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,8 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     // 2. Stripe Customer を取得（DB キャッシュ優先）
     const stripe = getStripe();

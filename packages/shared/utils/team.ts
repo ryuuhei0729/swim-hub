@@ -4,6 +4,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { compareMembersByBirthday } from "./memberSort";
+import { GUARDIAN_ROLE } from "../types/common";
 
 /**
  * チームメンバーの基本情報
@@ -60,7 +61,9 @@ export async function fetchTeamMembers(
     )
     .eq("team_id", teamId)
     .eq("status", "approved")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // 保護者アカウントは出欠の対象ではない (出欠タブ・出欠状況に出さない)
+    .neq("role", GUARDIAN_ROLE);
 
   if (membersError) throw membersError;
 

@@ -24,6 +24,7 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import type { Competition, EntryWithDetails } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useIsGuardian } from "@/hooks/useIsGuardian";
 import { formatDate, isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -88,6 +89,8 @@ export const CompetitionItem = React.memo(function CompetitionItem({
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
   const { supabase } = useAuth();
+  // 保護者版 (閲覧専用) では記録の追加ボタンを出さない (エントリーボタンは一覧を見るだけなので残す)
+  const isGuardian = useIsGuardian();
   const queryClient = useQueryClient();
   const updateStatusMutation = useUpdateCompetitionMutation(supabase);
 
@@ -430,7 +433,7 @@ export const CompetitionItem = React.memo(function CompetitionItem({
                 <Feather name="log-in" size={13} color="#2563EB" />
                 <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
               </Pressable>
-            ) : (
+            ) : isGuardian ? null : (
               <Pressable
                 style={styles.recordButton}
                 onPress={() => onRecord(competition)}

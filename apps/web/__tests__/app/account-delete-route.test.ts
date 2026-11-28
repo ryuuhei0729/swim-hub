@@ -57,6 +57,7 @@ vi.mock("@/lib/supabase-server", () => ({
 }));
 
 import { DELETE } from "@/app/api/account/delete/route";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 function makeAuthedRequest(): NextRequest {
   return new NextRequest("http://localhost/api/account/delete", {
@@ -290,5 +291,36 @@ describe("DELETE /api/account/delete - deleteUser 冪等性 (already-deleted は
     const response = await DELETE(makeAuthedRequest());
 
     expect(response.status).toBe(500);
+  });
+});
+
+describe("DELETE /api/account/delete - 保護者アカウント", () => {
+  beforeEach(() => {
+    getUserMock.mockReset();
+    functionsInvokeMock.mockReset();
+    deleteUserMock.mockReset().mockResolvedValue({ error: null });
+    practicesDeleteMock.mockReset().mockResolvedValue({ error: null });
+    competitionsDeleteMock.mockReset().mockResolvedValue({ error: null });
+    getUserMock.mockResolvedValue({ data: { user: VALID_USER }, error: null });
+  });
+
+  afterEach(() => {
+    vi.mocked(rejectIfGuardian).mockResolvedValue(null);
+  });
+
+  it("保護者アカウント (閲覧専用・共有) は退会できず 403、削除処理には一切進まない", async () => {
+    const { NextResponse } = await import("next/server");
+    vi.mocked(rejectIfGuardian).mockResolvedValue(
+      NextResponse.json({ code: "GUARDIAN_READ_ONLY" }, { status: 403 }),
+    );
+
+    const response = await DELETE(makeAuthedRequest());
+
+    expect(response.status).toBe(403);
+    expect(rejectIfGuardian).toHaveBeenCalledWith(VALID_USER.id);
+    expect(functionsInvokeMock).not.toHaveBeenCalled();
+    expect(practicesDeleteMock).not.toHaveBeenCalled();
+    expect(competitionsDeleteMock).not.toHaveBeenCalled();
+    expect(deleteUserMock).not.toHaveBeenCalled();
   });
 });

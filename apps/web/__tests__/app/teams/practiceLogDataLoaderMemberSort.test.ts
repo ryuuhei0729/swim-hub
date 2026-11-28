@@ -71,6 +71,7 @@ function buildQueueSupabaseMock(queues: Record<string, QueuedResponse[]>) {
       return builder;
     });
     builder.eq = vi.fn(() => builder);
+    builder.neq = vi.fn(() => builder);
     builder.in = vi.fn(() => builder);
     builder.order = vi.fn(() => builder);
     builder.single = vi.fn(() => Promise.resolve(response));

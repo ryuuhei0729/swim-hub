@@ -10,7 +10,7 @@ import FilterBottomSheet, { type FilterGroup } from "@/components/history/Filter
 import PracticeCard from "../_components/PracticeCard";
 import PracticeTabModal from "@/components/forms/PracticeTabModal";
 import PracticeDetailModal from "../_components/PracticeDetailModal";
-import { isAfter, parseISO, startOfDay } from "date-fns";
+import { parseISO, startOfDay } from "date-fns";
 import { useAuth } from "@/contexts";
 import {
   usePracticesQuery,
@@ -262,27 +262,14 @@ export default function PracticeClient({
   // 一覧のベース: 1練習ログ = 1カード行へ平坦化する(practice.id で去重。大会タブと同じ粒度)
   const practiceLogRows = useMemo(() => buildPracticeLogRows(displayPractices), [displayPractices]);
 
-  // 今日の日付（時刻を0時0分0秒にリセット）
-  const today = useMemo(() => startOfDay(new Date()), []);
-
-  // 場所/種目フィルタの選択肢生成対象: 未来日の練習は「選んでも常に0件」になる候補になるため、
-  // filteredRows と同じ未来日ガードを適用した集合(=表示対象になり得る行のみ)から
-  // distinct を生成する
-  const pastOrTodayRows = useMemo(() => {
-    return practiceLogRows.filter((row) => {
-      if (!row.practice.date) return true;
-      return !isAfter(startOfDay(new Date(row.practice.date)), today);
-    });
-  }, [practiceLogRows, today]);
-
   // 場所フィルタの選択肢（distinct, ロケール順。practice 単位のフィールドを行経由で走査する）
   const participatedPlaces = useMemo(() => {
     const places = new Set<string>();
-    pastOrTodayRows.forEach((row) => {
+    practiceLogRows.forEach((row) => {
       if (row.practice.place) places.add(row.practice.place);
     });
     return Array.from(places).sort((a, b) => a.localeCompare(b, locale));
-  }, [pastOrTodayRows, locale]);
+  }, [practiceLogRows, locale]);
 
   // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールド）
   // practice_logs.style は CHECK 制約の無い自由記述列で、legacy な小文字行("fr" 等)が
@@ -293,14 +280,16 @@ export default function PracticeClient({
   // 選択肢を出すより安全)。
   const participatedStyleKeys = useMemo(() => {
     const keys = new Set<string>();
-    pastOrTodayRows.forEach((row) => {
+    practiceLogRows.forEach((row) => {
       const code = toStyleCode(row.log?.style);
       if (code) keys.add(code);
     });
     return Array.from(keys).sort((a, b) => getStyleOrderIndex(a) - getStyleOrderIndex(b));
-  }, [pastOrTodayRows]);
+  }, [practiceLogRows]);
 
-  // タグ/場所/種目フィルタリングロジック + 日付フィルタリング（今日以前のみ）。カラム間 AND。
+  // タグ/場所/種目フィルタリングロジック。カラム間 AND。
+  // 先の日付で登録した練習も表示する(取得範囲は PracticeDataLoader と同じ 1 年前〜1 年後。
+  // モバイルの PracticesScreen と同じく日付で除外しない)。
   // log-level 化: 場所は親 practice、タグ(選択タグを全て持つか=AND)と種目はその行のログ自身を
   // 見る。day-level 時代の「条件に合うログが1件でもあれば日全体を表示」(OR-exists)は、
   // 条件に合わないログのカードまで一緒に出てしまうため撤回した。
@@ -308,14 +297,6 @@ export default function PracticeClient({
     () =>
       practiceLogRows.filter((row) => {
         const { practice, log } = row;
-
-        // 日付フィルタリング：今日より未来の日付は除外
-        if (practice.date) {
-          const practiceDate = startOfDay(new Date(practice.date));
-          if (isAfter(practiceDate, today)) {
-            return false;
-          }
-        }
 
         // タグフィルタリング（そのログが選択タグを全て持つ場合のみ表示）
         if (!logMatchesAllTags(log, selectedTagIds)) {
@@ -341,7 +322,7 @@ export default function PracticeClient({
 
         return true;
       }),
-    [practiceLogRows, selectedTagIds, filterPlaces, filterStyle, today],
+    [practiceLogRows, selectedTagIds, filterPlaces, filterStyle],
   );
 
   // 日付の降順を既定順とし、useTableSort に渡す（sortColumn が null の間はこの順序を維持する）。
@@ -718,6 +699,8 @@ export default function PracticeClient({
         setAvailableTags={setAvailableTags}
         allowParentUpdate={allowParentUpdate}
         initialTab={practiceActiveTab}
+        // チーム練習には他のメンバーのログも付く。自分のログだけを読み込み・保存する (swimhub-tasks#140)
+        logOwnerUserId={user?.id}
       />
     </div>
   );

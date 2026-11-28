@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { encrypt } from "@/lib/encryption";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 /**
  * Supabase設定を取得
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "認証に失敗しました" }, { status: 401 });
     }
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     // リクエストボディからprovider_refresh_tokenを取得
     let providerRefreshToken: string | undefined;

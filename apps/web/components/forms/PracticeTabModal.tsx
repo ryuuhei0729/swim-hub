@@ -25,9 +25,12 @@ import { PracticeMenuItem } from "@/components/forms/practice-log/components";
 import { PracticeLogTemplateSelectModal } from "@/components/practice-log-templates/PracticeLogTemplateSelectModal";
 import { usePracticeLogForm } from "@/components/forms/practice-log/hooks";
 import { useAuth } from "@/contexts";
-import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
+import {
+  checkIsPremium,
+  canUploadImage,
+  findLogsOverPracticeTimeLimit,
+} from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
 import { useCreatePracticeLogTemplateMutation } from "@swim-hub/shared/hooks";
 import { PracticeAPI } from "@apps/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
@@ -120,6 +123,14 @@ export interface PracticeTabModalProps {
    * 渡す allowParentUpdate と同じ値を渡すこと (Sprint Contract 2, Reviewer 指摘 F1-3)。
    */
   allowParentUpdate?: boolean;
+  /**
+   * 指定したとき、編集モードで読み込む既存の練習ログをこのユーザーのものだけに絞る。
+   * チーム練習には他のメンバーのログも付くため、自分の画面 (ダッシュボード・練習一覧・
+   * チーム画面の「記録追加」) から開くときは自分の user_id を渡す。
+   * 絞らないと他メンバーのログもメニューとして読み込まれ、保存時の diff で
+   * 他メンバーのログを更新・削除しようとしてしまう (swimhub-tasks#140)。
+   */
+  logOwnerUserId?: string;
 }
 
 // =============================================================================
@@ -138,6 +149,7 @@ export default function PracticeTabModal({
   isLoading,
   initialTab = "practice",
   allowParentUpdate = true,
+  logOwnerUserId,
 }: PracticeTabModalProps) {
   const t = useTranslations("forms.practice");
   const tTabModal = useTranslations("forms.tabModal");
@@ -228,14 +240,18 @@ export default function PracticeTabModal({
   const createTemplateMutation = useCreatePracticeLogTemplateMutation(supabase);
 
   // Practice time limit check
-  const getTotalPracticeTimesCount = useCallback(() => {
-    return menus.reduce((total, menu) => {
-      return total + (menu.times || []).filter((t) => t.time > 0).length;
-    }, 0);
-  }, [menus]);
+  // 上限は「1メニュー(= 1練習ログ)あたり」で数える。練習全体の合計では数えない
+  // (モバイルの PracticeTimeFormScreen・料金表の「1ログあたり」と同じ数え方)。
+  const overLimitMenuIndices = useMemo(
+    () =>
+      findLogsOverPracticeTimeLimit(
+        menus.map((menu) => (menu.times || []).filter((t) => t.time > 0).length),
+        isPremium,
+      ),
+    [menus, isPremium],
+  );
 
-  const isPracticeTimeLimitReached =
-    !isPremium && getTotalPracticeTimesCount() > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+  const isPracticeTimeLimitReached = overLimitMenuIndices.length > 0;
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -335,11 +351,12 @@ export default function PracticeTabModal({
 
     const load = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("practice_logs")
           .select("id, style, swim_category, distance, rep_count, set_count, circle, note, video_path, video_thumbnail_path, practice_log_tags(practice_tag_id), practice_times(set_number, rep_number, time)")
-          .eq("practice_id", editingPracticeId)
-          .order("created_at", { ascending: true });
+          .eq("practice_id", editingPracticeId);
+        if (logOwnerUserId) query = query.eq("user_id", logOwnerUserId);
+        const { data, error } = await query.order("created_at", { ascending: true });
         if (cancelled) return;
         // 失敗しても入力不能のまま固めない (既存どおり menus は既定値のまま編集できる)
         if (error || !data) return;
@@ -427,7 +444,7 @@ export default function PracticeTabModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, isInitialized, editingPracticeId, logsFetchSettled, supabase, setMenus, isTemplateAppendMode]);
+  }, [isOpen, isInitialized, editingPracticeId, logOwnerUserId, logsFetchSettled, supabase, setMenus, isTemplateAppendMode]);
 
   // Fetch place suggestions when modal opens
   useEffect(() => {
@@ -511,10 +528,12 @@ export default function PracticeTabModal({
   const isSubmittingRef = useRef(false);
 
   const executeSave = useCallback(async () => {
-    if (!isPremium) {
-      const total = getTotalPracticeTimesCount();
-      const validation = validatePracticeTimeLimit(total, false);
-      if (!validation.valid) return;
+    const [firstOverLimitMenuIndex] = overLimitMenuIndices;
+    if (firstOverLimitMenuIndex !== undefined) {
+      // 上限超えの理由が見えるよう、超えている最初のメニューを開いてから止める
+      setActiveTab("practiceLog");
+      setActivePracticeIndex(firstOverLimitMenuIndex);
+      return;
     }
 
     // 未編集かつログ未保存の場合、デフォルトメニュー(100m×4)を保存しない。練習ログは opt-in。
@@ -538,8 +557,7 @@ export default function PracticeTabModal({
     });
     pendingVideosRef.current.clear();
   }, [
-    isPremium,
-    getTotalPracticeTimesCount,
+    overLimitMenuIndices,
     hasMenuChanges,
     prepareSubmitData,
     menus,
@@ -973,17 +991,22 @@ export default function PracticeTabModal({
                   </ItemTabs>
                 );
               })()}
-
-              {isPracticeTimeLimitReached && (
-                <PremiumBadge
-                  message={tPremium("practiceTimeLimit", {
-                    limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
-                  })}
-                />
-              )}
             </div>
           </div>
           </div>
+
+          {/* 上限超えで保存できない理由は、どのタブを開いていても見えるようフッターの直前に出す */}
+          {isPracticeTimeLimitReached && (
+            <div className="shrink-0 px-4 pt-3 sm:px-6" data-testid="practice-time-limit-message">
+              <PremiumBadge
+                message={`${overLimitMenuIndices
+                  .map((index) => tPracticeLog("menuHeader", { n: index + 1 }))
+                  .join("・")}: ${tPremium("practiceTimeLimit", {
+                  limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
+                })}`}
+              />
+            </div>
+          )}
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

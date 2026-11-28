@@ -79,11 +79,6 @@ export function TeamPractices({ teamId, isAdmin = false }: HarnessProps) {
 
   return (
     <>
-      {!isAdmin && (
-        <button type="button" onClick={actions.openSelfLog}>
-          {t("practices.selfLogButton")}
-        </button>
-      )}
       {isAdmin && (
         <button type="button" onClick={actions.openAddForm}>
           {t("practices.addButton")}

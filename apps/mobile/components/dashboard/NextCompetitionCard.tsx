@@ -85,34 +85,35 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
     return (
       <View style={[styles.card, style]} testID="next-competition-none">
         <Text style={styles.kicker}>{t("dashboard.nextCompetition.title")}</Text>
+        {/* 予定なしのときも、エントリー2種目のカードより高くしない (2026-11-28 ユーザー指定)。
+            アイコンは出さず、説明は2行まで、ボタンは横に並べる */}
         <View style={styles.none}>
-          <View style={styles.noneIcon}>
-            <Feather name="award" size={20} color="#9CA3AF" />
-          </View>
           <Text style={styles.noneTitle}>{t("dashboard.nextCompetition.noneTitle")}</Text>
-          <Text style={styles.noneDescription}>
+          <Text style={styles.noneDescription} numberOfLines={2}>
             {t("dashboard.nextCompetition.noneDescription")}
           </Text>
-          <Pressable
-            style={styles.primaryButton}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate("CompetitionTabForm", { date: today })}
-          >
-            <Text style={styles.primaryButtonText}>
-              {t("dashboard.nextCompetition.addCompetition")}
-            </Text>
-          </Pressable>
-          {hasTeams && (
+          <View style={styles.noneActions}>
             <Pressable
-              style={styles.secondaryButton}
+              style={[styles.primaryButton, styles.noneActionButton]}
               accessibilityRole="button"
-              onPress={() => navigation.navigate("MainTabs", { screen: "Teams" })}
+              onPress={() => navigation.navigate("CompetitionTabForm", { date: today })}
             >
-              <Text style={styles.secondaryButtonText}>
-                {t("dashboard.nextCompetition.viewTeamCompetitions")}
+              <Text style={styles.primaryButtonText} numberOfLines={1}>
+                {t("dashboard.nextCompetition.addCompetition")}
               </Text>
             </Pressable>
-          )}
+            {hasTeams && (
+              <Pressable
+                style={[styles.secondaryButton, styles.noneActionButton]}
+                accessibilityRole="button"
+                onPress={() => navigation.navigate("MainTabs", { screen: "Teams" })}
+              >
+                <Text style={styles.secondaryButtonText} numberOfLines={1}>
+                  {t("dashboard.nextCompetition.viewTeamCompetitions")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -178,18 +179,24 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
       </View>
 
       {state === "noEntries" ? (
+        // エントリー未登録の枠は、エントリー2種目のとき (種目の行 × 2) より高くしない
+        // (2026-11-28 ユーザー指定)。見出し・説明を左、ボタンを右に並べて1段に収める
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>{t("dashboard.nextCompetition.noEntriesTitle")}</Text>
-          <Text style={styles.emptySub}>
-            {!isTeamCompetition
-              ? t("dashboard.nextCompetition.personalNoEntries")
-              : entryStatus === "open"
-                ? t("dashboard.nextCompetition.entryOpen")
-                : t("dashboard.nextCompetition.entryBefore")}
-          </Text>
+          <View style={styles.emptyText}>
+            <Text style={styles.emptyTitle} numberOfLines={1}>
+              {t("dashboard.nextCompetition.noEntriesTitle")}
+            </Text>
+            <Text style={styles.emptySub} numberOfLines={1}>
+              {!isTeamCompetition
+                ? t("dashboard.nextCompetition.personalNoEntries")
+                : entryStatus === "open"
+                  ? t("dashboard.nextCompetition.entryOpen")
+                  : t("dashboard.nextCompetition.entryBefore")}
+            </Text>
+          </View>
           {(!isTeamCompetition || entryStatus === "open") && (
-            <Pressable style={styles.primaryButton} accessibilityRole="button" onPress={openEntry}>
-              <Text style={styles.primaryButtonText}>
+            <Pressable style={styles.emptyButton} accessibilityRole="button" onPress={openEntry}>
+              <Text style={styles.emptyButtonText} numberOfLines={1}>
                 {isTeamCompetition
                   ? t("dashboard.nextCompetition.enter")
                   : t("dashboard.nextCompetition.registerEvents")}
@@ -450,8 +457,14 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     borderRadius: 10,
     backgroundColor: "#FAFAFA",
-    padding: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+  },
+  emptyText: {
+    flex: 1,
   },
   emptyTitle: {
     fontSize: 14,
@@ -461,22 +474,22 @@ const styles = StyleSheet.create({
   emptySub: {
     fontSize: 12,
     color: "#6B7280",
-    marginTop: 2,
-    marginBottom: 10,
-    textAlign: "center",
+    marginTop: 1,
+  },
+  emptyButton: {
+    backgroundColor: "#2563EB",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  emptyButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   none: {
     alignItems: "center",
-    paddingTop: 6,
-  },
-  noneIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+    paddingTop: 4,
   },
   noneTitle: {
     fontSize: 14,
@@ -487,8 +500,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: "center",
+  },
+  noneActions: {
+    alignSelf: "stretch",
+    flexDirection: "row",
+    gap: 8,
+  },
+  noneActionButton: {
+    flex: 1,
+    alignSelf: "auto",
+    marginTop: 0,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
   },
   primaryButton: {
     alignSelf: "stretch",

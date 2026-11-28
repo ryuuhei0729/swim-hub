@@ -14,6 +14,7 @@ import { localeFromReferer } from "@/i18n/routing";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_ERROR_CODE } from "@swim-hub/shared/constants/premium";
 import type { PremiumRequiredError } from "@swim-hub/shared/constants/premium";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     // Premium チェック（多層防御: presigned URL 発行後〜confirm の経路も弾く）
     const { data: subscriptionData } = await supabase

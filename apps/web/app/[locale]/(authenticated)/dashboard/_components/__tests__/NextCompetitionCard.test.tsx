@@ -126,14 +126,14 @@ describe("NextCompetitionCard", () => {
       expect(screen.queryByRole("button", { name: "エントリーする" })).toBeNull();
     });
 
-    it("自分で登録した大会は「種目を登録」を出す", () => {
+    it("自分で登録した大会は「エントリー」を出す", () => {
       mocks.nextCompetition = {
         data: { competition: competition(), entries: [], goals: [] },
         isLoading: false,
         isError: false,
       };
       const { openEntryLogForm } = renderCard();
-      fireEvent.click(screen.getByRole("button", { name: "種目を登録" }));
+      fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
       expect(openEntryLogForm).toHaveBeenCalledWith("c1");
     });
   });

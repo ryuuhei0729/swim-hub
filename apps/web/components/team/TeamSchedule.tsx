@@ -283,17 +283,7 @@ export default function TeamSchedule({
           </button>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {/* 利用者ビュー: 自分のログを追加 */}
-            {!isAdmin && (
-              <button
-                type="button"
-                onClick={practiceActions.openSelfLog}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <PlusIcon className="h-4 w-4 mr-1" />
-                {t("practices.selfLogButton")}
-              </button>
-            )}
+            {/* 利用者ビューの自分のログは、練習カードごとの「記録追加」から付ける (swimhub-tasks#57) */}
             {isAdmin && (
               <>
                 {onOpenBulkRegister && (

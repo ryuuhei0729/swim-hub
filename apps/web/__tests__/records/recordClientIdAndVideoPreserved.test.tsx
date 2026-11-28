@@ -99,6 +99,7 @@ function buildRecordDataLoaderSupabaseMock(
       return chain();
     });
     builder.eq = vi.fn(chain);
+    builder.neq = vi.fn(chain);
     builder.order = vi.fn(() => Promise.resolve(tableResponses.order ?? defaultResponse));
     builder.single = vi.fn(() => Promise.resolve(tableResponses.single ?? defaultResponse));
     return builder;

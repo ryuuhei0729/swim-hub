@@ -18,6 +18,7 @@ import { renderWithI18n as render, waitFor } from "@/__tests__/helpers/teamQuery
 
 const mocks = vi.hoisted(() => ({
   selectCalls: [] as string[],
+  neqCalls: [] as Array<[string, unknown]>,
   data: [] as unknown[],
   capturedTeamMembers: undefined as unknown,
 }));
@@ -30,6 +31,10 @@ vi.mock("@/contexts", () => ({
           mocks.selectCalls.push(query);
           const builder = {
             eq: () => builder,
+            neq: (column: string, value: unknown) => {
+              mocks.neqCalls.push([column, value]);
+              return builder;
+            },
             then: (
               onFulfilled?: (value: { data: unknown; error: unknown }) => unknown,
               onRejected?: (reason: unknown) => unknown,
@@ -129,5 +134,7 @@ describe("TeamGroupManagement (web) - メンバー割り当て候補一覧の年
 
     const ids = (mocks.capturedTeamMembers as Array<{ user_id: string }>).map((m) => m.user_id);
     expect(ids).toEqual(["u-older", "u-younger", "u-none"]);
+    // 保護者アカウントはグループに割り当てる候補に出さない
+    expect(mocks.neqCalls).toContainEqual(["role", "guardian"]);
   });
 });
