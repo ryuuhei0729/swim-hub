@@ -3120,10 +3120,9 @@
         "addAriaLabel": "添加{date}的训练记录",
         "viewAriaLabel": "查看{date}的训练记录",
         "editButton": "编辑",
-        "deleteButton": "删除",
-        "addLogButton": "添加记录",
-        "addLogAriaLabel": "为{date}的训练添加我的记录"
-      }
+        "deleteButton": "删除"
+      },
+      "selfLogButton": "添加我的训练记录"
     },
     "practiceDetail": {
       "title": "训练详情",

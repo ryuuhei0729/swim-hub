@@ -4,7 +4,7 @@
  *   [W-1] 2 ページ目で保存して 1 ページ目に戻したとき、キャッシュの古い 1 ページ目を
  *         表示せず、読み込み表示 → 最新の 1 ページ目 になる
  *   [W-2] 自分のログを保存したら、その練習の詳細モーダルのキャッシュも落とす
- *         (カードの「記録追加」から既存の練習に付ける。練習は新しく作らない)
+ *         (既存の練習への再送信 / 新規作成の両方)
  *   [W-3] 出欠タブの月別サマリは、ユーザーが確定するまで取得しない (読み込み表示のまま)
  *   [W-4] 月別サマリはクエリキーの基準月を起点に取得する
  */
@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   remove: vi.fn(),
   push: vi.fn(),
+  selfLogParams: { editingPracticeId: null as string | null },
 }));
 
 vi.mock("@apps/shared/api/teams/practices", () => ({
@@ -61,11 +62,7 @@ vi.mock("@/components/forms/PracticeBasicForm", () => ({
 
 // 練習ログタブモーダル: 開いたら onSave を呼ぶボタンだけ出す
 vi.mock("@/components/forms/PracticeTabModal", () => ({
-  default: (props: {
-    isOpen: boolean;
-    editingPracticeId: string | null;
-    onSave: (params: unknown) => Promise<void>;
-  }) =>
+  default: (props: { isOpen: boolean; onSave: (params: unknown) => Promise<void> }) =>
     props.isOpen ? (
       <button
         type="button"
@@ -74,7 +71,7 @@ vi.mock("@/components/forms/PracticeTabModal", () => ({
             basicData: { date: "2026-07-01", title: "", place: "", note: "" },
             logs: [],
             originalLogIds: [],
-            editingPracticeId: props.editingPracticeId,
+            editingPracticeId: mocks.selfLogParams.editingPracticeId,
           })
         }
       >
@@ -170,6 +167,7 @@ describe("TeamPractices — 保存後に保存前の内容を出さない", () =
     mocks.update.mockResolvedValue({});
     mocks.remove.mockResolvedValue(undefined);
     mocks.create.mockResolvedValue({ id: "p-new" });
+    mocks.selfLogParams.editingPracticeId = null;
   });
 
   it("[W-1] 2 ページ目で保存して 1 ページ目に戻すと、古い 1 ページ目を出さずに最新を読み込む", async () => {
@@ -257,12 +255,13 @@ describe("TeamPractices — 保存後に保存前の内容を出さない", () =
 
       render(<TeamPractices teamId="team-1" isAdmin={false} />, { queryClient });
       expect(await screen.findByText("朝練")).toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: /練習に自分の記録を追加/ }));
+      await user.click(screen.getByRole("button", { name: "自分のログを追加" }));
       await user.click(await screen.findByText("self-log-submit"));
       return queryClient;
     }
 
-    it("カードの「記録追加」から保存すると、その練習の詳細を落とし、練習は新しく作らない", async () => {
+    it("既存の練習への保存 (再送信) では、その練習の詳細を落とす", async () => {
+      mocks.selfLogParams.editingPracticeId = "p-1";
       const queryClient = await renderAndSaveSelfLog();
 
       await waitFor(() =>
@@ -271,6 +270,16 @@ describe("TeamPractices — 保存後に保存前の内容を出さない", () =
       expect(mocks.create).not.toHaveBeenCalled();
       // 関係ない練習の詳細は残す
       expect(queryClient.getQueryData(teamDetailKeys.practiceDetail("p-new"))).toBeDefined();
+    });
+
+    it("新規作成では、作成した練習の詳細を落とす", async () => {
+      const queryClient = await renderAndSaveSelfLog();
+
+      await waitFor(() =>
+        expect(queryClient.getQueryData(teamDetailKeys.practiceDetail("p-new"))).toBeUndefined(),
+      );
+      expect(mocks.create).toHaveBeenCalled();
+      expect(queryClient.getQueryData(teamDetailKeys.practiceDetail("p-1"))).toBeDefined();
     });
   });
 });
