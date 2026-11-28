@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, Linking, Platform } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -30,6 +40,9 @@ export const AccountPlanScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { subscription, refreshSubscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
+  // 支払い失敗 (past_due)。checkIsPremium は false になるが Free ではないため、
+  // Free 表示・アップグレード導線は出さず、支払い方法の更新を案内する (web の SubscriptionSettings と同じ)
+  const isPastDue = subscription?.status === "past_due";
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
   const insets = useSafeInsets();
@@ -86,19 +99,52 @@ export const AccountPlanScreen: React.FC = () => {
           />
         }
       >
+        {isPastDue && (
+          <View style={styles.pastDueBanner} testID="plan-past-due-banner">
+            <Text style={styles.pastDueTitle}>{t("settings.subscription.pastDueBanner.title")}</Text>
+            <Text style={styles.pastDueDescription}>
+              {t("settings.subscription.pastDueBanner.description")}
+            </Text>
+            <Pressable
+              onPress={() => Linking.openURL(STORE_SUBSCRIPTIONS_URL)}
+              accessibilityRole="link"
+              accessibilityLabel={t("settings.subscription.pastDueBanner.updatePayment")}
+              testID="plan-update-payment"
+              hitSlop={8}
+            >
+              <Text style={styles.pastDueLink}>
+                {t("settings.subscription.pastDueBanner.updatePayment")}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         <ListGroup footer={planNote}>
           <ListRow
             label={t("settings.mobile.currentPlanLabel")}
             accessory="none"
             right={
-              <View style={[styles.badge, isPremium ? styles.badgePremium : styles.badgeFree]}>
+              <View
+                style={[
+                  styles.badge,
+                  isPastDue ? styles.badgePastDue : isPremium ? styles.badgePremium : styles.badgeFree,
+                ]}
+              >
                 <Text
                   style={[
                     styles.badgeText,
-                    isPremium ? styles.badgeTextPremium : styles.badgeTextFree,
+                    isPastDue
+                      ? styles.badgeTextPastDue
+                      : isPremium
+                        ? styles.badgeTextPremium
+                        : styles.badgeTextFree,
                   ]}
                 >
-                  {isPremium ? "Premium" : "Free"}
+                  {isPastDue
+                    ? t("settings.subscription.badge.pastDue")
+                    : isPremium
+                      ? "Premium"
+                      : "Free"}
                 </Text>
               </View>
             }
@@ -106,7 +152,7 @@ export const AccountPlanScreen: React.FC = () => {
           />
         </ListGroup>
 
-        {!isPremium && (
+        {!isPremium && !isPastDue && (
           <ListGroup>
             <ListRow
               label={t("settings.mobile.upgradeButton")}
@@ -181,5 +227,35 @@ const styles = StyleSheet.create({
   },
   badgeTextFree: {
     color: "#6B7280",
+  },
+  badgePastDue: {
+    backgroundColor: "#FEE2E2",
+  },
+  badgeTextPastDue: {
+    color: "#991B1B",
+  },
+  pastDueBanner: {
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+    gap: 4,
+  },
+  pastDueTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#991B1B",
+  },
+  pastDueDescription: {
+    fontSize: 14,
+    color: "#B91C1C",
+  },
+  pastDueLink: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#B91C1C",
+    textDecorationLine: "underline",
   },
 });
