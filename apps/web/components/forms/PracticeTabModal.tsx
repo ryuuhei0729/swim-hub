@@ -120,6 +120,14 @@ export interface PracticeTabModalProps {
    * 渡す allowParentUpdate と同じ値を渡すこと (Sprint Contract 2, Reviewer 指摘 F1-3)。
    */
   allowParentUpdate?: boolean;
+  /**
+   * 指定したとき、編集モードで読み込む既存の練習ログをこのユーザーのものだけに絞る。
+   * チーム練習には他のメンバーのログも付くため、自分の画面 (ダッシュボード・練習一覧・
+   * チーム画面の「記録追加」) から開くときは自分の user_id を渡す。
+   * 絞らないと他メンバーのログもメニューとして読み込まれ、保存時の diff で
+   * 他メンバーのログを更新・削除しようとしてしまう (swimhub-tasks#140)。
+   */
+  logOwnerUserId?: string;
 }
 
 // =============================================================================
@@ -138,6 +146,7 @@ export default function PracticeTabModal({
   isLoading,
   initialTab = "practice",
   allowParentUpdate = true,
+  logOwnerUserId,
 }: PracticeTabModalProps) {
   const t = useTranslations("forms.practice");
   const tTabModal = useTranslations("forms.tabModal");
@@ -335,11 +344,12 @@ export default function PracticeTabModal({
 
     const load = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("practice_logs")
           .select("id, style, swim_category, distance, rep_count, set_count, circle, note, video_path, video_thumbnail_path, practice_log_tags(practice_tag_id), practice_times(set_number, rep_number, time)")
-          .eq("practice_id", editingPracticeId)
-          .order("created_at", { ascending: true });
+          .eq("practice_id", editingPracticeId);
+        if (logOwnerUserId) query = query.eq("user_id", logOwnerUserId);
+        const { data, error } = await query.order("created_at", { ascending: true });
         if (cancelled) return;
         // 失敗しても入力不能のまま固めない (既存どおり menus は既定値のまま編集できる)
         if (error || !data) return;
@@ -427,7 +437,7 @@ export default function PracticeTabModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, isInitialized, editingPracticeId, logsFetchSettled, supabase, setMenus, isTemplateAppendMode]);
+  }, [isOpen, isInitialized, editingPracticeId, logOwnerUserId, logsFetchSettled, supabase, setMenus, isTemplateAppendMode]);
 
   // Fetch place suggestions when modal opens
   useEffect(() => {

@@ -3117,9 +3117,10 @@
         "addAriaLabel": "Add practice record for {date}",
         "viewAriaLabel": "View practice record for {date}",
         "editButton": "Edit",
-        "deleteButton": "Delete"
-      },
-      "selfLogButton": "Add My Log"
+        "deleteButton": "Delete",
+        "addLogButton": "Add record",
+        "addLogAriaLabel": "Add my record to the practice on {date}"
+      }
     },
     "practiceDetail": {
       "title": "Practice Details",
