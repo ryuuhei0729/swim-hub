@@ -113,7 +113,9 @@ function getCompetitionSortValue(record: Record, column: CompetitionSortColumn):
  * 行クリック時の詳細/編集/削除 UI/UX はダッシュボード (DayDetailModal 系) と統一している。
  * - 詳細表示: CompetitionDetailModal (dashboard の CompetitionDetails / CompetitionWithEntry を再利用)
  * - 編集: dashboard と同じ CompetitionTabModal
- * - 削除確認: dashboard と同じ DeleteConfirmModal (CompetitionDetailModal 内で使用)
+ * - 削除確認: 大会・エントリーは dashboard と同じ DeleteConfirmModal (CompetitionDetailModal 内)、
+ *   記録単位は CompetitionDetails 内の ConfirmDialog
+ * - 記録カードから開いた詳細には押した記録1件だけを表示する(mobile の大会タブと同じ仕様)
  *
  * 一覧UI(2026-07-22 Sprint): テーブルを廃止し、全幅カード + ボトムシート(並べ替え/絞り込み)に刷新した。
  */
@@ -307,9 +309,6 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
   // React Queryのキャッシュを使用
   const displayRecords = records;
 
-  // 今日の日付（時刻を0時0分0秒にリセット）
-  const today = startOfDay(new Date());
-
   // ---------------------------------------------------------------------------
   // エントリー済み（記録未登録）の大会一覧（V-W-C05）
   // records に載らない「エントリー済みだが記録がまだ無い」大会をダッシュボードと同じ粒度
@@ -412,39 +411,29 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, entryOnlyRefreshKey]);
 
-  // 種目/大会名/場所フィルタの選択肢生成対象: 未来日の大会は「選んでも常に0件」になる候補になるため、
-  // filteredRecords と同じ未来日ガードを適用した集合(=表示対象になり得る行のみ)から distinct を生成する
-  const pastOrTodayRecords = useMemo(() => {
-    return displayRecords.filter((record: Record) => {
-      const competition = record.competition as Competition | null;
-      if (!competition?.date) return true;
-      return !isAfter(startOfDay(new Date(competition.date)), today);
-    });
-  }, [displayRecords, today]);
-
   // 距離フィルタの選択肢（distinct, 昇順。record.style が無い行はスキップする）
   const participatedDistances = useMemo(() => {
     const distances = new Set<number>();
-    pastOrTodayRecords.forEach((record: Record) => {
+    displayRecords.forEach((record: Record) => {
       const distance = (record.style as Style | undefined)?.distance;
       if (typeof distance === "number") {
         distances.add(distance);
       }
     });
     return Array.from(distances).sort((a, b) => a - b);
-  }, [pastOrTodayRecords]);
+  }, [displayRecords]);
 
   // 種目(泳法)フィルタの選択肢（distinct, STYLES 定義順。record.style が無い行はスキップする）
   const participatedStyleCodes = useMemo(() => {
     const codes = new Set<SwimStyle>();
-    pastOrTodayRecords.forEach((record: Record) => {
+    displayRecords.forEach((record: Record) => {
       const code = (record.style as Style | undefined)?.style;
       if (code) {
         codes.add(code);
       }
     });
     return STYLE_ORDER.filter((code) => codes.has(code));
-  }, [pastOrTodayRecords]);
+  }, [displayRecords]);
 
   // 種目(泳法)コード → 距離接頭辞を除いた裸のラベル(例: "自由形") のマップ
   const styleLabelByCode = useMemo(() => {
@@ -460,18 +449,18 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
   // 大会名フィルタの選択肢（distinct, ロケール順）
   const participatedCompetitionNames = useMemo(() => {
     const names = new Set<string>();
-    pastOrTodayRecords.forEach((record: Record) => {
+    displayRecords.forEach((record: Record) => {
       const title = (record.competition as Competition | null)?.title;
       if (title) names.add(title);
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b, locale));
-  }, [pastOrTodayRecords, locale]);
+  }, [displayRecords, locale]);
 
   // 場所フィルタの選択肢（distinct, ロケール順）+ 未設定(null)行の有無
   const { participatedPlaces, hasUnsetPlace } = useMemo(() => {
     const places = new Set<string>();
     let unset = false;
-    pastOrTodayRecords.forEach((record: Record) => {
+    displayRecords.forEach((record: Record) => {
       const place = (record.competition as Competition | null)?.place;
       if (place) {
         places.add(place);
@@ -483,18 +472,11 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       participatedPlaces: Array.from(places).sort((a, b) => a.localeCompare(b, locale)),
       hasUnsetPlace: unset,
     };
-  }, [pastOrTodayRecords, locale]);
+  }, [displayRecords, locale]);
 
-  // フィルタリングロジック（日付=常に今日以前のみ。カラム間 AND）
+  // フィルタリングロジック（カラム間 AND）。未来日の大会の記録も日付では除外しない(mobile と同じ)
   const filteredRecords = displayRecords.filter((record: Record) => {
-    // 日付フィルタリング：今日より未来の日付は除外
     const competition = record.competition as Competition | null;
-    if (competition?.date) {
-      const competitionDate = startOfDay(new Date(competition.date));
-      if (isAfter(competitionDate, today)) {
-        return false;
-      }
-    }
 
     // 距離フィルタ（複数select, OR。record.style が無い記録は除外する）
     if (filterDistances.length > 0) {
@@ -985,11 +967,16 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     }
   };
 
-  // 個別の大会記録削除（即時削除・確認なし。ダッシュボードと同じ挙動）
+  // 個別の大会記録削除（CompetitionDetails 内の確認ダイアログ経由で呼ばれる）。
+  // 詳細は押した記録1件だけを表示しているため、その記録を消したら表示するものが無くなるので閉じる
   const handleDeleteRecord = async (recordId: string) => {
     try {
       await deleteRecordMutation.mutateAsync(recordId);
-      setModalNonce((n) => n + 1);
+      if (selection?.mode === "record" && selection.record.id === recordId) {
+        setSelection(null);
+      } else {
+        setModalNonce((n) => n + 1);
+      }
       setEntryOnlyRefreshKey((n) => n + 1);
       await refetch();
     } catch (err) {
@@ -1248,6 +1235,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
           onDeleteCompetition={handleDeleteCompetition}
           onOpenRecordTab={handleOpenRecordTab}
           onOpenEntryTab={handleOpenEntryTab}
+          targetRecordId={selection.mode === "record" ? selection.record.id : undefined}
           onDeleteRecord={handleDeleteRecord}
           onDeleteEntry={handleDeleteEntry}
         />

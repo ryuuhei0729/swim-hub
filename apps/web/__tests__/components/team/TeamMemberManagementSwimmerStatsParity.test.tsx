@@ -2,10 +2,10 @@
  * Issue #49 QA テスト (Phase A スケルトン): 統計ヘッダーの母数は非泳者を除外しない (R1)
  *
  * Sprint Contract 検証観点:
- *   [V-R1-01] PM裁定 R1: 「統計ヘッダーの母数は変更しない。総メンバー数は在籍者全員のまま。
- *             admin/user 内訳も変更しない」。TeamMemberManagement が MemberStatsHeader へ
- *             渡す totalMembers/adminCount/userCount が、非泳者を含んだ生の members 配列から
- *             計算されていることを、実コンポーネントを結合してレンダリングし確認する。
+ *   [V-R1-01] PM裁定 R1: 「統計ヘッダーの母数は変更しない。総メンバー数は在籍者全員のまま」。
+ *             TeamMemberManagement が MemberStatsHeader へ渡す totalMembers が、非泳者を含んだ
+ *             生の members 配列から計算されていることを、実コンポーネントを結合してレンダリングし確認する。
+ *             (admin/user の内訳は mobile に合わせて表示しなくなった。swimhub-tasks #105)
  *
  * このテストは「MembersTimeTable が非泳者を除外する」ことと「TeamMemberManagement の
  * 統計計算はそれとは無関係に生の members を使い続ける」ことの**両立**を確認するのが目的。
@@ -156,17 +156,29 @@ describe("TeamMemberManagement - 統計ヘッダーの母数 (R1: 非泳者を�
     // 総数3人 (非泳者2人を含む)。ラベル文言は変えず、count 引数だけを厳密に確認する。
     const totalEl = screen.getByTestId("team-member-count-total");
     expect(totalEl.textContent).toContain("3");
-
-    const adminEl = screen.getByTestId("team-member-count-admin");
-    expect(adminEl.textContent).toContain("1");
-
-    const userEl = screen.getByTestId("team-member-count-user");
-    // role="user" は m2, m3 (どちらも非泳者) の2人。非泳者だからといって
-    // user 内訳からも消えてはならない。
-    expect(userEl.textContent).toContain("2");
   });
 
-  it("[V-R1-02] 全員が非泳者でも総数・内訳は0にならない (フィルタが統計計算に混入していないことの境界値)", () => {
+  it("管理者・一般の人数の内訳は出さない (mobile と同じく合計だけ)", () => {
+    const members: SwimmerMember[] = [
+      buildMember({ id: "m1", user_id: "m1", role: "admin", is_swimmer: true }),
+      buildMember({ id: "m2", user_id: "m2", role: "user", is_swimmer: true }),
+    ];
+    useMembersMock.mockReturnValue({ members, loading: false, error: null, loadMembers: vi.fn() });
+
+    renderWithLocale(
+      <TeamMemberManagement
+        teamId="team-1"
+        currentUserId="m1"
+        isCurrentUserAdmin={true}
+        onMemberClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("team-member-count-admin")).toBeNull();
+    expect(screen.queryByTestId("team-member-count-user")).toBeNull();
+  });
+
+  it("[V-R1-02] 全員が非泳者でも総数は0にならない (フィルタが統計計算に混入していないことの境界値)", () => {
     const members: SwimmerMember[] = [
       buildMember({ id: "m1", user_id: "m1", role: "admin", is_swimmer: false }),
       buildMember({ id: "m2", user_id: "m2", role: "user", is_swimmer: false }),
@@ -183,7 +195,5 @@ describe("TeamMemberManagement - 統計ヘッダーの母数 (R1: 非泳者を�
     );
 
     expect(screen.getByTestId("team-member-count-total").textContent).toContain("2");
-    expect(screen.getByTestId("team-member-count-admin").textContent).toContain("1");
-    expect(screen.getByTestId("team-member-count-user").textContent).toContain("1");
   });
 });

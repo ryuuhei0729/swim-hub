@@ -6,7 +6,10 @@
  *     読み取り専用の参考ラベルとしてのみ表示する。
  *   [仕様#2] 既存記録を優先し、不足分だけエントリーから追加する。(user_id, style_id) の
  *     組で重複排除する。リレー検出済みの StyleEntry には一切触れない。
- *   [仕様#6] エントリー0件の大会では現行どおり空行1件のまま。
+ *   [仕様#6] エントリー0件の大会では、どの種目を開いても入力行は無い。
+ *
+ * 記録入力は「種目一覧 → 種目を選んで入力」の組み立て。入力欄の検証は selection で
+ * 種目を開いた状態で行う (省略時は自由形50m)。
  *
  * このテストは Developer 実装着地後の RecordClient.tsx / buildStyleEntries.ts
  * (applyEntryAdditionsToStyleEntries) / entryRecordMerge.ts (shared,
@@ -16,7 +19,7 @@
  */
 
 import React from "react";
-import { renderWithQueryClient as render, screen, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
+import { renderWithQueryClient as render, screen, waitFor, cleanup } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi } from "vitest";
 import type { Style } from "@apps/shared/types";
 import { formatTimeBest } from "@/utils/formatters";
@@ -82,7 +85,7 @@ type RecordClientPropsFull = Parameters<typeof RecordClient>[0];
 
 function renderRecordClient(
   overrides: Partial<
-    Pick<RecordClientPropsFull, "existingRecords" | "entries" | "styles" | "members">
+    Pick<RecordClientPropsFull, "existingRecords" | "entries" | "styles" | "members" | "selection">
   >,
 ) {
   return render(
@@ -96,6 +99,7 @@ function renderRecordClient(
       styles={[STYLE_FREE_50, STYLE_BREAST_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={{ kind: "individual", styleId: 2 }}
       {...overrides}
     />,
   );
@@ -281,20 +285,22 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
       expect(values).toContain(formatTimeBest(27.5)); // 太郎: 既存タイム保持
       expect(values).toContain(""); // 次郎: 未入力のまま (entry_time が紛れ込んでいない)
 
-      // 種目カードは自由形50mの1枚のまま (別カードに分裂していない)
-      expect(screen.getAllByText(/^entryHeader/)).toHaveLength(1);
+      // 自由形50mの組は1つのまま (別の組に分裂していない。組の見出しは2組以上のときだけ出る)
+      expect(screen.queryAllByText(/^record\.groupNumber/)).toHaveLength(0);
     },
   );
 
   it(
-    "エントリーが0件の大会では、記録が無い場合と同様に空行1件のまま表示される" +
-      "(仕様#6: エントリー0件は現行どおり)",
+    "エントリーが0件の大会では、種目一覧のカードは全て未入力・エントリー0人で、" +
+      "種目を開いても入力行は無い (仕様#6: エントリー0件は現行どおり)",
     () => {
+      const { unmount } = renderRecordClient({ existingRecords: [], entries: [], selection: null });
+      expect(screen.queryAllByText(/^recordList\.filledCount/)).toHaveLength(0);
+      expect(screen.queryAllByText(/^recordList\.entryCountLabel/)).toHaveLength(0);
+      unmount();
+
       renderRecordClient({ existingRecords: [], entries: [] });
-      expect(screen.getAllByText(/^entryHeader/)).toHaveLength(1);
-      const select = screen.getByRole("combobox") as unknown as HTMLSelectElement;
-      expect(select.value).toBe("");
-      // エントリー由来の入力欄は無い (種目未選択のプレースホルダーのみ)
+      // エントリー由来の入力欄は無い (メンバー未選択)
       expect(screen.queryAllByPlaceholderText("timePlaceholder")).toHaveLength(0);
     },
   );
@@ -327,6 +333,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
 
       renderRecordClient({
         existingRecords: relayRecords,
+        selection: { kind: "relay", relayEventId: "relay_4x50_free" },
         // リレー4名 + 次郎(平泳ぎのエントリー対象) を選択肢に含める
         // (select の value がどの <option> とも一致しないと jsdom は空文字にフォールバック
         // するため、リレーメンバーを members にも含めておく必要がある)
@@ -350,19 +357,28 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         ],
       });
 
-      // 種目カードは「リレー1枚 + 平泳ぎ1枚」の計2枚
-      const headers = await screen.findAllByText(/^entryHeader/);
-      expect(headers).toHaveLength(2);
-
       // リレーの4名の select (泳者選択) はそのまま4件残っている (user-a〜user-d が
       // 割り当てられた select が4件存在する = 4レグ構造が保たれている)
-      const allCombos = screen.getAllByRole("combobox") as unknown as HTMLSelectElement[];
+      const allCombos = (await screen.findAllByRole(
+        "combobox",
+      )) as unknown as HTMLSelectElement[];
       const relayLegSelects = allCombos.filter((s) =>
         ["user-a", "user-b", "user-c", "user-d"].includes(s.value),
       );
       expect(relayLegSelects).toHaveLength(4);
+      // リレーの入力画面にはエントリー由来の行 (個人種目のタイム欄) が混ざらない
+      expect(screen.queryAllByPlaceholderText("timePlaceholder")).toHaveLength(0);
+      cleanup();
 
-      // 新規追加された平泳ぎカードのタイム入力欄は1件だけ、かつ未入力
+      // 平泳ぎ50mを開くと、エントリー由来の行が1件だけ、未入力で出る
+      renderRecordClient({
+        existingRecords: relayRecords,
+        members: [...activeMembers],
+        entries: [
+          { id: "entry-1", user_id: "user-2", style_id: 9, entry_time: 45.0, note: null, users: { id: "user-2", name: "次郎" } },
+        ],
+        selection: { kind: "individual", styleId: 9 },
+      });
       const timeInputs = screen.getAllByPlaceholderText(
         "timePlaceholder",
       ) as HTMLInputElement[];
@@ -408,6 +424,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
 
       renderRecordClient({
         existingRecords: relayRecords,
+        selection: { kind: "relay", relayEventId: "relay_4x50_free" },
         members: [
           ...activeMembers,
           { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0", gender: 0 } },
@@ -428,28 +445,41 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         ],
       });
 
-      // 実測どおり (entryRecordMerge.test.ts): リレー内選手への一致エントリーは
-      // リレー行の重複排除材料から除外され、別の個人種目カードとして新規追加される。
-      // カード数は「リレー1枚 + 新規個人カード1枚」の計2枚になる
-      const headers = await screen.findAllByText(/^entryHeader/);
-      expect(headers).toHaveLength(2);
+      // リレーの入力画面: 4レグ構造は変化せず (user-a〜user-d の4件の select が健在)、
+      // 参考ラベルは1件も出ない (リレーの4レグには参考ラベルを出す場所が無い)
+      const allCombos = (await screen.findAllByRole(
+        "combobox",
+      )) as unknown as HTMLSelectElement[];
+      const relayLegSelects = allCombos.filter((s) =>
+        ["user-a", "user-b", "user-c", "user-d"].includes(s.value),
+      );
+      expect(relayLegSelects).toHaveLength(4);
+      expect(
+        screen.queryAllByText((_, element) =>
+          (element?.textContent ?? "").startsWith("entryTimeLabel"),
+        ),
+      ).toHaveLength(0);
+      cleanup();
 
-      // 参考ラベルは site-wide でちょうど1件だけ表示され、かつその値は新規追加された
-      // 個人カード側のエントリー (26.0秒) のものである。もしリレー4レグの側にも
-      // 参考ラベルが付いてしまうと、この件数は2件以上になるはずなので、
-      // 「1件だけ」であることがリレー行への非表示を裏付ける
+      // 実測どおり (entryRecordMerge.test.ts): リレー内選手への一致エントリーは
+      // リレー行の重複排除材料から除外され、自由形50m (個人種目) の行として新規追加される。
+      // その個人種目の入力画面には参考ラベル (26.0秒) がちょうど1件出る
+      renderRecordClient({
+        existingRecords: relayRecords,
+        members: [
+          ...activeMembers,
+          { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0", gender: 0 } },
+        ],
+        entries: [
+          { id: "entry-relay-a", user_id: "user-a", style_id: 2, entry_time: 26.0, note: null, users: { id: "user-a", name: "選手0" } },
+        ],
+        selection: { kind: "individual", styleId: 2 },
+      });
       const referenceLabels = screen.getAllByText(
         (_, element) => element?.textContent?.replace(/\s+/g, " ").trim() ===
           `entryTimeLabel ${formatTimeBest(26.0)}`,
       );
       expect(referenceLabels).toHaveLength(1);
-
-      // リレーの4レグ構造も変化しない (user-a〜user-d の4件の select が健在)
-      const allCombos = screen.getAllByRole("combobox") as unknown as HTMLSelectElement[];
-      const relayLegSelects = allCombos.filter((s) =>
-        ["user-a", "user-b", "user-c", "user-d"].includes(s.value),
-      );
-      expect(relayLegSelects).toHaveLength(4);
     },
   );
 });

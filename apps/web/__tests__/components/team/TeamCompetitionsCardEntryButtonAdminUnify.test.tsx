@@ -10,11 +10,9 @@
  *   `entryBulkInputButton`/「エントリー入力」への参照は存在しない)。
  * - admin が最初に見るカードボタンは「エントリー」(非admin と同じラベル・同じ
  *   TeamCompetitionEntryModal を開く) になる。
- * - R9 (実測, `TeamCompetitions.tsx:1090-1104`):
- *   `(isAdmin || !isCompetitionDateInPast(competition.date))` — 統合後も admin は
- *   過去日でも「エントリー」ボタンを見られる (旧・撤去済みボタンが isAdmin のみで
- *   ガードされ日付制限が無かったことと対称にする措置。過去大会への代理入力到達能力を
- *   維持するための意図的な設計であり、Reviewer 指摘の Critical はこの R9 で解消済み)。
+ * - R9 は swimhub-tasks #60 (2026-11-28) で廃止: mobile と同じく admin も
+ *   「明日以降の大会はエントリー、今日・過去の大会は記録入力」だけを出す
+ *   (`isEntryTabVisible(competition.date)`)。代理エントリーは受付中の未来の大会だけで行う。
  *
  * 【既存テストとの関係 (QA Phase A 棚卸し結果)】
  * `TeamCompetitionsEntryButtonPastDate.test.tsx:168-183` ([V-06]) は
@@ -98,7 +96,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions — 大会カードのエントリーボタン統一 (admin/非admin 同一導線, web)", () => {
   beforeEach(() => {
@@ -177,9 +176,8 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
       );
     });
 
-    // R9 (実測): admin は過去日でも「エントリー」ボタンが見える (代理入力への到達能力維持)。
-    // 非admin は過去日で従来どおり非表示 (TeamCompetitionsEntryButtonPastDate.test.tsx [V-01] と同じ)。
-    it("[R9/非退行] admin は過去日でも「エントリー」ボタンが表示される (過去大会への到達能力維持)", async () => {
+    // swimhub-tasks #60: admin も過去日は「エントリー」を出さず「記録入力」だけを出す (mobile と同じ)
+    it("admin は過去日には「エントリー」ボタンを出さず「記録入力」を出す", async () => {
       vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
@@ -189,7 +187,8 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
       await screen.findByText("admin過去大会検証");
-      expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+      expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+      expect(screen.getByRole("button", { name: "記録入力" })).toBeDefined();
     });
   });
 });

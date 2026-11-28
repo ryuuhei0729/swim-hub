@@ -19,8 +19,9 @@
  *              usePracticeStore の状態 (isOpen=true) が閉じられる (mount 時 closeAll)
  *   [V-D4P-04] 安全策: TeamPractices アンマウント時、usePracticeStore が閉じられる
  *              (unmount 時 closeAll。他画面へ遷移してもモーダルが残留しない)
- *   [V-D4P-05] admin のカードには「記録追加」を出さない (admin のログ入力は
- *              「記録代理入力」ボタンから一括入力へ進む)
+ *   [V-D4P-05] 管理者ビューのカードには「記録追加」を出さない (admin のログ入力は
+ *              「記録代理入力」ボタンから一括入力へ進む。自分の分は利用者ビューで入力する。
+ *              swimhub-tasks#112)
  *
  * 【jsdom 描画リスクに関するメモ】
  * PracticeTabModal 自体は重量コンポーネント (usePracticeTabSave 等) なので、本テストの
@@ -93,7 +94,8 @@ vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "member-1" }, supabase: supabaseMock }),
 }));
 
-import TeamPractices from "@/components/team/TeamPractices";
+// 練習カードと操作は予定タブ (TeamSchedule) と同じ useTeamPracticeActions。一覧の取得はテスト用の描画側
+import { TeamPractices } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 const findAddLogButton = () =>
   screen.findByRole("button", { name: /練習に自分の記録を追加/ });

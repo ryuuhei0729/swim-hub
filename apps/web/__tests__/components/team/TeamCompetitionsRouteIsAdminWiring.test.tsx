@@ -86,7 +86,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions — routeIsAdmin 配線の検証 (符号反転・取り違え検出)", () => {
   afterEach(() => {

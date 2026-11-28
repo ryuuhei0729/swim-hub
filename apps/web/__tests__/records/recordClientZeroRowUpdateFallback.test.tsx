@@ -27,6 +27,7 @@ import {
   type RecordSaveSupabaseMock,
 } from "../utils/supabaseRecordSaveMock";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({ default: () => null }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
@@ -111,6 +112,7 @@ function renderRecordClient() {
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selectionOfFirstEvent(existingRecords, [STYLE_FREE_50])}
     />,
   );
 }
@@ -134,7 +136,7 @@ describe("[新High] 0行 UPDATE 検知時の INSERT フォールバック (web)"
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-heron?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-heron/competitions/comp-heron/records"),
     );
 
     const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
@@ -156,7 +158,7 @@ describe("[新High] 0行 UPDATE 検知時の INSERT フォールバック (web)"
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-heron?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-heron/competitions/comp-heron/records"),
     );
 
     expect(fake.updateCalls.filter((c) => c.table === "records")).toHaveLength(1);

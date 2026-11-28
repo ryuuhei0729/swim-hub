@@ -1,198 +1,69 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
-import { AttendanceEditState } from "../hooks/useAttendanceEdit";
-import { getStatusBadge } from "./StatusBadge";
-import { parseISO } from "date-fns";
-import { formatDate } from "@apps/shared/utils/date";
-import { resolveAttendanceStatus } from "@apps/shared/utils/attendanceStatus";
+import { addMonths, format } from "date-fns";
 import { useTranslations } from "next-intl";
+import type { MyAttendanceItem, MyAttendanceMonthGroup } from "@/utils/teamAttendance";
+import type { MyAnswerChange } from "../hooks/useMyAttendanceSaver";
+import { AttendanceAnswerRow } from "./AttendanceAnswerRow";
 
 interface RecentAttendanceProps {
-  events: TeamEvent[];
-  editStates: Record<string, AttendanceEditState>;
-  savingEventIds: Set<string>;
-  loading: boolean;
-  onStatusChange: (eventId: string, status: "present" | "absent" | "other" | null) => void;
-  onNoteChange: (eventId: string, note: string) => void;
-  onSave: (eventId: string) => void;
-  attendances: TeamAttendanceWithDetails[];
+  /** 月ごとにまとめた一覧 (過去のイベントは含まない) */
+  months: MyAttendanceMonthGroup[];
+  onSave: (item: MyAttendanceItem, change: MyAnswerChange) => void;
+  onOpen: (item: MyAttendanceItem) => void;
 }
 
-const NOTE_MAX_LENGTH = 500;
+/** 直近の出欠 (今月・来月)。今月は今日以降のイベントだけ。押した時点で保存する */
+export const RecentAttendance = React.memo(({ months, onSave, onOpen }: RecentAttendanceProps) => {
+  const t = useTranslations("teams");
+  const [selectedTab, setSelectedTab] = useState<"current" | "next">("current");
 
-export const RecentAttendance = React.memo(
-  ({
-    events,
-    editStates,
-    savingEventIds,
-    loading,
-    onStatusChange,
-    onNoteChange,
-    onSave,
-    attendances,
-  }: RecentAttendanceProps) => {
-    const t = useTranslations("teams");
-    const tDashboard = useTranslations("dashboard");
-    const [selectedTab, setSelectedTab] = useState<"current" | "next">("current");
+  const items = useMemo(() => {
+    const now = new Date();
+    const key = format(selectedTab === "current" ? now : addMonths(now, 1), "yyyy-MM");
+    return months.find((month) => month.key === key)?.items ?? [];
+  }, [months, selectedTab]);
 
-    const filteredEvents = useMemo(() => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
-      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+  return (
+    <div className="mt-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("recentAttendance.title")}</h2>
 
-      return events.filter((event) => {
-        const eventDate = parseISO(event.date);
-        const eventYear = eventDate.getFullYear();
-        const eventMonth = eventDate.getMonth() + 1;
-
-        if (selectedTab === "current") {
-          return eventYear === currentYear && eventMonth === currentMonth;
-        } else {
-          return eventYear === nextYear && eventMonth === nextMonth;
-        }
-      });
-    }, [events, selectedTab]);
-
-    if (loading) {
-      return (
-        <div className="text-center py-6">
-          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-          <p className="mt-1.5 text-sm text-gray-500">{t("attendance.loading")}</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("recentAttendance.title")}</h2>
-
-        <div className="flex border-b border-gray-200 mb-4">
+      <div className="flex border-b border-gray-200 mb-4">
+        {(["current", "next"] as const).map((tab) => (
           <button
-            onClick={() => setSelectedTab("current")}
+            key={tab}
+            type="button"
+            onClick={() => setSelectedTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              selectedTab === "current"
+              selectedTab === tab
                 ? "border-blue-500 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t("recentAttendance.thisMonth")}
+            {tab === "current" ? t("recentAttendance.thisMonth") : t("recentAttendance.nextMonth")}
           </button>
-          <button
-            onClick={() => setSelectedTab("next")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              selectedTab === "next"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {t("recentAttendance.nextMonth")}
-          </button>
-        </div>
-
-        {filteredEvents.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-6 text-center">
-            <p className="text-sm text-gray-600">{t("recentAttendance.empty")}</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
-            {filteredEvents.map((event) => {
-              const editState = editStates[event.id] || { status: null, note: "" };
-              const isSaving = savingEventIds.has(event.id);
-              const existingAttendance = attendances.find((a) => {
-                if (event.type === "practice") {
-                  return a.practice_id === event.id;
-                } else {
-                  return a.competition_id === event.id;
-                }
-              });
-              const hasChanges = existingAttendance
-                ? existingAttendance.status !== editState.status ||
-                  (existingAttendance.note || "").trim() !== (editState.note || "").trim()
-                : editState.status !== null || (editState.note || "").trim() !== "";
-
-              return (
-                <div
-                  key={`${event.type}-${event.id}`}
-                  className={`p-4 hover:bg-gray-50 ${
-                    event.type === "competition" ? "bg-purple-50" : "bg-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                        {formatDate(event.date, "shortWithWeekday")}
-                      </span>
-                      <h3 className="text-xs font-medium text-gray-900">
-                        {event.type === "competition" ? event.title : t("monthDetail.practiceLabel")}
-                      </h3>
-                      {event.place && <span className="text-xs text-gray-600">@{event.place}</span>}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <div>{getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}</div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => onStatusChange(event.id, "present")}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                            editState.status === "present"
-                              ? "bg-green-100 text-green-800 border-2 border-green-500"
-                              : "bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent"
-                          }`}
-                        >
-                          {t("attendanceStatus.present")}
-                        </button>
-                        <button
-                          onClick={() => onStatusChange(event.id, "absent")}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                            editState.status === "absent"
-                              ? "bg-red-100 text-red-800 border-2 border-red-500"
-                              : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
-                          }`}
-                        >
-                          {t("attendanceStatus.absent")}
-                        </button>
-                        <button
-                          onClick={() => onStatusChange(event.id, "other")}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                            editState.status === "other"
-                              ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-500"
-                              : "bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent"
-                          }`}
-                        >
-                          {tDashboard("attendance.other")}
-                        </button>
-                        <input
-                          type="text"
-                          value={editState.note}
-                          onChange={(e) => onNoteChange(event.id, e.target.value)}
-                          placeholder={t("recentAttendance.notePlaceholder")}
-                          maxLength={NOTE_MAX_LENGTH}
-                          className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button
-                          onClick={() => onSave(event.id)}
-                          disabled={isSaving || !hasChanges}
-                          className={`px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors ${
-                            isSaving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          {isSaving ? t("monthDetail.saving") : t("recentAttendance.saveButton")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        ))}
       </div>
-    );
-  },
-);
+
+      {items.length === 0 ? (
+        <div className="bg-gray-50 rounded-lg p-6 text-center">
+          <p className="text-sm text-gray-600">{t("recentAttendance.empty")}</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
+          {items.map((item) => (
+            <AttendanceAnswerRow
+              key={`${item.event.type}-${item.event.id}`}
+              item={item}
+              onSave={onSave}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 RecentAttendance.displayName = "RecentAttendance";

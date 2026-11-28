@@ -147,7 +147,8 @@ vi.mock("@/components/forms/CompetitionBasicForm", () => ({
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionRecordsModal", () => ({ default: () => null }));
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions — 管理者向け編集・削除 (D3)", () => {
   beforeEach(() => {

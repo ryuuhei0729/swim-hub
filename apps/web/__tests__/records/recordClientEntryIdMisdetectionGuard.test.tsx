@@ -89,6 +89,7 @@ function renderRecordClient(
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={{ kind: "individual", styleId: 2 }}
       {...overrides}
     />,
   );
@@ -121,7 +122,7 @@ describe("[V-05w] entries.id 由来行の誤 UPDATE 防止", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     // entries.id ("entry-solo-1") は既存 records.id 集合に無いので INSERT される
@@ -173,7 +174,7 @@ describe("[V-05w] entries.id 由来行の誤 UPDATE 防止", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     // 既存の太郎の行だけが UPDATE され、次郎 (entries 由来) は INSERT される
@@ -227,7 +228,7 @@ describe("[V-05w] entries.id 由来行の誤 UPDATE 防止", () => {
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     // 太郎 (既存 records.id) だけが UPDATE 対象、次郎 (entries.id) は

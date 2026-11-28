@@ -132,7 +132,8 @@ vi.mock("../../../components/team/TeamPracticeDetailModal", () => ({
   default: () => null,
 }));
 
-import TeamPractices from "@/components/team/TeamPractices";
+// 練習カードと操作は予定タブ (TeamSchedule) と同じ useTeamPracticeActions。一覧の取得はテスト用の描画側
+import { TeamPractices } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamPractices — 管理者向け編集・削除 (D3)", () => {
   beforeEach(() => {

@@ -1240,11 +1240,6 @@
       "Fly": "Fly",
       "IM": "IM"
     },
-    "categories": {
-      "Swim": "配合游",
-      "Pull": "划手",
-      "Kick": "打腿"
-    },
     "form": {
       "dateLabel": "日期",
       "datePlaceholder": "YYYY-MM-DD",
@@ -1826,10 +1821,6 @@
       "splitTimePlaceholder": "2.00.00",
       "subtitle": "可按项目录入各成员的成绩",
       "competitionFallback": "比赛",
-      "entryHeader": "项目 {num}",
-      "eventLabel": "项目",
-      "selectPlaceholder": "请选择",
-      "individualEvents": "个人项目",
       "selectSwimmer": "选择泳者",
       "timePlaceholder": "2.00.00",
       "distancePlaceholder": "距离",
@@ -1845,8 +1836,6 @@
         "atLeastOneRecord": "请至少输入一条成绩"
       },
       "error": {
-        "splitDeleteFailed": "删除分段成绩失败",
-        "recordDeleteFailed": "删除现有成绩失败",
         "saveFailed": "保存时发生错误。请重试。"
       },
       "errorVideoUploadUrlFailed": "{name}：获取上传 URL 失败（{status}）",
@@ -3034,11 +3023,6 @@
       "description": "已加入的团队列表"
     },
     "pending": {
-      "sectionTitle": "待审核（{count}项）",
-      "loading": "正在加载...",
-      "inviteCodeLabel": "邀请码：",
-      "waitingWithCode": "正在等待审核",
-      "waitingNoCode": "正在等待审核",
       "appliedAtLabel": "申请日期："
     },
     "empty": {
@@ -3066,14 +3050,6 @@
     },
     "loading": {
       "text": "正在加载..."
-    },
-    "tabs": {
-      "attendance": "出勤",
-      "members": "成员",
-      "practices": "训练",
-      "competitions": "比赛",
-      "rankings": "排行榜",
-      "settings": "设置"
     },
     "createModal": {
       "errorTitle": "发生错误",
@@ -3114,19 +3090,11 @@
       "confirmMessageToSwimmer": "确定将{name}设为选手吗？"
     },
     "practices": {
-      "title": "团队训练记录（{count}项）",
       "addButton": "添加训练记录",
-      "empty": "暂无训练记录",
-      "error": "获取团队训练信息失败",
-      "retry": "重试",
       "card": {
         "detailButton": "详情",
         "manageButton": "管理",
         "noLogs": "无记录",
-        "logsCount": "已有{count}组训练记录",
-        "noLogsLabel": "无训练记录",
-        "clickToEdit": "点击编辑",
-        "clickToAdd": "点击添加",
         "editAriaLabel": "编辑{date}的训练记录",
         "addAriaLabel": "添加{date}的训练记录",
         "viewAriaLabel": "查看{date}的训练记录",
@@ -3149,11 +3117,7 @@
       "noLogs": "暂无训练记录"
     },
     "competitions": {
-      "title": "团队比赛（{count}项）",
       "addButton": "添加比赛",
-      "empty": "暂无比赛",
-      "error": "获取团队比赛信息失败",
-      "retry": "重试",
       "fallbackTitle": "比赛",
       "card": {
         "entryButton": "报名",
@@ -3162,13 +3126,7 @@
         "editButton": "编辑",
         "deleteButton": "删除",
         "entryBulkInputButton": "录入报名",
-        "recordCount": "已登记记录：{count}项",
-        "tapForDetails": "点击查看详情",
-        "noRecords": "暂无登记记录",
-        "addable": "可添加",
-        "viewRecordsAriaLabel": "查看{title}的记录",
-        "entryCount": "报名：{count} 条",
-        "createdBy": "创建者："
+        "viewRecordsAriaLabel": "查看{title}的记录"
       },
       "entryStatus": {
         "before": "报名前",
@@ -3396,7 +3354,6 @@
     "attendance": {
       "statusOpen": "提交受理中",
       "statusClosed": "提交已截止",
-      "statusUnset": "未设置",
       "none": "无",
       "loading": "正在加载...",
       "error": "发生错误",
@@ -3411,9 +3368,7 @@
     "memberStats": {
       "title": "成员管理（{count}人）",
       "includeRelay": "包含接力",
-      "totalLabel": "成员总数：{count}人",
-      "adminLabel": "管理员：{count}人",
-      "userLabel": "用户：{count}人"
+      "totalLabel": "成员总数：{count}人"
     },
     "membersTimeTable": {
       "col": {
@@ -3465,20 +3420,15 @@
     "recentAttendance": {
       "title": "近期出勤",
       "empty": "没有活动",
-      "saveButton": "保存",
       "thisMonth": "本月",
-      "nextMonth": "下月",
-      "notePlaceholder": "请输入备注（可选）"
+      "nextMonth": "下月"
     },
     "monthDetail": {
       "title": "月度出勤",
       "close": "关闭",
-      "saveButton": "保存",
-      "saving": "正在保存...",
-      "error": "发生错误",
-      "loading": "正在加载...",
       "practiceLabel": "训练",
-      "notePlaceholder": "请输入备注（可选）"
+      "notePlaceholder": "请输入备注（可选）",
+      "openAttendanceAriaLabel": "查看{date} {title}的出勤情况"
     },
     "attendanceStatus": {
       "present": "出席",
@@ -3511,18 +3461,8 @@
     "attendanceStatusHook": {
       "loadError": "获取出勤信息失败"
     },
-    "monthDetailHook": {
-      "loadError": "获取出勤信息失败"
-    },
     "monthListHook": {
       "loadError": "获取月份列表失败"
-    },
-    "recentAttendanceHook": {
-      "loadError": "获取近期出勤信息失败",
-      "saveSuccess": "已保存",
-      "confirmEditAfterDeadline": "已过提交截止时间（{date}）。编辑时间将自动添加到备注中。确定保存吗？",
-      "authRequired": "需要身份验证",
-      "saveError": "保存出勤信息失败"
     },
     "entryCompetitionCard": {
       "placeLabel": "地点：",
@@ -3622,7 +3562,8 @@
       "filledCountIndividual": "{n}人",
       "filledCountRelay": "{n}队",
       "emptyLabel": "未输入",
-      "entryCountLabel": "（{n}人报名）"
+      "entryCountLabel": "（{n}人报名）",
+      "backToList": "返回项目列表"
     },
     "practiceForm": {
       "title": "添加训练记录",
@@ -3868,28 +3809,8 @@
     "badge": {
       "admin": "管理员"
     },
-    "client": {
-      "notFound": {
-        "title": "未找到团队",
-        "description": "指定的团队不存在，或你没有访问权限。"
-      },
-      "unauthorized": {
-        "title": "没有访问权限",
-        "description": "访问此页面需要管理员权限。"
-      },
-      "inviteCodeLabel": "邀请码："
-    },
     "tabs": {
-      "attendance": "出勤",
-      "announcements": "公告",
-      "members": "成员",
-      "groups": "分组",
-      "practices": "训练",
-      "competitions": "比赛",
-      "rankings": "排行榜",
-      "goals": "目标",
-      "bulkRegister": "批量登记",
-      "settings": "设置"
+      "bulkRegister": "批量登记"
     },
     "settings": {
       "title": "团队设置",
@@ -4108,15 +4029,14 @@
     "eventListItem": {
       "openButton": "受理中",
       "closedButton": "已截止",
-      "saveButton": "保存",
-      "saving": "保存中…"
+      "confirmOpen": "是否开始受理该活动的出勤申报？",
+      "confirmClose": "是否截止该活动的出勤申报？"
     },
     "bulkChange": {
       "title": "批量修改出勤状态",
       "empty": "暂无活动",
       "statusOpen": "受理中",
       "statusClosed": "已截止",
-      "statusUnset": "未设置",
       "competitionLabel": "（比赛）",
       "openButton": "设为受理中",
       "closedButton": "设为已截止"
@@ -4295,8 +4215,7 @@
       "modeTabManual": "手动输入"
     },
     "common": {
-      "close": "关闭",
-      "copyTitle": "复制"
+      "close": "关闭"
     },
     "bulkRegisterHook": {
       "invalidFileType": "请选择 Excel 文件（.xlsx 或 .xls）",
@@ -4584,7 +4503,7 @@
       "cancel": "取消",
       "helpTitle": "成绩输入技巧",
       "helpBodyBasic": "用非数字字符（. - : 等）分隔数字进行输入。\n用“.”分隔最方便，只用数字键盘就能输入。\n例如：“1.23.4”→ 1:23.4，“2.00.00”→ 2:00.00，“31-2”→ 31.2，“1分12秒3”→ 1:12.3。",
-      "helpBody": "用非数字字符（. - : 等）分隔数字进行输入。\n用“.”分隔最方便，只用数字键盘就能输入。\n例如：“1.23.4”→ 1:23.4，“2.00.00”→ 2:00.00，“31-2”→ 31.2，“1分12秒3”→ 1:12.3。\n\n在前一格输入“33-2”后，下一格只需输入“3-2”即可自动补全为“33.2”（沿用十位数字）。清空该格后将不再沿用。"
+      "helpBody": "用非数字字符（. - : 等）分隔数字进行输入。\n用“.”分隔最方便，只用数字键盘就能输入。\n例如：“1.23.4”→ 1:23.4，“2.00.00”→ 2:00.00，“31-2”→ 31.2，“1分12秒3”→ 1:12.3。\n\n从第2趟开始，打开输入框时会预先填入上一趟的十位数字（超过1分钟时也包括分钟）。只需输入剩余数字，小数点会自动填入（例如：上一趟为“33.2”时，输入框以“3”开头，输入“45”即为“34.5”）。输入“3-2”这样的分隔符时，仍会沿用十位数字并识别为“33.2”。如需重新输入，请用退格键删除预填的数字。"
     },
     "record": {
       "title_create": "添加记录",

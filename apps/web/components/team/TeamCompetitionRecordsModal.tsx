@@ -18,7 +18,7 @@ import BestTimeBadge from "@/components/ui/BestTimeBadge";
 import { TeamRelayRecordsAPI } from "@apps/shared/api/teams/relayRecords";
 import { useQuery } from "@tanstack/react-query";
 import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
-import { calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
+import { RELAY_KIND_VALUES, calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
 import type { RelayRecordWithLegs } from "@apps/shared/types";
 import RecordFeedbackCell from "@/components/record-feedback/RecordFeedbackCell";
 import { useRecordFeedbackSummaries } from "@/components/record-feedback/useRecordFeedbackSummaries";
@@ -303,8 +303,19 @@ export default function TeamCompetitionRecordsModal({
     return ids;
   }, [relayRecords]);
 
+  // mobile (apps/mobile/utils/teamCompetitionRecords.ts の groupRelayRecordsByEvent) と同じ並び:
+  // リレーの種類 (RELAY_KIND_VALUES の順: free → medley) → 1泳者あたりの距離の昇順でまとめ、
+  // その中で合計タイムの速い順に並べる
   const sortedRelayRecords = useMemo(
-    () => [...relayRecords].sort((a, b) => a.totalTime - b.totalTime),
+    () =>
+      [...relayRecords].sort((a, b) => {
+        const kindDiff =
+          RELAY_KIND_VALUES.indexOf(a.relayKind) - RELAY_KIND_VALUES.indexOf(b.relayKind);
+        if (kindDiff !== 0) return kindDiff;
+        const distanceDiff = a.legDistance - b.legDistance;
+        if (distanceDiff !== 0) return distanceDiff;
+        return a.totalTime - b.totalTime;
+      }),
     [relayRecords],
   );
 

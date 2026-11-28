@@ -1240,11 +1240,6 @@
       "Fly": "Fly",
       "IM": "IM"
     },
-    "categories": {
-      "Swim": "스윔",
-      "Pull": "풀",
-      "Kick": "킥"
-    },
     "form": {
       "dateLabel": "날짜",
       "datePlaceholder": "YYYY-MM-DD",
@@ -1826,10 +1821,6 @@
       "splitTimePlaceholder": "2.00.00",
       "subtitle": "종목별로 멤버의 기록을 입력할 수 있습니다",
       "competitionFallback": "대회",
-      "entryHeader": "종목 {num}",
-      "eventLabel": "종목",
-      "selectPlaceholder": "선택해 주세요",
-      "individualEvents": "개인 종목",
       "selectSwimmer": "영자 선택",
       "timePlaceholder": "2.00.00",
       "distancePlaceholder": "거리",
@@ -1845,8 +1836,6 @@
         "atLeastOneRecord": "기록을 하나 이상 입력해 주세요"
       },
       "error": {
-        "splitDeleteFailed": "스플릿 기록 삭제에 실패했습니다",
-        "recordDeleteFailed": "기존 기록 삭제에 실패했습니다",
         "saveFailed": "저장 중 오류가 발생했습니다. 다시 시도해 주세요."
       },
       "errorVideoUploadUrlFailed": "{name}: 업로드 URL 가져오기에 실패했습니다 ({status})",
@@ -3034,11 +3023,6 @@
       "description": "참가 중인 팀 목록"
     },
     "pending": {
-      "sectionTitle": "승인 대기 ({count}건)",
-      "loading": "불러오는 중...",
-      "inviteCodeLabel": "초대 코드:",
-      "waitingWithCode": "현재 승인 대기 중입니다",
-      "waitingNoCode": "현재 승인 대기 중입니다",
       "appliedAtLabel": "신청일:"
     },
     "empty": {
@@ -3066,14 +3050,6 @@
     },
     "loading": {
       "text": "불러오는 중..."
-    },
-    "tabs": {
-      "attendance": "출결",
-      "members": "멤버",
-      "practices": "연습",
-      "competitions": "대회",
-      "rankings": "랭킹",
-      "settings": "설정"
     },
     "createModal": {
       "errorTitle": "오류가 발생했습니다",
@@ -3114,19 +3090,11 @@
       "confirmMessageToSwimmer": "{name}님을 선수로 설정하시겠습니까?"
     },
     "practices": {
-      "title": "팀 연습 기록 ({count}건)",
       "addButton": "연습 기록 추가",
-      "empty": "연습 기록이 없습니다",
-      "error": "팀 연습 정보를 불러오지 못했습니다",
-      "retry": "다시 시도",
       "card": {
         "detailButton": "상세",
         "manageButton": "관리",
         "noLogs": "로그 없음",
-        "logsCount": "{count}세트의 연습 기록 있음",
-        "noLogsLabel": "연습 기록 없음",
-        "clickToEdit": "클릭하여 편집",
-        "clickToAdd": "클릭하여 추가",
         "editAriaLabel": "{date}의 연습 기록 편집",
         "addAriaLabel": "{date}의 연습 기록 추가",
         "viewAriaLabel": "{date}의 연습 기록 보기",
@@ -3149,11 +3117,7 @@
       "noLogs": "연습 로그가 없습니다"
     },
     "competitions": {
-      "title": "팀 대회 ({count}건)",
       "addButton": "대회 추가",
-      "empty": "대회가 없습니다",
-      "error": "팀 대회 정보를 불러오지 못했습니다",
-      "retry": "다시 시도",
       "fallbackTitle": "대회",
       "card": {
         "entryButton": "엔트리",
@@ -3162,13 +3126,7 @@
         "editButton": "편집",
         "deleteButton": "삭제",
         "entryBulkInputButton": "엔트리 입력",
-        "recordCount": "등록 기록: {count}건",
-        "tapForDetails": "탭하여 상세보기",
-        "noRecords": "등록된 기록 없음",
-        "addable": "추가 가능",
-        "viewRecordsAriaLabel": "{title}의 기록 보기",
-        "entryCount": "엔트리: {count}건",
-        "createdBy": "작성자:"
+        "viewRecordsAriaLabel": "{title}의 기록 보기"
       },
       "entryStatus": {
         "before": "접수 전",
@@ -3396,7 +3354,6 @@
     "attendance": {
       "statusOpen": "제출 접수 중",
       "statusClosed": "제출 마감",
-      "statusUnset": "미설정",
       "none": "없음",
       "loading": "불러오는 중...",
       "error": "오류가 발생했습니다",
@@ -3411,9 +3368,7 @@
     "memberStats": {
       "title": "멤버 관리 ({count}명)",
       "includeRelay": "이어받기 포함",
-      "totalLabel": "전체 멤버: {count}명",
-      "adminLabel": "관리자: {count}명",
-      "userLabel": "사용자: {count}명"
+      "totalLabel": "전체 멤버: {count}명"
     },
     "membersTimeTable": {
       "col": {
@@ -3465,20 +3420,15 @@
     "recentAttendance": {
       "title": "최근 출결",
       "empty": "이벤트가 없습니다",
-      "saveButton": "저장",
       "thisMonth": "이번 달",
-      "nextMonth": "다음 달",
-      "notePlaceholder": "비고를 입력하세요 (선택)"
+      "nextMonth": "다음 달"
     },
     "monthDetail": {
       "title": "월별 출결",
       "close": "닫기",
-      "saveButton": "저장",
-      "saving": "저장 중...",
-      "error": "오류가 발생했습니다",
-      "loading": "불러오는 중...",
       "practiceLabel": "연습",
-      "notePlaceholder": "비고를 입력하세요 (선택)"
+      "notePlaceholder": "비고를 입력하세요 (선택)",
+      "openAttendanceAriaLabel": "{date} {title}의 출결 현황 보기"
     },
     "attendanceStatus": {
       "present": "출석",
@@ -3511,18 +3461,8 @@
     "attendanceStatusHook": {
       "loadError": "출결 정보를 불러오지 못했습니다"
     },
-    "monthDetailHook": {
-      "loadError": "출결 정보를 불러오지 못했습니다"
-    },
     "monthListHook": {
       "loadError": "월 목록을 불러오지 못했습니다"
-    },
-    "recentAttendanceHook": {
-      "loadError": "최근 출결 정보를 불러오지 못했습니다",
-      "saveSuccess": "저장했습니다",
-      "confirmEditAfterDeadline": "제출 마감 후의 편집입니다 ({date}). 비고에 편집 일시가 자동으로 추가됩니다. 저장하시겠습니까?",
-      "authRequired": "인증이 필요합니다",
-      "saveError": "출결 정보 저장에 실패했습니다"
     },
     "entryCompetitionCard": {
       "placeLabel": "장소:",
@@ -3622,7 +3562,8 @@
       "filledCountIndividual": "{n}명",
       "filledCountRelay": "{n}팀",
       "emptyLabel": "미입력",
-      "entryCountLabel": "({n}명 엔트리)"
+      "entryCountLabel": "({n}명 엔트리)",
+      "backToList": "종목 목록으로 돌아가기"
     },
     "practiceForm": {
       "title": "연습 기록 추가",
@@ -3868,28 +3809,8 @@
     "badge": {
       "admin": "관리자"
     },
-    "client": {
-      "notFound": {
-        "title": "팀을 찾을 수 없습니다",
-        "description": "지정된 팀이 존재하지 않거나 접근 권한이 없습니다."
-      },
-      "unauthorized": {
-        "title": "접근 권한이 없습니다",
-        "description": "이 페이지에 접근하려면 관리자 권한이 필요합니다."
-      },
-      "inviteCodeLabel": "초대 코드:"
-    },
     "tabs": {
-      "attendance": "출결",
-      "announcements": "공지사항",
-      "members": "멤버",
-      "groups": "그룹",
-      "practices": "연습",
-      "competitions": "대회",
-      "rankings": "랭킹",
-      "goals": "목표",
-      "bulkRegister": "일괄 등록",
-      "settings": "설정"
+      "bulkRegister": "일괄 등록"
     },
     "settings": {
       "title": "팀 설정",
@@ -4108,15 +4029,14 @@
     "eventListItem": {
       "openButton": "접수 중",
       "closedButton": "마감",
-      "saveButton": "저장",
-      "saving": "저장 중..."
+      "confirmOpen": "이 이벤트의 출결 접수를 시작하시겠습니까?",
+      "confirmClose": "이 이벤트의 출결 접수를 마감하시겠습니까?"
     },
     "bulkChange": {
       "title": "출결 상태 일괄 변경",
       "empty": "이벤트가 없습니다",
       "statusOpen": "접수 중",
       "statusClosed": "마감",
-      "statusUnset": "미설정",
       "competitionLabel": "(대회)",
       "openButton": "접수 중으로 변경",
       "closedButton": "마감으로 변경"
@@ -4295,8 +4215,7 @@
       "modeTabManual": "직접 입력"
     },
     "common": {
-      "close": "닫기",
-      "copyTitle": "복사"
+      "close": "닫기"
     },
     "bulkRegisterHook": {
       "invalidFileType": "Excel 파일(.xlsx 또는 .xls)을 선택해 주세요",
@@ -4584,7 +4503,7 @@
       "cancel": "취소",
       "helpTitle": "기록 입력 팁",
       "helpBodyBasic": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.",
-      "helpBody": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.\n\n앞 칸에 \"33-2\"를 입력하면 다음 칸은 \"3-2\"만 입력해도 \"33.2\"로 자동 완성됩니다(앞 칸의 십의 자리를 이어받음). 칸을 비우면 이어받기가 초기화됩니다."
+      "helpBody": "숫자 사이를 숫자가 아닌 문자(. - : 등)로 구분해 입력합니다. 점(.)만으로도 구분되므로 숫자 키보드만으로 입력할 수 있습니다. 예: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1분12초3\" → 1:12.3.\n\n2번째부터는 입력칸을 열면 앞 기록의 십의 자리(1분 이상이면 분도)가 미리 들어가 있습니다. 나머지 숫자만 입력하면 소수점도 자동으로 들어갑니다(예: 앞 기록이 \"33.2\"이면 \"3\"이 들어간 상태에서 \"45\"를 입력하면 \"34.5\"). \"3-2\"처럼 구분 문자를 입력하면 십의 자리를 이어받아 \"33.2\"로 인식합니다. 처음부터 다시 입력하려면 Backspace로 이어받은 숫자를 지워 주세요."
     },
     "record": {
       "title_create": "기록 추가",

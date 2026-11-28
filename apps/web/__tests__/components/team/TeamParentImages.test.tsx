@@ -162,8 +162,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamPractices from "@/components/team/TeamPractices";
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 練習・大会カードと操作は予定タブ (TeamSchedule) と同じ useTeam*Actions。一覧の取得はテスト用の描画側
+import { TeamPractices, TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 beforeEach(() => {
   vi.clearAllMocks();

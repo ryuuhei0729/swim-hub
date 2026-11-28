@@ -6,28 +6,24 @@ import { parseISO, isValid } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 import { TeamEvent } from "@swim-hub/shared/types";
-import type { EventStatusEditState } from "@/types/admin-attendance";
+import { effectiveAttendanceStatus } from "@/utils/teamAttendance";
 
 interface EventListItemProps {
   event: TeamEvent;
-  editState: EventStatusEditState;
   isSaving: boolean;
-  hasChanges: boolean;
-  onStatusChange: (eventId: string, status: "open" | "closed") => void;
-  onSave: (eventId: string) => void;
+  /** 受付中 / 締切 を選んだとき (確認して即保存するのは呼び出し側) */
+  onStatusChange: (event: TeamEvent, status: "open" | "closed") => void;
   onClick: () => void;
 }
 
 /**
  * イベントリストアイテム（React.memoで再レンダリング最適化）
+ * 受付状態は選んだ時点で保存する (保存ボタンは無い)。未設定は受付中として表示する
  */
 export const EventListItem = memo(function EventListItem({
   event,
-  editState,
   isSaving,
-  hasChanges,
   onStatusChange,
-  onSave,
   onClick,
 }: EventListItemProps) {
   const t = useTranslations("teamsAdmin");
@@ -41,6 +37,8 @@ export const EventListItem = memo(function EventListItem({
     }
     return formatInTimeZone(parsed, "Asia/Tokyo", datePattern, { locale: dateLocale });
   };
+
+  const currentStatus = effectiveAttendanceStatus(event);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -74,39 +72,36 @@ export const EventListItem = memo(function EventListItem({
           {event.place && <span className="text-xs text-gray-600">@{event.place}</span>}
         </div>
 
-        {/* 右側：ステータス選択と保存ボタン */}
-        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => onStatusChange(event.id, "open")}
-            disabled={isSaving}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              editState.attendanceStatus === "open"
-                ? "bg-blue-100 text-blue-800 border-2 border-blue-500"
-                : "bg-gray-100 text-gray-600 hover:bg-blue-50 border-2 border-transparent"
-            } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {t("eventListItem.openButton")}
-          </button>
-          <button
-            onClick={() => onStatusChange(event.id, "closed")}
-            disabled={isSaving}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              editState.attendanceStatus === "closed"
-                ? "bg-red-100 text-red-800 border-2 border-red-500"
-                : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
-            } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {t("eventListItem.closedButton")}
-          </button>
-          <button
-            onClick={() => onSave(event.id)}
-            disabled={isSaving || !hasChanges}
-            className={`px-4 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors ${
-              isSaving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {isSaving ? t("eventListItem.saving") : t("eventListItem.saveButton")}
-          </button>
+        {/* 右側：受付状態の選択 (選んだら確認のうえ即保存) */}
+        <div
+          className="flex items-center gap-2 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {(["open", "closed"] as const).map((status) => {
+            const selected = currentStatus === status;
+            const activeClass =
+              status === "open"
+                ? "bg-blue-100 text-blue-800 border-blue-500"
+                : "bg-red-100 text-red-800 border-red-500";
+            const hoverClass = status === "open" ? "hover:bg-blue-50" : "hover:bg-red-50";
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => {
+                  if (!selected) onStatusChange(event, status);
+                }}
+                disabled={isSaving}
+                aria-pressed={selected}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border-2 ${
+                  selected ? activeClass : `bg-gray-100 text-gray-600 border-transparent ${hoverClass}`
+                } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {t(status === "open" ? "eventListItem.openButton" : "eventListItem.closedButton")}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

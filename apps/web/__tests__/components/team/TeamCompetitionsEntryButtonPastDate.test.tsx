@@ -14,10 +14,14 @@
  * (recordApi.getCompetitions() の個人スコープ問題) は
  * TeamCompetitionEntryModalOtherAdminCompetition.test.tsx で別途検証する。
  *
- * 実装前の現時点では isCompetitionDateInPast によるガードが存在しないため、
- * 過去日を隠す系のテスト ([V-01][V-06][V-07]) は RED になる想定。
- * 今日/未来/不正値でボタンが出続けるテスト ([V-02][V-03][V-04][V-05]) は
- * 現行実装でもガード無しで無条件表示のため GREEN のまま (回帰防止の非退行ケース)。
+ * 【swimhub-tasks #60 / #112 (2026-11-28) で仕様変更】
+ * mobile (apps/mobile/components/teams/TeamCompetitionList.tsx) と同じ出し分けにした:
+ *   - 明日以降の大会: 「エントリー」だけ (管理者も同じ)
+ *   - 今日・過去の大会 (と不正な日付): 「記録」だけ
+ *     (利用者ビューは「自分の記録を追加」、管理者ビューは「記録入力」= 代理入力)
+ *   - 管理者ビューには「自分の記録を追加」を出さない
+ * 判定は isEntryTabVisible (未来のみ true)。今日・不正値・null の扱いが変わったケース
+ * ([V-02][V-04][V-05][SC19]) は新仕様に合わせて書き換えている。
  */
 
 import React from "react";
@@ -96,7 +100,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions — 過去大会のエントリーボタン非表示", () => {
   beforeEach(() => {
@@ -121,7 +126,7 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
   });
 
-  it("[境界値 V-02] 今日の大会ではエントリーボタンが表示される (今日は過去に含めない)", async () => {
+  it("[境界値 V-02] 今日の大会ではエントリーボタンを出さず「自分の記録を追加」を出す", async () => {
     vi.mocked(useAuth).mockReturnValue(
       buildAuthContext({
         user: { id: "member-1" },
@@ -133,7 +138,8 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("本日大会V02");
-    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+    expect(screen.getByRole("button", { name: "自分の記録を追加" })).toBeDefined();
   });
 
   it("[境界値 V-03] 明日の大会ではエントリーボタンが表示される", async () => {
@@ -149,6 +155,8 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
 
     await screen.findByText("明日大会V03");
     expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+    // 明日以降の大会は記録の導線を出さない
+    expect(screen.queryByRole("button", { name: "自分の記録を追加" })).toBeNull();
   });
 
   // 【解消済み・履歴メモ】Phase A の QA 実測時点では TeamCompetitions.tsx:651 の
@@ -159,7 +167,7 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   // 現在この V-04/V-05 は GREEN (QA 実測で確認済み)。`competitions.date` は DB スキーマ上
   // `date NOT NULL` (initial_schema.sql:666) で実運用データでは到達不能なケースだが、
   // 防御的な境界値として引き続き検証する。
-  it("[境界値 V-04] date が不正フォーマットの場合はエントリーボタンが表示される (isCompetitionDateInPast=false)", async () => {
+  it("[境界値 V-04] date が不正フォーマットの場合はエントリーボタンを出さず記録の導線に倒す (isEntryTabVisible=false)", async () => {
     vi.mocked(useAuth).mockReturnValue(
       buildAuthContext({
         user: { id: "member-1" },
@@ -171,10 +179,11 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("不正日付大会V04");
-    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+    expect(screen.getByRole("button", { name: "自分の記録を追加" })).toBeDefined();
   });
 
-  it("[境界値 V-05] date が null (防御的: 型はstringだが実データ異常を想定) の場合はエントリーボタンが表示される", async () => {
+  it("[境界値 V-05] date が null (防御的: 型はstringだが実データ異常を想定) の場合はエントリーボタンを出さない", async () => {
     vi.mocked(useAuth).mockReturnValue(
       buildAuthContext({
         user: { id: "member-1" },
@@ -186,21 +195,13 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("日付なし大会V05");
-    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
   });
 
-  // 【QA Phase B 書き換え (PM 裁定 R9, Reviewer Critical 対応)】
-  // D4 で web カードから admin 専用「エントリー代理一括入力」ボタンを撤去した結果、
-  // admin が過去大会の代理一括入力ページへ到達できなくなる退行が生じていた
-  // (撤去前のボタンは isAdmin のみのガードで日付制限が無かったことを PM が実測確認)。
-  // Web Developer が `(isAdmin || !isCompetitionDateInPast(competition.date))`
-  // (`TeamCompetitions.tsx:1096`) に修正し、admin は過去日でも統合後の「エントリー」
-  // ボタン (→モーダル内「エントリーを代理入力」) から到達できるようにした。
-  // 旧テストは「admin でも過去日なら非表示」を pin していたが、これは新仕様
-  // (SC19: admin は表示 / SC20: 非admin は非表示) と正面から矛盾するため反転した。
-  // 「エントリー入力」ボタン (entryBulkInputButton) はカードから撤去済みで、その代替が
-  // この統合済み「エントリー」ボタンであるため、旧ボタン名でのアサーションは削除する。
-  it("[SC19] admin: 過去日でも「エントリー」ボタンが表示される (代理入力への到達能力を維持)", async () => {
+  // 【swimhub-tasks #60 で再変更】以前は admin だけ過去日でも「エントリー」を出していた (R9) が、
+  // mobile に合わせて admin も「明日以降はエントリー、今日・過去は記録入力」の出し分けにした。
+  // 管理者ビューには「自分の記録を追加」も出さない (#112)。
+  it("[SC19] admin: 過去日は「記録入力」だけを出す (エントリー・自分の記録を追加は出さない)", async () => {
     vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "admin-1" },
       supabase: buildSupabaseMock([
@@ -210,10 +211,38 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
     await screen.findByText("過去大会admin");
-    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
-
-    // 非退行: スコープ外の admin 専用ボタンは過去日でも消えない
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
     expect(screen.getByRole("button", { name: "記録入力" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "自分の記録を追加" })).toBeNull();
+  });
+
+  it("admin: 今日の大会も「記録入力」だけを出す", async () => {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: { id: "admin-1" },
+      supabase: buildSupabaseMock([
+        buildCompetitionRow({ date: TODAY_DATE, title: "本日大会admin" }),
+      ]),
+    }));
+    render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
+
+    await screen.findByText("本日大会admin");
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+    expect(screen.getByRole("button", { name: "記録入力" })).toBeDefined();
+  });
+
+  it("admin: 明日以降の大会は「エントリー」だけを出す (記録入力・自分の記録を追加は出さない)", async () => {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: { id: "admin-1" },
+      supabase: buildSupabaseMock([
+        buildCompetitionRow({ date: FUTURE_DATE, title: "明日大会admin" }),
+      ]),
+    }));
+    render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
+
+    await screen.findByText("明日大会admin");
+    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "記録入力" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "自分の記録を追加" })).toBeNull();
   });
 
   it("[SC20] 非admin: 過去日では「エントリー」ボタンが表示されない (従来どおり)", async () => {

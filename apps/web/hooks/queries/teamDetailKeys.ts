@@ -45,7 +45,7 @@ export const teamDetailKeys = {
   /** 承認済み・在籍中メンバー一覧 (メンバータブ) */
   approvedMembers: (teamId: string) =>
     [...teamKeys.members(teamId), "web", "approved"] as const,
-  /** グループ割り当て用の選択肢 (グループ管理タブ) */
+  /** グループ割り当て用の選択肢 (グループ管理) */
   selectableMembers: (teamId: string) =>
     [...teamKeys.members(teamId), "web", "selectable"] as const,
   /** 出欠状況モーダルの名簿 (fetchTeamMembers の形) */
@@ -54,7 +54,7 @@ export const teamDetailKeys = {
   /** 承認待ちメンバー一覧 (管理者) */
   pendingMemberList: (teamId: string) =>
     [...teamKeys.pendingMembers(teamId), "web", "list"] as const,
-  /** 承認待ち件数 (管理者タブのバッジ) */
+  /** 承認待ち件数 (管理者ビューのメンバータブのバッジ) */
   pendingMemberCount: (teamId: string) =>
     [...teamKeys.pendingMembers(teamId), "web", "count"] as const,
 
@@ -69,9 +69,17 @@ export const teamDetailKeys = {
     [...teamDetailKeys.groups(teamId), "members", groupId] as const,
 
   // --- 練習 -----------------------------------------------------------------
-  practicePages: (teamId: string) => [...teamKeys.practices(teamId), "web", "page"] as const,
-  practicePage: (teamId: string, page: number, pageSize: number) =>
-    [...teamDetailKeys.practicePages(teamId), page, pageSize] as const,
+  /**
+   * 予定タブの練習一覧 (今日以降・過去) の前方一致キー。保存・削除後はこれで丸ごと落とす。
+   * (名前は以前のページ分け時代のまま。記録入力ページ等からも参照されている)
+   */
+  practicePages: (teamId: string) => [...teamKeys.practices(teamId), "web", "list"] as const,
+  /** 今日以降の練習。today (yyyy-MM-dd) で今日と過去を分けるので、日付が変われば別キー */
+  practiceUpcoming: (teamId: string, today: string) =>
+    [...teamDetailKeys.practicePages(teamId), "upcoming", today] as const,
+  /** 過去の練習 (useInfiniteQuery) */
+  practicePast: (teamId: string, today: string) =>
+    [...teamDetailKeys.practicePages(teamId), "past", today] as const,
   /**
    * 練習詳細モーダル。練習ログ入力ページ (practiceId しか持たない経路) からも
    * 落とせるよう teamId を含めない (`teamKeys.attendanceByPractice` と同じ形)。
@@ -80,9 +88,13 @@ export const teamDetailKeys = {
     [...teamKeys.all, "web", "practiceDetail", practiceId] as const,
 
   // --- 大会 -----------------------------------------------------------------
-  competitionPages: (teamId: string) => [...teamKeys.competitions(teamId), "web", "page"] as const,
-  competitionPage: (teamId: string, page: number, pageSize: number) =>
-    [...teamDetailKeys.competitionPages(teamId), page, pageSize] as const,
+  /** 予定タブの大会一覧 (今日以降・過去) の前方一致キー (practicePages と同じ考え方) */
+  competitionPages: (teamId: string) =>
+    [...teamKeys.competitions(teamId), "web", "list"] as const,
+  competitionUpcoming: (teamId: string, today: string) =>
+    [...teamDetailKeys.competitionPages(teamId), "upcoming", today] as const,
+  competitionPast: (teamId: string, today: string) =>
+    [...teamDetailKeys.competitionPages(teamId), "past", today] as const,
   /** エントリー一覧モーダル。閲覧者のロール (isAdmin) を含むので userId もキーに入れる */
   competitionEntriesAll: (teamId: string, competitionId: string) =>
     [...teamKeys.competitions(teamId), "web", "entries", competitionId] as const,
@@ -94,13 +106,13 @@ export const teamDetailKeys = {
 
   // --- 出欠 -----------------------------------------------------------------
   /**
-   * 自分の月別出欠サマリ (出欠タブ)。自分の回答を数えるので userId、
-   * 「今月から1年分」なので基準月 (yyyy-MM) もキーに含める。
+   * 自分の出欠一覧 (出欠タブ)。自分の回答を持つので userId、
+   * 「今日から12か月先まで」なので基準日 (yyyy-MM-dd) もキーに含める。
    */
   myMonthListAll: (teamId: string) =>
     [...teamKeys.detail(teamId), "web", "myMonthList"] as const,
-  myMonthList: (teamId: string, userId: string | null, baseMonth: string) =>
-    [...teamDetailKeys.myMonthListAll(teamId), userId, baseMonth] as const,
+  myMonthList: (teamId: string, userId: string | null, baseDate: string) =>
+    [...teamDetailKeys.myMonthListAll(teamId), userId, baseDate] as const,
 } as const;
 
 /**
@@ -128,7 +140,7 @@ export const teamMemberBestTimesKeys = {
  * - 表示中 (active) のクエリ … invalidate して再取得し、完了まで待つ。
  * - 表示していない (inactive) クエリ … キャッシュごと捨てる。invalidate だけだと
  *   staleTime 0 で再マウント時に再取得はされるが、それが終わるまで「保存前の内容」が
- *   表示されてしまう (例: 2 ページ目で保存 → 1 ページ目に戻すと古い 1 ページ目が出る、
+ *   表示されてしまう (例: 過去の一覧を開いて保存 → 過去を閉じて開き直すと古い一覧が出る、
  *   閉じていた詳細モーダルを開き直すと保存前のログが出る)。捨てておけば次に表示する
  *   ときは以前と同じ 読み込み表示 → 最新の内容 になる。
  */
@@ -211,8 +223,7 @@ export function invalidateTeamAttendanceAnswerQueries(
   queryClient: QueryClient,
   events: ReadonlyArray<{ id: string; type: "practice" | "competition" }>,
 ) {
-  // 月別サマリ (重い) はここでは落とさない。呼び出し側が 1 か月分だけ再計算するか
-  // (updateMonthStatus)、一覧ごと再取得 (loadMonthList) しているため
+  // 自分の出欠一覧はここでは落とさない。回答した側が一覧のキャッシュを直接書き換えているため
   return Promise.all([
     ...events.map((event) =>
       queryClient.invalidateQueries({

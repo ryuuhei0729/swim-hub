@@ -81,7 +81,8 @@ export default function LastPracticeCard({ practice, onOpenDay }: LastPracticeCa
                     CATEGORY_CLASS[row.category] ?? CATEGORY_CLASS.Swim,
                   )}
                 >
-                  {tPractice(`categories.${row.category}`)}
+                  {/* Swim/Pull/Kick は言語に関係なく英語で出す (mobile と揃える) */}
+                  {row.category}
                 </span>
                 <span className="min-w-0 truncate font-semibold text-gray-900">
                   {styleKey ? tPractice(`styleAbbrev.${styleKey}`) : row.style}{" "}

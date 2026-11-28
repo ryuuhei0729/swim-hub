@@ -16,7 +16,8 @@
  *   - [最重要] 渡していない兄弟ログの内容は表示されない(day-level 表示への退行防止)
  *   - ヘッダー(日付/タイトル/場所)は practice 由来なので、どのログのカードにも出る
  *   - log=null(ログ未登録の練習)でもクラッシュせず、ヘッダーのみのカードになる
- *   - クリック/Enter で onClick に practice(ログではない)が渡る
+ *   - クリック/Enter で onClick に practice と、そのカードのログが渡る(詳細はそのログ1件だけを出す)
+ *   - メニューが2件以上の練習のカードにだけメニュー件数バッジが出る (mobile PracticeItem と同じ条件)
  *
  * トートロジー防止メモ: 実装の組み立て手順をなぞらず、「そのカードに何が見えていて
  * 何が見えていないか」から逆算したアサーションにする。
@@ -171,17 +172,38 @@ describe("PracticeCard", () => {
     expect(screen.getByText(/自由形/)).toBeInTheDocument();
   });
 
-  it("カードクリックで onClick に practice(練習オブジェクト。ログではない)が渡される", () => {
+  it("カードクリックで onClick に practice と、そのカードのログが渡される", () => {
     const onClick = vi.fn();
-    const practice = makePractice({ id: "practice-xyz" });
+    const practice = makePractice({ id: "practice-xyz", practice_logs: PARITY_FIXTURE_LOGS });
     renderWithIntl(
-      <PracticeCard practice={practice} log={practice.practice_logs[0]!} onClick={onClick} />,
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]!} onClick={onClick} />,
     );
 
     screen.getByRole("button", { name: /^練習詳細を表示\(/ }).click();
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ id: "practice-xyz" }));
+    expect(onClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "practice-xyz" }),
+      expect.objectContaining({ id: "log-b" }),
+    );
+  });
+
+  it("メニューが2件以上の練習のカードには「メニューN件」のバッジが出る", () => {
+    const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
+    renderWithIntl(
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]!} onClick={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId("practice-menu-count-badge")).toHaveTextContent("メニュー2件");
+  });
+
+  it("メニューが1件以下の練習のカードにはメニュー件数バッジが出ない", () => {
+    const practice = makePractice();
+    renderWithIntl(
+      <PracticeCard practice={practice} log={practice.practice_logs[0]!} onClick={vi.fn()} />,
+    );
+
+    expect(screen.queryByTestId("practice-menu-count-badge")).not.toBeInTheDocument();
   });
 
   it("キーボード操作(Enter)でも onClick が発火する(a11y要件)", () => {

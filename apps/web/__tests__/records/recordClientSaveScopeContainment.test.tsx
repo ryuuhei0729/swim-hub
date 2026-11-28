@@ -3,12 +3,13 @@
 // Sprint Contract Phase A スケルトン — RecordClient (web) の upsert 化スコープ検証
 // =============================================================================
 //
-// web の UI は無変更 (大会全体スコープの1フォーム)。だが保存ロジックを
-// delete-all→insert-all から upsert 化するとき、以下が崩れていないか検証する。
+// 記録入力は「種目一覧 → 種目を選んで入力 → 種目ごとに保存」の組み立て (mobile と同じ)。
+// 保存は開いている種目のぶんだけに絞られる。以下が崩れていないか検証する。
 //
 // [V-01w] フォームから外れた (ユーザーが削除した) 行だけが DELETE 対象になり、
 //         フォームに残っている行は id を保持したまま UPDATE される
 //         (=大会内の他 team / 他 competition の records には一切触れない)。
+// [#114]  開いていない種目の records は、UPDATE も DELETE もされない。
 
 import React from "react";
 import { renderWithQueryClient as render, screen, waitFor, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
@@ -81,7 +82,9 @@ const activeMembers = [
 type RecordClientPropsFull = Parameters<typeof RecordClient>[0];
 
 function renderRecordClient(
-  overrides: Partial<Pick<RecordClientPropsFull, "existingRecords" | "entries" | "styles">>,
+  overrides: Partial<
+    Pick<RecordClientPropsFull, "existingRecords" | "entries" | "styles" | "selection">
+  >,
 ) {
   return render(
     <RecordClient
@@ -94,6 +97,7 @@ function renderRecordClient(
       styles={[STYLE_FREE_50, STYLE_BREAST_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={{ kind: "individual", styleId: 2 }}
       {...overrides}
     />,
   );
@@ -153,51 +157,64 @@ beforeEach(() => {
 });
 
 describe("[V-01w] 保存の差分適用 (upsert化) スコープ封じ込め", () => {
-  it("既存3行のうち1行をフォームから削除して保存すると、DELETE 対象の id はその1行のみ (残り2行は削除されない)", async () => {
-    const { container } = renderRecordClient({ existingRecords: THREE_EXISTING_ROWS });
+  it("自由形50mで次郎をメンバーから外して保存すると、DELETE 対象の id はその1行のみ (太郎は UPDATE、別種目の三郎には触れない)", async () => {
+    renderRecordClient({ existingRecords: THREE_EXISTING_ROWS });
 
-    // buildStyleEntriesFromExisting は渡した順に連続する同一 style_id をまとめるため、
-    // THREE_EXISTING_ROWS (太郎/次郎=Fr50, 三郎=Br50) は
-    // [entry0: Fr50 (太郎+次郎), entry1: Br50 (三郎)] の2カードになる。
-    // 削除ボタンはアイコンのみで accessible name を持たないため、カード削除ボタンの
-    // クラス (text-red-600) で直接引く (このクラス名自体が期待値になっていない —
-    // production の class 名を偶然の識別子として使っているだけで、削除操作は
-    // ボタン数=カード数の対応関係で保証している)。
-    const removeButtons = container.querySelectorAll("button.text-red-600");
-    expect(removeButtons).toHaveLength(2);
-    // 最後のカード (2番目=Br50/三郎) を削除する
-    fireEvent.click(removeButtons[removeButtons.length - 1] as HTMLElement);
+    // メンバー選択で次郎を外して確定する
+    fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
+    fireEvent.click(screen.getByRole("button", { name: "次郎" }));
+    fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     const deleteIns = fake.inCalls.filter((c) => c.table === "records" && c.op === "delete");
     expect(deleteIns).toHaveLength(1);
-    expect(deleteIns[0]?.values).toEqual(["record-saburo"]);
+    expect(deleteIns[0]?.values).toEqual(["record-jiro"]);
 
-    // 残りの2行 (太郎・次郎) は UPDATE され、delete 対象には含まれない
     const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
-    const updatedIds = recordUpdates.map((c) => c.eq[0]?.value).sort();
-    expect(updatedIds).toEqual(["record-jiro", "record-taro"].sort());
+    const updatedIds = recordUpdates.map((c) => c.eq[0]?.value);
+    expect(updatedIds).toEqual(["record-taro"]);
   });
 
-  it("既存行の値を変更して保存すると、UPDATE payload に対象行の id が付与され、records.id が保持される", async () => {
+  it("既存行の値を変更して保存すると、開いている種目の行だけが id を保持したまま UPDATE される (別種目の行は UPDATE も DELETE もされない)", async () => {
     renderRecordClient({ existingRecords: THREE_EXISTING_ROWS });
 
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
-    expect(recordUpdates).toHaveLength(3);
     const updatedIds = recordUpdates.map((c) => c.eq[0]?.value).sort();
-    expect(updatedIds).toEqual(["record-jiro", "record-saburo", "record-taro"].sort());
+    expect(updatedIds).toEqual(["record-jiro", "record-taro"].sort());
     expect(fake.insertCalls.filter((c) => c.table === "records")).toHaveLength(0);
+    // 平泳ぎ50m (三郎) の行は今回のフォームに無いが、別種目なので削除対象にならない
+    expect(fake.inCalls.filter((c) => c.table === "records" && c.op === "delete")).toHaveLength(0);
+  });
+
+  it("平泳ぎ50mを開いて保存すると、三郎の行だけが UPDATE され、自由形50mの行には触れない", async () => {
+    renderRecordClient({
+      existingRecords: THREE_EXISTING_ROWS,
+      selection: { kind: "individual", styleId: 9 },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
+
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
+    });
+
+    const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
+    expect(recordUpdates.map((c) => c.eq[0]?.value)).toEqual(["record-saburo"]);
+    expect(fake.inCalls.filter((c) => c.table === "records" && c.op === "delete")).toHaveLength(0);
+    expect(fake.insertCalls.filter((c) => c.table === "records")).toHaveLength(0);
+    // 個人種目だけの保存ではリレーのチーム記録に触れない
+    expect(fake.inCalls.filter((c) => c.table === "relay_record_legs")).toHaveLength(0);
   });
 
   it("新規追加した行 (entries由来 or 完全新規) は INSERT される (既存 records.id 集合に無い id を UPDATE 対象にしない = V-05w と同一観点)", async () => {
@@ -222,7 +239,7 @@ describe("[V-01w] 保存の差分適用 (upsert化) スコープ封じ込め", (
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
@@ -240,7 +257,7 @@ describe("[V-01w] 保存の差分適用 (upsert化) スコープ封じ込め", (
     fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/comp-1/records");
     });
 
     // RecordDataLoader が team_id/competition_id で絞り込んだ existingRecords

@@ -45,6 +45,7 @@ import {
   type RecordSaveSupabaseMock,
 } from "../utils/supabaseRecordSaveMock";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
@@ -230,6 +231,7 @@ function renderRecordClient(
       styles={[STYLE_FREE_50]}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selectionOfFirstEvent(existingRecords, [STYLE_FREE_50])}
     />,
   );
 }
@@ -305,7 +307,7 @@ describe("[V-SG-01] records が1件でも失敗したら relay 側を1行も書�
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(relayInsertsOf(fake)).toHaveLength(1);
@@ -354,7 +356,7 @@ describe("[V-SG-02] 古い行の delete は全計画が成功したときだけ"
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(fake.inCalls.filter((call) => call.table === "relay_records")).toEqual([
@@ -369,7 +371,7 @@ describe("[V-SG-02] 古い行の delete は全計画が成功したときだけ"
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(fake.deleteCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
@@ -398,7 +400,7 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const deleteFilters = fake.eqCalls.filter(
@@ -423,7 +425,7 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     // 全操作を発生順に記録した列で順序を実測する
@@ -469,7 +471,7 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const legScopeSelect = fake.inCalls.filter(
@@ -550,7 +552,7 @@ describe("[V-SG-04] レグ insert 失敗で親を巻き戻す", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(
@@ -568,7 +570,7 @@ describe("[V-SG-05] created_by をクライアントから送らない", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const payload = relayInsertsOf(fake)[0]?.payload as Record<string, unknown>;
@@ -582,7 +584,7 @@ describe("[V-SG-05] created_by をクライアントから送らない", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const payload = relayInsertsOf(fake)[0]?.payload as Record<string, unknown>;
@@ -617,7 +619,7 @@ describe("[V-SG-06] 個人種目だけの保存は relay_records に一切触れ
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     // individualOnlyRecords() は保存前から存在する1行なので UPDATE になる (INSERT ではない)
@@ -640,7 +642,7 @@ describe("[V-SG-07] レグの payload", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const legRows = legInsertsOf(fake)[0]?.payload as Array<Record<string, unknown>>;
@@ -657,7 +659,7 @@ describe("[V-SG-07] レグの payload", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     // relayExistingRecords() は保存前から存在する4行なので UPDATE で書かれ、
@@ -682,7 +684,7 @@ describe("[V-SG-07] レグの payload", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const newRelayId = (fake.insertedIds.relay_records ?? [])[0];
@@ -695,7 +697,7 @@ describe("[V-SG-07] レグの payload", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const legRows = legInsertsOf(fake)[0]?.payload as Array<Record<string, unknown>>;
@@ -711,7 +713,7 @@ describe("[V-SG-08] 性別区分の prefill", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const payload = relayInsertsOf(fake)[0]?.payload as Record<string, unknown>;
@@ -724,7 +726,7 @@ describe("[V-SG-08] 性別区分の prefill", () => {
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const payload = relayInsertsOf(fake)[0]?.payload as Record<string, unknown>;
@@ -756,7 +758,7 @@ describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(fake.inCalls.filter((call) => call.table === "relay_records")).toEqual([
@@ -784,7 +786,7 @@ describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     expect(fake.selectCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
@@ -799,7 +801,7 @@ describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象
     clickSave();
 
     await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-thrush/competitions/comp-thrush/records"),
     );
 
     const payload = relayInsertsOf(fake)[0]?.payload as Record<string, unknown>;

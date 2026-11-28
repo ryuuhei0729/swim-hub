@@ -10,8 +10,8 @@
  * Sprint Contract 検証観点:
  *   [V-D4C-01] 非admin(一般メンバー): 「自分の記録を追加」ボタンが表示される
  *   [V-D4C-02] ボタン押下で RecordLogForm が開き、対象の competitionId が渡される
- *   [V-D4C-03] admin でも「自分の記録を追加」ボタンが表示される (既存の管理者向け
- *              「記録入力」ボタンとは別に共存する)
+ *   [V-D4C-03] 管理者ビューには「自分の記録を追加」を出さず、代理入力の「記録入力」だけを出す
+ *              (swimhub-tasks #112 で変更。自分の分は利用者ビューで入力する。mobile と同じ)
  *
  * 【[V-D4C-04] は本ファイルから移動した (PM裁定, 2026-09-01)】
  * 旧 [V-D4C-04] (「RecordAPI.createRecord が reject した場合、エラーメッセージが
@@ -173,7 +173,8 @@ vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
 import { buildAuthContext } from "@/__tests__/utils/authContext";
 
-import TeamCompetitions from "@/components/team/TeamCompetitions";
+// 大会カードと操作は予定タブ (TeamSchedule) と同じ useTeamCompetitionActions。一覧の取得はテスト用の描画側
+import { TeamCompetitions } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 describe("TeamCompetitions — 自己記録導線 (D4)", () => {
   beforeEach(() => {
@@ -206,14 +207,13 @@ describe("TeamCompetitions — 自己記録導線 (D4)", () => {
     expect(stub).toHaveTextContent("competitionId:competition-1");
   });
 
-  it("[V-D4C-03] admin でも「自分の記録を追加」ボタンが表示される (管理者用ボタンと共存)", async () => {
+  it("[V-D4C-03] 管理者ビューには「自分の記録を追加」を出さず「記録入力」だけを出す", async () => {
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
     await screen.findByText("県大会");
 
     expect(
-      screen.getByRole("button", { name: /自分の記録を追加|自己記録を追加/ }),
-    ).toBeInTheDocument();
-    // 既存の管理者向け「記録入力」ボタンも引き続き存在する
+      screen.queryByRole("button", { name: /自分の記録を追加|自己記録を追加/ }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("記録入力")).toBeInTheDocument();
   });
 

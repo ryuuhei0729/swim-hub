@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { UsersIcon, PlusIcon, UserPlusIcon, ClockIcon } from "@heroicons/react/24/outline";
-import { TeamMembershipWithUser } from "@apps/shared/types";
+import { UsersIcon, PlusIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
@@ -16,17 +15,13 @@ import { resolveTeamToOpen, shouldOpenAsAdmin, teamViewHref } from "@/utils/team
 const TeamCreateModal = dynamic(() => import("@/components/team/TeamCreateModal"));
 const TeamJoinModal = dynamic(() => import("@/components/team/TeamJoinModal"));
 
-interface PendingTeamWithInviteCode {
-  membership: TeamMembershipWithUser;
-  inviteCode: string | null;
-}
-
 /**
  * チームの入口 (/teams)。
  *
  * モバイルのチームタブと同じく一覧は挟まず、最後に開いたチームを最後に使ったビュー
  * (利用者 / 管理者) でそのまま開く。別のチームへはチーム画面のヘッダーのチーム名から移る。
- * 承認済みのチームが無いときだけ、ここで承認待ちの状況と作成・参加の案内を出す。
+ * 承認待ちのチームもそのまま開く (チーム画面で「承認待ち」の案内を出す。swimhub-tasks #101)。
+ * 所属しているチームが1つも無いときだけ、ここで作成・参加の案内を出す。
  */
 export default function TeamsClient() {
   const { supabase } = useAuth();
@@ -39,34 +34,12 @@ export default function TeamsClient() {
   // prefetch して HydrationBoundary で渡しているので、初回は取得を待たずに表示できる
   const { teams = [], isLoading: teamsLoading } = useTeamsQuery(supabase);
 
-  // 表示用のデータ（React Queryのキャッシュを使用）
-  // 承認済みと承認待ちを分ける
-  const { approvedTeams, pendingTeams } = useMemo(() => {
-    const approved: TeamMembershipWithUser[] = [];
-    const pending: TeamMembershipWithUser[] = [];
-
-    teams.forEach((membership) => {
-      if (membership.status === "approved" && membership.is_active) {
-        approved.push(membership);
-      } else if (membership.status === "pending") {
-        pending.push(membership);
-      }
-    });
-
-    return {
-      approvedTeams: approved,
-      pendingTeams: pending,
-    };
-  }, [teams]);
-
-  const displayTeams = approvedTeams;
-
-  // 承認済みのチームがあれば、最後に開いたチームへ送る。
+  // 所属しているチーム (承認待ちを含む) があれば、最後に開いたチームへ送る。
   // 最後に開いたチーム・ビューは localStorage にあるのでクライアントで決める
   const router = useRouter();
   const teamToOpen = useMemo(
-    () => resolveTeamToOpen(approvedTeams, useTeamViewStore.getState().lastTeamId),
-    [approvedTeams],
+    () => resolveTeamToOpen(teams, useTeamViewStore.getState().lastTeamId),
+    [teams],
   );
   useEffect(() => {
     if (!teamToOpen) return;
@@ -74,51 +47,7 @@ export default function TeamsClient() {
     router.replace(teamViewHref(teamToOpen.team_id, shouldOpenAsAdmin(teamToOpen, prefs)));
   }, [teamToOpen, router]);
 
-  // 承認待ちチームの招待コードを取得
-  const [pendingTeamsWithInviteCode, setPendingTeamsWithInviteCode] = useState<
-    PendingTeamWithInviteCode[]
-  >([]);
-  const [loadingInviteCodes, setLoadingInviteCodes] = useState(false);
-
-  useEffect(() => {
-    const loadInviteCodes = async () => {
-      if (pendingTeams.length === 0) {
-        setPendingTeamsWithInviteCode([]);
-        return;
-      }
-
-      setLoadingInviteCodes(true);
-      try {
-        const results = await Promise.all(
-          pendingTeams.map(async (membership) => {
-            try {
-              const { data, error } = await supabase.rpc("get_invite_code_by_team_id", {
-                p_team_id: membership.team_id,
-              });
-
-              if (error) {
-                return { membership, inviteCode: null };
-              }
-
-              return { membership, inviteCode: data || null };
-            } catch {
-              return { membership, inviteCode: null };
-            }
-          }),
-        );
-        setPendingTeamsWithInviteCode(results);
-      } catch {
-        // エラー時は空配列を設定
-        setPendingTeamsWithInviteCode([]);
-      } finally {
-        setLoadingInviteCodes(false);
-      }
-    };
-
-    loadInviteCodes();
-  }, [pendingTeams, supabase]);
-
-  if ((teamsLoading && displayTeams.length === 0) || teamToOpen) {
+  if (teamsLoading || teamToOpen) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -161,74 +90,32 @@ export default function TeamsClient() {
         </div>
       </div>
 
-      {/* 承認待ちチームセクション */}
-      {pendingTeams.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-3 sm:p-6">
-          <h2 className="text-sm sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-4">
-            {t("pending.sectionTitle", { count: pendingTeams.length })}
-          </h2>
-          <div className="space-y-4">
-            {loadingInviteCodes ? (
-              <div className="text-sm text-gray-500">{t("pending.loading")}</div>
-            ) : (
-              pendingTeamsWithInviteCode.map(({ membership, inviteCode }) => (
-                <div
-                  key={membership.team_id}
-                  className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center space-x-3">
-                    <ClockIcon className="h-5 w-5 text-yellow-600" />
-                    <div className="flex-1">
-                      <p className="text-sm text-yellow-800">
-                        {inviteCode ? (
-                          <>
-                            <span className="font-medium">
-                              {t("pending.inviteCodeLabel")} {inviteCode}
-                            </span>
-                            <span className="ml-2">{t("pending.waitingWithCode")}</span>
-                          </>
-                        ) : (
-                          <span>{t("pending.waitingNoCode")}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+      {/* 所属しているチームはチーム画面へ送るので、ここに来るのは所属なしのときだけ */}
+      <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+        <UsersIcon className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+        <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-medium text-gray-900">
+          {t("empty.title")}
+        </h3>
+        <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 mb-4 sm:mb-8">
+          {t("empty.description")}
+        </p>
+        <div className="flex flex-row gap-2 sm:gap-4 justify-center">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-transparent text-xs sm:text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+            {t("empty.createButton")}
+          </button>
+          <button
+            onClick={() => setIsJoinModalOpen(true)}
+            className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-gray-300 text-xs sm:text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <UserPlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+            {t("empty.joinButton")}
+          </button>
         </div>
-      )}
-
-      {/* 参加中のチーム一覧 */}
-      {/* 承認済みのチームはチーム画面へ送るので、ここに来るのは承認待ちのみ・所属なしのとき */}
-      {pendingTeams.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
-          <UsersIcon className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-          <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-medium text-gray-900">
-            {t("empty.title")}
-          </h3>
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 mb-4 sm:mb-8">
-            {t("empty.description")}
-          </p>
-          <div className="flex flex-row gap-2 sm:gap-4 justify-center">
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-transparent text-xs sm:text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-            >
-              <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-              {t("empty.createButton")}
-            </button>
-            <button
-              onClick={() => setIsJoinModalOpen(true)}
-              className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-gray-300 text-xs sm:text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-            >
-              <UserPlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-              {t("empty.joinButton")}
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* チーム作成モーダル */}
       <TeamCreateModal
@@ -245,10 +132,11 @@ export default function TeamsClient() {
       <TeamJoinModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={(_teamId) => {
-          // チーム一覧のキャッシュを無効化して再取得
+        onSuccess={(teamId) => {
+          // 参加申請したチーム (承認待ち) をそのまま開く (mobile と同じ)
           queryClient.invalidateQueries({ queryKey: teamKeys.list() });
           setIsJoinModalOpen(false);
+          router.push(teamViewHref(teamId, false));
         }}
       />
     </div>

@@ -5,6 +5,10 @@ import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import RecordDataLoader from "./_server/RecordDataLoader";
 import { FreshServerRender } from "@/components/ui/FreshServerRender";
 import CompetitionRecordsLoading from "./loading";
+import {
+  parseRecordEventSelection,
+  type RecordEventSearchParams,
+} from "./_client/recordEventSelection";
 
 export async function generateMetadata({
   params,
@@ -29,14 +33,20 @@ export async function generateMetadata({
 
 interface RecordPageProps {
   params: Promise<{ teamId: string; competitionId: string }>;
+  /** 開いている種目。`?style={styles.id}` (個人種目) / `?relay={RelayEventId}` (リレー種目) */
+  searchParams: Promise<RecordEventSearchParams>;
 }
 
 /**
  * チーム大会Record代理入力ページ（Server Component）
- * adminがチームメンバーのRecord/split_timeを代理入力する
+ * adminがチームメンバーのRecord/split_timeを代理入力する。
+ * クエリが無ければ種目一覧、あればその種目の入力画面を出す (mobile と同じ2段の組み立て)。
+ * 種目を切り替えるたびにサーバーで描画し直すので、一覧の入力済み件数・入力画面の初期値は
+ * 常に保存後の最新になる。
  */
-export default async function RecordPage({ params }: RecordPageProps) {
-  const { teamId, competitionId } = await params;
+export default async function RecordPage({ params, searchParams }: RecordPageProps) {
+  const [{ teamId, competitionId }, query] = await Promise.all([params, searchParams]);
+  const selection = parseRecordEventSelection(query);
 
   return (
     <Suspense
@@ -57,7 +67,7 @@ export default async function RecordPage({ params }: RecordPageProps) {
       {/* 保存した直後に同じ画面を開き直すと、ページ遷移のキャッシュに残った保存前のデータで
           フォームが開き、重複登録や上書きになる。使い回された描画なら最新を取り直す */}
       <FreshServerRender renderId={crypto.randomUUID()} fallback={<CompetitionRecordsLoading />}>
-        <RecordDataLoader teamId={teamId} competitionId={competitionId} />
+        <RecordDataLoader teamId={teamId} competitionId={competitionId} selection={selection} />
       </FreshServerRender>
     </Suspense>
   );

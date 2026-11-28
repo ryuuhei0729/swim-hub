@@ -27,13 +27,15 @@ export interface PracticeDetailModalProps {
   isTeamPractice?: boolean;
   teamId?: string | null;
   teamName?: string;
+  /** 押したカードの練習メニューID。指定時はそのメニュー1件だけを表示する (ログ未登録の練習は未指定) */
+  targetLogId?: string;
   /** ダッシュボードと同じ PracticeTabModal (practice タブ) を開く */
   onEditPractice: (images?: GalleryImage[]) => void;
   /** 練習全体の削除 (確認モーダル経由) */
   onDeletePractice: () => Promise<void> | void;
   /** ダッシュボードと同じ PracticeTabModal (practiceLog タブ) を開く */
   onOpenPracticeLogTab: () => void;
-  /** 個別の練習ログ削除 (カスケード: 残り0件なら親 practice も削除) */
+  /** 個別の練習ログ削除 (確認は PracticeDetails 内で行う。残り0件でも練習本体は残す) */
   onDeletePracticeLog: (logId: string) => Promise<void> | void;
 }
 
@@ -41,6 +43,7 @@ export interface PracticeDetailModalProps {
  * 練習履歴タブ (/practice) の行クリックで開く詳細モーダル。
  * ダッシュボードの DayDetailModal 由来の PracticeDetails / AttendanceModal / DeleteConfirmModal を
  * そのまま再利用し、UI/UX をダッシュボードと完全に一致させる。
+ * 表示するのは押したカードのメニュー1件だけ (targetLogId。mobile の練習タブと同じ仕様)。
  */
 export default function PracticeDetailModal({
   isOpen,
@@ -51,6 +54,7 @@ export default function PracticeDetailModal({
   isTeamPractice = false,
   teamId,
   teamName,
+  targetLogId,
   onEditPractice,
   onDeletePractice,
   onOpenPracticeLogTab,
@@ -94,6 +98,7 @@ export default function PracticeDetailModal({
               isTeamPractice={isTeamPractice}
               teamId={teamId}
               teamName={teamName}
+              targetLogId={targetLogId}
               onEdit={(images) => onEditPractice(images)}
               onDelete={() => setShowDeleteConfirm(true)}
               onAddPracticeLog={() => onOpenPracticeLogTab()}

@@ -2,9 +2,9 @@
  * TeamPractices — 練習カードを押すとメンバー全員のタイム一覧を開く
  *
  * mobile の予定タブ (TeamPracticeList) と同じ導線:
- *   - 記録がある練習は、admin/非admin を問わずカード全体を押すとタイム一覧モーダルが開く
+ *   - admin/非admin を問わずカード全体を押すとタイム一覧モーダルが開く
  *   - admin がカードを押してもログ代理入力ページには飛ばない。代理入力は「記録代理入力」ボタンから
- *   - 記録が無い練習はカードを押しても何も開かない
+ *   - 記録が無い練習もカードを押すと開く (0件なら一覧側で空表示。swimhub-tasks#103)
  */
 import React from "react";
 import { renderWithI18n as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
@@ -102,7 +102,8 @@ vi.mock("../../../components/team/TeamPracticeDetailModal", () => ({
   ),
 }));
 
-import TeamPractices from "@/components/team/TeamPractices";
+// 練習カードと操作は予定タブ (TeamSchedule) と同じ useTeamPracticeActions。一覧の取得はテスト用の描画側
+import { TeamPractices } from "@/__tests__/utils/teamScheduleCardRenderers";
 
 function setAuth(isAdmin: boolean, rows: (typeof RAW_PRACTICE_ROW)[] = [RAW_PRACTICE_ROW]) {
   vi.mocked(useAuth).mockReturnValue(
@@ -162,14 +163,13 @@ describe("TeamPractices — 練習カードからタイム一覧を開く", () =
     expect(screen.queryByTestId("team-practice-log-input-button")).not.toBeInTheDocument();
   });
 
-  it("記録が無い練習はカードがボタンにならず、押しても開かない", async () => {
+  it("記録が無い練習もカードがボタンになり、押すとタイム一覧が開く (swimhub-tasks#103)", async () => {
     setAuth(false, [{ ...RAW_PRACTICE_ROW, practice_logs: [] }]);
     const user = userEvent.setup();
     render(<TeamPractices teamId="team-1" isAdmin={false} />);
     await screen.findByText("朝練");
 
-    expect(screen.queryByRole("button", { name: /タイムを表示/ })).not.toBeInTheDocument();
-    await user.click(screen.getByTestId("team-practice-card"));
-    expect(screen.queryByTestId("practice-times-modal-stub")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /タイムを表示/ }));
+    expect(await screen.findByTestId("practice-times-modal-stub")).toBeInTheDocument();
   });
 });

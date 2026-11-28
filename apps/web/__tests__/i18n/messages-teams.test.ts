@@ -120,10 +120,11 @@
  *     セクションタイトル / 空状態テキスト
  *     月の出欠率ラベル
  *   monthly-attendance/components/RecentAttendance.tsx →
- *     セクションタイトル / 空状態テキスト / 保存ボタン
+ *     セクションタイトル / 空状態テキスト / 今月・来月タブ
  *   monthly-attendance/components/MonthDetailModal.tsx →
- *     モーダルタイトル / 閉じるボタン / 保存ボタン / 保存中テキスト
- *     エラーテキスト / ローディングテキスト
+ *     モーダルタイトル / 閉じるボタン
+ *   monthly-attendance/components/AttendanceAnswerRow.tsx →
+ *     練習ラベル / 備考の入力欄 / 行の aria-label
  *   monthly-attendance/components/StatusBadge.tsx →
  *     ステータス: 出席 / 欠席 / 遅刻 / 早退 / 未回答
  *   monthly-attendance/components/AttendanceStatusModal.tsx →
@@ -131,16 +132,12 @@
  *     出欠ステータス列ヘッダー / メンバー列ヘッダー
  *   monthly-attendance/components/AttendanceGroupingDisplay.tsx →
  *     グルーピング表示: カテゴリラベル
- *   monthly-attendance/hooks/useAttendanceEdit.ts →
- *     保存失敗メッセージ
+ *   monthly-attendance/hooks/useMyAttendanceSaver.ts →
+ *     保存失敗メッセージ / 締切後編集の確認
  *   monthly-attendance/hooks/useAttendanceStatus.ts →
  *     データ取得失敗メッセージ
- *   monthly-attendance/hooks/useMonthDetail.ts →
+ *   monthly-attendance/hooks/useMyAttendanceList.ts →
  *     データ取得失敗メッセージ
- *   monthly-attendance/hooks/useMonthList.ts →
- *     データ取得失敗メッセージ
- *   monthly-attendance/hooks/useRecentAttendance.ts →
- *     データ取得失敗メッセージ / 保存成功メッセージ
  *   entry/CompetitionCard.tsx →
  *     エントリーステータスラベル / 場所ラベル
  *   entry/EntryForm.tsx →
@@ -293,13 +290,6 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     "teams.page.title",
     "teams.page.description",
 
-    // TeamsClient.tsx: 承認待ちセクション
-    "teams.pending.sectionTitle",
-    "teams.pending.loading",
-    "teams.pending.inviteCodeLabel",
-    "teams.pending.waitingWithCode",
-    "teams.pending.waitingNoCode",
-
     // TeamsClient.tsx: 空状態
     "teams.empty.title",
     "teams.empty.description",
@@ -331,12 +321,12 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     "teams.loading.text",
 
     // --------------------------------------------------------
-    // TeamTabs.tsx: タブ名
+    // TeamTabs.tsx: タブ名 (mobile と同じ teams.mobile.* を使う)
     // --------------------------------------------------------
-    "teams.tabs.attendance",
-    "teams.tabs.members",
-    "teams.tabs.practices",
-    "teams.tabs.competitions",
+    "teams.mobile.tabMembers",
+    "teams.mobile.tabSchedule",
+    "teams.mobile.tabAttendance",
+    "teams.mobile.tabOthers",
 
     // --------------------------------------------------------
     // TeamCreateModal.tsx: エラーヘッダー
@@ -369,11 +359,7 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     // --------------------------------------------------------
     // TeamPractices.tsx
     // --------------------------------------------------------
-    "teams.practices.title",
     "teams.practices.addButton",
-    "teams.practices.empty",
-    "teams.practices.error",
-    "teams.practices.retry",
     "teams.practices.card.detailButton",
     "teams.practices.card.manageButton",
     "teams.practices.card.noLogs",
@@ -393,11 +379,7 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     // --------------------------------------------------------
     // TeamCompetitions.tsx
     // --------------------------------------------------------
-    "teams.competitions.title",
     "teams.competitions.addButton",
-    "teams.competitions.empty",
-    "teams.competitions.error",
-    "teams.competitions.retry",
     "teams.competitions.card.entryButton",
     "teams.competitions.card.recordsButton",
     "teams.competitions.card.manageButton",
@@ -503,15 +485,17 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     // monthly-attendance/components/RecentAttendance.tsx
     "teams.recentAttendance.title",
     "teams.recentAttendance.empty",
-    "teams.recentAttendance.saveButton",
+    "teams.recentAttendance.thisMonth",
+    "teams.recentAttendance.nextMonth",
 
     // monthly-attendance/components/MonthDetailModal.tsx
     "teams.monthDetail.title",
     "teams.monthDetail.close",
-    "teams.monthDetail.saveButton",
-    "teams.monthDetail.saving",
-    "teams.monthDetail.error",
-    "teams.monthDetail.loading",
+
+    // monthly-attendance/components/AttendanceAnswerRow.tsx
+    "teams.monthDetail.practiceLabel",
+    "teams.monthDetail.notePlaceholder",
+    "teams.monthDetail.openAttendanceAriaLabel",
 
     // monthly-attendance/components/StatusBadge.tsx
     "teams.attendanceStatus.present",
@@ -536,21 +520,14 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     "teams.attendanceGrouping.unanswered",
     "teams.attendanceGrouping.none",
 
-    // monthly-attendance/hooks/useAttendanceEdit.ts
+    // monthly-attendance/hooks/useMyAttendanceSaver.ts
     "teams.attendanceEditHook.saveError",
 
     // monthly-attendance/hooks/useAttendanceStatus.ts
     "teams.attendanceStatusHook.loadError",
 
-    // monthly-attendance/hooks/useMonthDetail.ts
-    "teams.monthDetailHook.loadError",
-
-    // monthly-attendance/hooks/useMonthList.ts
+    // monthly-attendance/hooks/useMyAttendanceList.ts
     "teams.monthListHook.loadError",
-
-    // monthly-attendance/hooks/useRecentAttendance.ts
-    "teams.recentAttendanceHook.loadError",
-    "teams.recentAttendanceHook.saveSuccess",
 
     // --------------------------------------------------------
     // entry/CompetitionCard.tsx
@@ -721,8 +698,6 @@ describe("[V-C2C1-03] Phase 1-C-1 / 1-C-2-A / 1-C-2-B 必須キーのリグレ�
 
 describe("[V-C2C1-04] ICU Message Format プレースホルダーの ja/en 対称確認", () => {
   const ICU_KEYS_TO_CHECK = [
-    // 承認待ち件数: {count}件
-    "teams.pending.sectionTitle",
     // メンバー人数: {count}人
     "teams.members.title",
     "teams.memberStats.title",

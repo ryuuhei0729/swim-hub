@@ -5,19 +5,16 @@ import { useTranslations } from "next-intl";
 
 interface MemberStatsHeaderProps {
   totalMembers: number;
-  adminCount: number;
-  userCount: number;
   includeRelaying: boolean;
   onToggleRelaying: (value: boolean) => void;
 }
 
 /**
- * メンバー統計表示とリレー含む/含まないトグル
+ * メンバー統計表示とリレー含む/含まないトグル。
+ * メンバー数は mobile (TeamMemberList) と同じく合計だけを出す (管理者・一般の内訳は出さない)
  */
 export const MemberStatsHeader: React.FC<MemberStatsHeaderProps> = ({
   totalMembers,
-  adminCount,
-  userCount,
   includeRelaying,
   onToggleRelaying,
 }) => {
@@ -40,12 +37,6 @@ export const MemberStatsHeader: React.FC<MemberStatsHeaderProps> = ({
       <div className="flex items-center space-x-4 text-sm text-gray-600">
         <span data-testid="team-member-count-total">
           {t("memberStats.totalLabel", { count: totalMembers })}
-        </span>
-        <span data-testid="team-member-count-admin">
-          {t("memberStats.adminLabel", { count: adminCount })}
-        </span>
-        <span data-testid="team-member-count-user">
-          {t("memberStats.userLabel", { count: userCount })}
         </span>
       </div>
     </div>

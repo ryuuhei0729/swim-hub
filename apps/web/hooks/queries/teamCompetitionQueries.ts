@@ -1,21 +1,18 @@
 "use client";
 
 // =============================================================================
-// チーム大会 (大会タブ) の取得
+// チーム大会 (予定タブの大会) の取得
 //
 // 取得関数はタブ本体 (next/dynamic で遅延読み込み) から切り離してここに置く。
 // タブの先読み (useTeamTabPrefetch) が本体のチャンクを読み込まずに同じ取得を
-// 呼べるようにするため。
+// 呼べるようにするため。今日以降 / 過去の分け方は teamPracticeQueries.ts と同じ。
 // =============================================================================
 
-import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PoolType } from "@apps/shared/types";
 import { isPoolType } from "@apps/shared/types";
 import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "./teamDetailKeys";
-
-/** 大会タブの 1 ページの件数 */
-export const TEAM_COMPETITIONS_PAGE_SIZE = 20;
+import { TEAM_SCHEDULE_PAST_PAGE_SIZE, type TeamScheduleRange } from "./teamPracticeQueries";
 
 export interface TeamCompetition {
   id: string;
@@ -30,48 +27,21 @@ export interface TeamCompetition {
   note: string | null;
   created_at: string;
   created_by: string | null;
-  users?: {
-    name: string;
-  };
-  created_by_user?: {
-    name: string;
-  };
-  records?: {
-    id: string;
-    time: number;
-    users?: {
-      name: string;
-    };
-  }[];
+  /** 「自分の記録を追加」フォームで自分のエントリー内容を初期値にするために使う */
   entries?: {
     id: string;
     user_id: string;
     style_id: number;
     entry_time: number | null;
-    users?: {
-      name: string;
-    };
   }[];
 }
 
 // Supabaseクエリ結果の型定義
-// Note: Supabaseはリレーションを配列として返す場合がある
-interface RawCompetitionUser {
-  name: string;
-}
-
-interface RawCompetitionRecord {
-  id: string;
-  time: number;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
-}
-
 interface RawCompetitionEntry {
   id: string;
   user_id: string;
   style_id: number;
   entry_time: number | null;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
 }
 
 interface RawCompetitionData {
@@ -87,30 +57,14 @@ interface RawCompetitionData {
   note: string | null;
   created_at: string;
   created_by: string | null;
-  users?: RawCompetitionUser | RawCompetitionUser[] | null;
-  created_by_user?: RawCompetitionUser | RawCompetitionUser[] | null;
-  records?: RawCompetitionRecord[] | null;
   entries?: RawCompetitionEntry[] | null;
 }
 
 
 /**
- * Supabaseが返すユーザー情報（配列または単一オブジェクト）を単一オブジェクトに正規化
- */
-function normalizeUser(
-  user: RawCompetitionUser | RawCompetitionUser[] | null | undefined,
-): { name: string } | undefined {
-  if (!user) return undefined;
-  if (Array.isArray(user)) {
-    return user.length > 0 ? { name: user[0]!.name } : undefined; // user.length > 0 を三項演算子内で確認済み
-  }
-  return { name: user.name };
-}
-
-/**
  * Supabaseのクエリ結果をTeamCompetition[]に変換するマッパー関数
  */
-function mapToTeamCompetitions(
+export function mapToTeamCompetitions(
   data: RawCompetitionData[] | null,
 ): TeamCompetition[] {
   if (!data) return [];
@@ -132,19 +86,11 @@ function mapToTeamCompetitions(
       note: item.note,
       created_at: item.created_at,
       created_by: item.created_by,
-      users: normalizeUser(item.users),
-      created_by_user: normalizeUser(item.created_by_user),
-      records: item.records?.map((record) => ({
-        id: record.id,
-        time: record.time,
-        users: normalizeUser(record.users),
-      })),
       entries: item.entries?.map((entry) => ({
         id: entry.id,
         user_id: entry.user_id,
         style_id: entry.style_id,
         entry_time: entry.entry_time,
-        users: normalizeUser(entry.users),
       })),
     }),
   );
@@ -155,32 +101,16 @@ function isValidEntryStatus(
 ): status is "before" | "open" | "closed" {
   return status === "before" || status === "open" || status === "closed";
 }
-export interface TeamCompetitionsPage {
-  competitions: TeamCompetition[];
-  totalCount: number;
-}
-
-/** チームの大会 1 ページ分 (エントリー・記録の概要を含む) と総件数を取得する */
-export async function fetchTeamCompetitionsPage(
+/** チームの大会 (エントリーの概要を含む) を、予定タブの範囲 (今日以降 / 過去の 1 ページ) で取得する */
+export async function fetchTeamCompetitions(
   supabase: SupabaseClient,
   teamId: string,
-  page: number,
-  pageSize: number = TEAM_COMPETITIONS_PAGE_SIZE,
-): Promise<TeamCompetitionsPage> {
-  const offset = (page - 1) * pageSize;
-
-  // 総件数とデータを並列取得（パフォーマンス最適化）
-  const [countResult, competitionsResult] = await Promise.all([
-    // 総件数を取得
-    supabase
-      .from("competitions")
-      .select("*", { count: "exact", head: true })
-      .eq("team_id", teamId),
-    // チームIDが設定された大会を取得（エントリー情報も含む）
-    supabase
-      .from("competitions")
-      .select(
-        `
+  range: TeamScheduleRange,
+): Promise<TeamCompetition[]> {
+  const base = supabase
+    .from("competitions")
+    .select(
+      `
             id,
             user_id,
             team_id,
@@ -193,63 +123,61 @@ export async function fetchTeamCompetitionsPage(
             note,
             created_at,
             created_by,
-            users!competitions_user_id_fkey (
-              name
-            ),
-            created_by_user:users!competitions_created_by_fkey (
-              name
-            ),
-            records (
-              id,
-              time,
-              users!records_user_id_fkey (
-                name
-              )
-            ),
             entries (
               id,
               user_id,
               style_id,
-              entry_time,
-              users!entries_user_id_fkey (
-                name
-              )
+              entry_time
             )
           `,
-      )
-      .eq("team_id", teamId)
-      .order("date", { ascending: false })
-      .range(offset, offset + pageSize - 1),
-  ]);
+    )
+    .eq("team_id", teamId);
 
-  if (countResult.error) throw countResult.error;
-  if (competitionsResult.error) throw competitionsResult.error;
+  const { data, error } =
+    range.when === "upcoming"
+      ? await base.gte("date", range.today).order("date", { ascending: true })
+      : await base
+          .lt("date", range.today)
+          .order("date", { ascending: false })
+          .range(range.offset, range.offset + range.limit - 1);
 
-  return {
-    totalCount: countResult.count || 0,
-    competitions: mapToTeamCompetitions(competitionsResult.data as RawCompetitionData[] | null),
-  };
+  if (error) throw error;
+  return mapToTeamCompetitions(data as RawCompetitionData[] | null);
 }
 
-export function teamCompetitionsPageQueryOptions(
+/** 今日以降の大会 (日付の近い順・全件) */
+export function teamUpcomingCompetitionsQueryOptions(
   supabase: SupabaseClient,
   teamId: string,
-  page: number,
-  pageSize: number = TEAM_COMPETITIONS_PAGE_SIZE,
+  today: string,
 ) {
   return {
-    queryKey: teamDetailKeys.competitionPage(teamId, page, pageSize),
-    queryFn: () => fetchTeamCompetitionsPage(supabase, teamId, page, pageSize),
+    queryKey: teamDetailKeys.competitionUpcoming(teamId, today),
+    queryFn: () => fetchTeamCompetitions(supabase, teamId, { when: "upcoming", today }),
     ...TEAM_VIEW_QUERY_OPTIONS,
   };
 }
 
-/** 大会タブの一覧 (ページ単位) */
-export function useTeamCompetitionsPageQuery(
+/** 過去の大会 (新しい順・TEAM_SCHEDULE_PAST_PAGE_SIZE 件ずつ) の useInfiniteQuery 用オプション */
+export function teamPastCompetitionsInfiniteQueryOptions(
   supabase: SupabaseClient,
   teamId: string,
-  page: number,
-  pageSize: number = TEAM_COMPETITIONS_PAGE_SIZE,
+  today: string,
 ) {
-  return useQuery(teamCompetitionsPageQueryOptions(supabase, teamId, page, pageSize));
+  return {
+    queryKey: teamDetailKeys.competitionPast(teamId, today),
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      fetchTeamCompetitions(supabase, teamId, {
+        when: "past",
+        today,
+        offset: pageParam,
+        limit: TEAM_SCHEDULE_PAST_PAGE_SIZE,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: TeamCompetition[], allPages: TeamCompetition[][]) =>
+      lastPage.length < TEAM_SCHEDULE_PAST_PAGE_SIZE
+        ? undefined
+        : allPages.length * TEAM_SCHEDULE_PAST_PAGE_SIZE,
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  };
 }

@@ -1240,11 +1240,6 @@
       "Fly": "バタフライ",
       "IM": "個人メドレー"
     },
-    "categories": {
-      "Swim": "スイム",
-      "Pull": "プル",
-      "Kick": "キック"
-    },
     "form": {
       "dateLabel": "日付",
       "datePlaceholder": "YYYY-MM-DD",
@@ -1826,10 +1821,6 @@
       "splitTimePlaceholder": "2.00.00",
       "subtitle": "種目ごとにメンバーの記録を入力できます",
       "competitionFallback": "大会",
-      "entryHeader": "種目 {num}",
-      "eventLabel": "種目",
-      "selectPlaceholder": "選択してください",
-      "individualEvents": "個人種目",
       "selectSwimmer": "泳者を選択",
       "timePlaceholder": "2.00.00",
       "distancePlaceholder": "距離",
@@ -1845,8 +1836,6 @@
         "atLeastOneRecord": "少なくとも1つの記録を入力してください"
       },
       "error": {
-        "splitDeleteFailed": "スプリットタイムの削除に失敗しました",
-        "recordDeleteFailed": "既存の記録の削除に失敗しました",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
       },
       "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
@@ -3034,11 +3023,6 @@
       "description": "参加しているチームの一覧"
     },
     "pending": {
-      "sectionTitle": "承認待ち ({count}件)",
-      "loading": "読み込み中...",
-      "inviteCodeLabel": "招待コード:",
-      "waitingWithCode": "ただいま承認待ちです",
-      "waitingNoCode": "ただいま承認待ちです",
       "appliedAtLabel": "申請日:"
     },
     "empty": {
@@ -3066,14 +3050,6 @@
     },
     "loading": {
       "text": "読み込み中..."
-    },
-    "tabs": {
-      "attendance": "出欠",
-      "members": "メンバー",
-      "practices": "練習",
-      "competitions": "大会",
-      "rankings": "ランキング",
-      "settings": "設定"
     },
     "createModal": {
       "errorTitle": "エラーが発生しました",
@@ -3114,19 +3090,11 @@
       "confirmMessageToSwimmer": "{name}さんを泳者にしますか？"
     },
     "practices": {
-      "title": "チーム練習記録 ({count}件)",
       "addButton": "練習記録追加",
-      "empty": "練習記録がありません",
-      "error": "チーム練習情報の取得に失敗しました",
-      "retry": "再試行",
       "card": {
         "detailButton": "詳細",
         "manageButton": "管理",
         "noLogs": "ログなし",
-        "logsCount": "{count}セットの練習記録あり",
-        "noLogsLabel": "練習記録なし",
-        "clickToEdit": "クリックで編集",
-        "clickToAdd": "クリックで追加",
         "editAriaLabel": "{date}の練習記録を編集",
         "addAriaLabel": "{date}の練習記録を追加",
         "viewAriaLabel": "{date}の練習記録を閲覧",
@@ -3149,11 +3117,7 @@
       "noLogs": "練習ログがありません"
     },
     "competitions": {
-      "title": "チーム大会 ({count}件)",
       "addButton": "大会追加",
-      "empty": "大会がありません",
-      "error": "チーム大会情報の取得に失敗しました",
-      "retry": "再試行",
       "fallbackTitle": "大会",
       "card": {
         "entryButton": "エントリー",
@@ -3162,13 +3126,7 @@
         "editButton": "編集",
         "deleteButton": "削除",
         "entryBulkInputButton": "エントリー入力",
-        "recordCount": "登録記録: {count}件",
-        "tapForDetails": "タップで詳細",
-        "noRecords": "登録記録なし",
-        "addable": "追加可能",
-        "viewRecordsAriaLabel": "{title}の記録を閲覧",
-        "entryCount": "エントリー: {count}件",
-        "createdBy": "作成者:"
+        "viewRecordsAriaLabel": "{title}の記録を閲覧"
       },
       "entryStatus": {
         "before": "受付前",
@@ -3396,7 +3354,6 @@
     "attendance": {
       "statusOpen": "提出受付中",
       "statusClosed": "提出締切",
-      "statusUnset": "未設定",
       "none": "なし",
       "loading": "読み込み中...",
       "error": "エラーが発生しました",
@@ -3411,9 +3368,7 @@
     "memberStats": {
       "title": "メンバー管理 ({count}人)",
       "includeRelay": "引き継ぎを含む",
-      "totalLabel": "総メンバー: {count}人",
-      "adminLabel": "管理者: {count}人",
-      "userLabel": "ユーザー: {count}人"
+      "totalLabel": "総メンバー: {count}人"
     },
     "membersTimeTable": {
       "col": {
@@ -3465,20 +3420,15 @@
     "recentAttendance": {
       "title": "直近の出欠",
       "empty": "イベントがありません",
-      "saveButton": "保存",
       "thisMonth": "今月",
-      "nextMonth": "来月",
-      "notePlaceholder": "備考を入力（任意）"
+      "nextMonth": "来月"
     },
     "monthDetail": {
       "title": "月別出欠",
       "close": "閉じる",
-      "saveButton": "保存",
-      "saving": "保存中...",
-      "error": "エラーが発生しました",
-      "loading": "読み込み中...",
       "practiceLabel": "練習",
-      "notePlaceholder": "備考を入力（任意）"
+      "notePlaceholder": "備考を入力（任意）",
+      "openAttendanceAriaLabel": "{date} {title}の出欠状況を表示"
     },
     "attendanceStatus": {
       "present": "出席",
@@ -3511,18 +3461,8 @@
     "attendanceStatusHook": {
       "loadError": "出欠情報の取得に失敗しました"
     },
-    "monthDetailHook": {
-      "loadError": "出欠情報の取得に失敗しました"
-    },
     "monthListHook": {
       "loadError": "月リストの取得に失敗しました"
-    },
-    "recentAttendanceHook": {
-      "loadError": "直近の出欠情報の取得に失敗しました",
-      "saveSuccess": "保存しました",
-      "confirmEditAfterDeadline": "提出締め切り後の編集になります（{date}）。備考に編集日時が自動的に追加されます。保存しますか？",
-      "authRequired": "認証が必要です",
-      "saveError": "出欠情報の保存に失敗しました"
     },
     "entryCompetitionCard": {
       "placeLabel": "場所:",
@@ -3622,7 +3562,8 @@
       "filledCountIndividual": "{n}人",
       "filledCountRelay": "{n}チーム",
       "emptyLabel": "未入力",
-      "entryCountLabel": "({n}人エントリー)"
+      "entryCountLabel": "({n}人エントリー)",
+      "backToList": "種目一覧に戻る"
     },
     "practiceForm": {
       "title": "練習記録を追加",
@@ -3868,28 +3809,8 @@
     "badge": {
       "admin": "管理者"
     },
-    "client": {
-      "notFound": {
-        "title": "チームが見つかりません",
-        "description": "指定されたチームは存在しないか、アクセス権限がありません。"
-      },
-      "unauthorized": {
-        "title": "アクセス権限がありません",
-        "description": "このページにアクセスするには管理者権限が必要です。"
-      },
-      "inviteCodeLabel": "招待コード:"
-    },
     "tabs": {
-      "attendance": "出欠",
-      "announcements": "お知らせ",
-      "members": "メンバー",
-      "groups": "グループ",
-      "practices": "練習",
-      "competitions": "大会",
-      "rankings": "ランキング",
-      "goals": "目標",
-      "bulkRegister": "一括登録",
-      "settings": "設定"
+      "bulkRegister": "一括登録"
     },
     "settings": {
       "title": "チーム設定",
@@ -4108,15 +4029,14 @@
     "eventListItem": {
       "openButton": "受付中",
       "closedButton": "締切",
-      "saveButton": "保存",
-      "saving": "保存中..."
+      "confirmOpen": "出欠の受付を開始しますか？",
+      "confirmClose": "出欠の受付を締め切りますか？"
     },
     "bulkChange": {
       "title": "まとめて出欠状態を変更",
       "empty": "イベントがありません",
       "statusOpen": "受付中",
       "statusClosed": "締切",
-      "statusUnset": "未設定",
       "competitionLabel": "（大会）",
       "openButton": "受付中にする",
       "closedButton": "締切にする"
@@ -4295,8 +4215,7 @@
       "modeTabManual": "手動入力"
     },
     "common": {
-      "close": "閉じる",
-      "copyTitle": "コピー"
+      "close": "閉じる"
     },
     "bulkRegisterHook": {
       "invalidFileType": "Excelファイル（.xlsx または .xls）を選択してください",
@@ -4584,7 +4503,7 @@
       "cancel": "キャンセル",
       "helpTitle": "タイム入力のコツ",
       "helpBodyBasic": "数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n数字キーボードだけで打てる「.」区切りが便利です。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。",
-      "helpBody": "数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n数字キーボードだけで打てる「.」区切りが便利です。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。\n\n前のセルで「33-2」と入力すると、次のセルは「3-2」と入力するだけで「33.2」に自動補完されます（十の位を引き継ぐ）。セルを空にすると引き継ぎはリセットされます。"
+      "helpBody": "数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n数字キーボードだけで打てる「.」区切りが便利です。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。\n\n2本目以降は、入力欄を開くと前の本の十の位（1分以上なら分も）が先に入っています。続きの数字だけを打てば小数点も自動で入ります（例: 前の本が「33.2」なら「3」が入った状態で「45」と打つと「34.5」）。「3-2」のように区切り文字を打つと、十の位を引き継いで「33.2」と解釈します。最初から打ち直すときは Backspace で引き継いだ数字を消してください。"
     },
     "record": {
       "title_create": "記録を追加",

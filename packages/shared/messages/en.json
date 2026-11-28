@@ -1237,11 +1237,6 @@
       "Fly": "Fly",
       "IM": "IM"
     },
-    "categories": {
-      "Swim": "Swim",
-      "Pull": "Pull",
-      "Kick": "Kick"
-    },
     "form": {
       "dateLabel": "Date",
       "datePlaceholder": "YYYY-MM-DD",
@@ -1823,10 +1818,6 @@
       "splitTimePlaceholder": "2.00.00",
       "subtitle": "Enter records for each event by member",
       "competitionFallback": "Competition",
-      "entryHeader": "Event {num}",
-      "eventLabel": "Event",
-      "selectPlaceholder": "Select...",
-      "individualEvents": "Individual Events",
       "selectSwimmer": "Select swimmer",
       "timePlaceholder": "2.00.00",
       "distancePlaceholder": "Distance",
@@ -1842,8 +1833,6 @@
         "atLeastOneRecord": "Please enter at least one record"
       },
       "error": {
-        "splitDeleteFailed": "Failed to delete split times",
-        "recordDeleteFailed": "Failed to delete existing records",
         "saveFailed": "An error occurred while saving. Please try again."
       },
       "errorVideoUploadUrlFailed": "{name}: Failed to get upload URL ({status})",
@@ -3031,11 +3020,6 @@
       "description": "List of teams you have joined"
     },
     "pending": {
-      "sectionTitle": "Pending Approval ({count})",
-      "loading": "Loading...",
-      "inviteCodeLabel": "Invite Code:",
-      "waitingWithCode": "Your join request is pending approval",
-      "waitingNoCode": "Your join request is pending approval",
       "appliedAtLabel": "Applied:"
     },
     "empty": {
@@ -3063,14 +3047,6 @@
     },
     "loading": {
       "text": "Loading..."
-    },
-    "tabs": {
-      "attendance": "Attendance",
-      "members": "Members",
-      "practices": "Practices",
-      "competitions": "Competitions",
-      "rankings": "Rankings",
-      "settings": "Settings"
     },
     "createModal": {
       "errorTitle": "An error occurred",
@@ -3111,19 +3087,11 @@
       "confirmMessageToSwimmer": "Mark {name} as a swimmer?"
     },
     "practices": {
-      "title": "Team Practices ({count})",
       "addButton": "Add Practice",
-      "empty": "No practice records",
-      "error": "Failed to load team practice information",
-      "retry": "Retry",
       "card": {
         "detailButton": "Details",
         "manageButton": "Manage",
         "noLogs": "No logs",
-        "logsCount": "Sets recorded: {count}",
-        "noLogsLabel": "No practice records",
-        "clickToEdit": "Click to edit",
-        "clickToAdd": "Click to add",
         "editAriaLabel": "Edit practice record for {date}",
         "addAriaLabel": "Add practice record for {date}",
         "viewAriaLabel": "View practice record for {date}",
@@ -3146,11 +3114,7 @@
       "noLogs": "No practice logs"
     },
     "competitions": {
-      "title": "Team Competitions ({count})",
       "addButton": "Add Competition",
-      "empty": "No competitions",
-      "error": "Failed to load team competition information",
-      "retry": "Retry",
       "fallbackTitle": "Competition",
       "card": {
         "entryButton": "Entry",
@@ -3159,13 +3123,7 @@
         "editButton": "Edit",
         "deleteButton": "Delete",
         "entryBulkInputButton": "Add Entries",
-        "recordCount": "{count, plural, one {{count} record} other {{count} records}}",
-        "tapForDetails": "Tap for details",
-        "noRecords": "No records yet",
-        "addable": "Add a record",
-        "viewRecordsAriaLabel": "View records for {title}",
-        "entryCount": "Entries: {count}",
-        "createdBy": "Created by:"
+        "viewRecordsAriaLabel": "View records for {title}"
       },
       "entryStatus": {
         "before": "Not Open",
@@ -3390,7 +3348,6 @@
     "attendance": {
       "statusOpen": "Open",
       "statusClosed": "Closed",
-      "statusUnset": "Not set",
       "none": "None",
       "loading": "Loading...",
       "error": "An error occurred",
@@ -3405,9 +3362,7 @@
     "memberStats": {
       "title": "Member Management ({count})",
       "includeRelay": "Include relay",
-      "totalLabel": "Total members: {count}",
-      "adminLabel": "Admins: {count}",
-      "userLabel": "Users: {count}"
+      "totalLabel": "Total members: {count}"
     },
     "membersTimeTable": {
       "col": {
@@ -3459,20 +3414,15 @@
     "recentAttendance": {
       "title": "Recent Attendance",
       "empty": "No events",
-      "saveButton": "Save",
       "thisMonth": "This Month",
-      "nextMonth": "Next Month",
-      "notePlaceholder": "Add a note (optional)"
+      "nextMonth": "Next Month"
     },
     "monthDetail": {
       "title": "Monthly Attendance",
       "close": "Close",
-      "saveButton": "Save",
-      "saving": "Saving...",
-      "error": "An error occurred",
-      "loading": "Loading...",
       "practiceLabel": "Practice",
-      "notePlaceholder": "Add a note (optional)"
+      "notePlaceholder": "Add a note (optional)",
+      "openAttendanceAriaLabel": "Show attendance for {title} on {date}"
     },
     "attendanceStatus": {
       "present": "Present",
@@ -3505,18 +3455,8 @@
     "attendanceStatusHook": {
       "loadError": "Failed to load attendance information"
     },
-    "monthDetailHook": {
-      "loadError": "Failed to load attendance information"
-    },
     "monthListHook": {
       "loadError": "Failed to load month list"
-    },
-    "recentAttendanceHook": {
-      "loadError": "Failed to load recent attendance information",
-      "saveSuccess": "Saved",
-      "confirmEditAfterDeadline": "You are editing after the deadline ({date}). The edit timestamp will be automatically added to the note. Save anyway?",
-      "authRequired": "Authentication required",
-      "saveError": "Failed to save attendance information"
     },
     "entryCompetitionCard": {
       "placeLabel": "Location:",
@@ -3616,7 +3556,8 @@
       "filledCountIndividual": "{n} swimmers",
       "filledCountRelay": "{n} teams",
       "emptyLabel": "Not entered",
-      "entryCountLabel": "({n} entries)"
+      "entryCountLabel": "({n} entries)",
+      "backToList": "Back to events"
     },
     "entrySection": {
       "title": "Open for Entry"
@@ -3865,28 +3806,8 @@
     "badge": {
       "admin": "Admin"
     },
-    "client": {
-      "notFound": {
-        "title": "Team not found",
-        "description": "The specified team does not exist or you do not have access."
-      },
-      "unauthorized": {
-        "title": "Access denied",
-        "description": "You need admin permissions to access this page."
-      },
-      "inviteCodeLabel": "Invite Code:"
-    },
     "tabs": {
-      "attendance": "Attendance",
-      "announcements": "Announcements",
-      "members": "Members",
-      "groups": "Groups",
-      "practices": "Practices",
-      "competitions": "Competitions",
-      "rankings": "Rankings",
-      "goals": "Goals",
-      "bulkRegister": "Bulk Register",
-      "settings": "Settings"
+      "bulkRegister": "Bulk Register"
     },
     "settings": {
       "title": "Team Settings",
@@ -4105,15 +4026,14 @@
     "eventListItem": {
       "openButton": "Open",
       "closedButton": "Closed",
-      "saveButton": "Save",
-      "saving": "Saving..."
+      "confirmOpen": "Open attendance submissions for this event?",
+      "confirmClose": "Close attendance submissions for this event?"
     },
     "bulkChange": {
       "title": "Bulk update attendance status",
       "empty": "No events",
       "statusOpen": "Open",
       "statusClosed": "Closed",
-      "statusUnset": "Not set",
       "competitionLabel": "(Competition)",
       "openButton": "Set to Open",
       "closedButton": "Set to Closed"
@@ -4292,8 +4212,7 @@
       "modeTabManual": "Manual Entry"
     },
     "common": {
-      "close": "Close",
-      "copyTitle": "Copy"
+      "close": "Close"
     },
     "bulkRegisterHook": {
       "invalidFileType": "Please select an Excel file (.xlsx or .xls)",
@@ -4581,7 +4500,7 @@
       "cancel": "Cancel",
       "helpTitle": "Time Entry Tips",
       "helpBodyBasic": "Separate the numbers with any non-digit character (. - : etc.). Dots alone work, so you can type everything on the number keypad. Examples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.",
-      "helpBody": "Separate the numbers with any non-digit character (. - : etc.). Dots alone work, so you can type everything on the number keypad. Examples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
+      "helpBody": "Separate the numbers with any non-digit character (. - : etc.). Dots alone work, so you can type everything on the number keypad. Examples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.\n\nFrom the 2nd rep on, the tens digit of the previous rep (and the minutes, if over 1 minute) is already filled in when you open the cell. Just type the remaining digits and the decimal point is added automatically (e.g. if the previous rep was \"33.2\", the cell starts with \"3\" and typing \"45\" gives \"34.5\"). Typing a separator, as in \"3-2\", still carries over the tens digit and reads as \"33.2\". To start over, delete the carried-over digits with Backspace."
     },
     "record": {
       "title_create": "Add Record",

@@ -24,6 +24,7 @@ import {
 } from "@apps/shared/utils/domesticRecords";
 import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 import { COMPACT_SELECT_CLASS } from "@/components/ui/selectStyles";
+import BaseModal from "@/components/ui/BaseModal";
 
 export interface BestTime {
   id: string;
@@ -116,6 +117,23 @@ export default function BestTimesTable({
   const effectiveAgeCategory: AgeCategory | null =
     ageCategoryOverride === undefined ? (ageCategory ?? null) : ageCategoryOverride;
   const [isWaPointsMode, setIsWaPointsMode] = useState<boolean>(false);
+  // マスを押したときに出す詳細 (大会名・日付・備考)。null の間は閉じている
+  const [selectedDetail, setSelectedDetail] = useState<{
+    heading: string;
+    bestTime: BestTime;
+  } | null>(null);
+
+  // 一括入力に入ったら点数表示をタイムに戻し、開いていた詳細も閉じる (mobile と同じ)。
+  // 入力を終えたときはタイム表示のまま戻る
+  const isEditing = edit !== undefined;
+  const [wasEditing, setWasEditing] = useState(isEditing);
+  if (isEditing !== wasEditing) {
+    setWasEditing(isEditing);
+    if (isEditing) {
+      setIsWaPointsMode(false);
+      setSelectedDetail(null);
+    }
+  }
 
   const styleHeaderBgClass: Record<string, string> = {
     自由形: "bg-yellow-100",
@@ -493,8 +511,17 @@ export default function BestTimesTable({
                           <span className="inline-block text-gray-300">—</span>
                         )
                       ) : bestTime ? (
-                        <div
-                          className={`group relative inline-block pt-1 ${isNew ? "pr-4 @lg:pr-5" : ""}`}
+                        // 押すと詳細 (大会名・日付・備考) を開く。ホバーだけだとスマホのブラウザで見られないため
+                        <button
+                          type="button"
+                          aria-haspopup="dialog"
+                          onClick={() =>
+                            setSelectedDetail({
+                              heading: `${distance}m ${tStyles(STYLE_KEY_MAP[style])}`,
+                              bestTime,
+                            })
+                          }
+                          className={`relative inline-block cursor-pointer rounded pt-1 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isNew ? "pr-4 @lg:pr-5" : ""}`}
                         >
                           {isNew && (
                             <span className="absolute -top-0.5 -right-2 @lg:-right-3 text-[8px] @lg:text-[9px] bg-red-500 text-white px-1 py-0.5 leading-none rounded-full shadow">
@@ -519,25 +546,7 @@ export default function BestTimesTable({
                               );
                             })()}
                           </span>
-
-                          {/* ホバー時の詳細情報 */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] @xl:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                            <div className="flex items-center space-x-1 mb-1">
-                              <CalendarIcon className="h-3 w-3" />
-                              <span>{formatDate(bestTime.competition?.date ?? bestTime.created_at, "numeric")}</span>
-                            </div>
-                            {bestTime.competition ? (
-                              <div className="text-blue-300">{bestTime.competition.title}</div>
-                            ) : null}
-                            {bestTime.note ? (
-                              <div className="text-gray-400">{bestTime.note}</div>
-                            ) : !bestTime.competition ? (
-                              <div className="text-gray-400">{t("bulkEntryNote")}</div>
-                            ) : null}
-                            {/* 矢印 */}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
+                        </button>
                       ) : (
                         <span className="inline-block text-gray-300">—</span>
                       )}
@@ -630,6 +639,40 @@ export default function BestTimesTable({
           )}
         </div>
       )}
+
+      <BaseModal
+        isOpen={selectedDetail !== null}
+        onClose={() => setSelectedDetail(null)}
+        title={selectedDetail?.heading}
+        size="sm"
+      >
+        {selectedDetail && (
+          <BestTimeDetail bestTime={selectedDetail.bestTime} bulkEntryNote={t("bulkEntryNote")} />
+        )}
+      </BaseModal>
+    </div>
+  );
+}
+
+/**
+ * マスを押したときの詳細。日付は常に出し、大会名と備考はそれぞれあれば出す。
+ * どちらも無い (一括登録) ときは「一括登録」相当の文言を出す (mobile の BestTimeDetailSheet と同じ)
+ */
+function BestTimeDetail({ bestTime, bulkEntryNote }: { bestTime: BestTime; bulkEntryNote: string }) {
+  return (
+    <div className="space-y-1.5" data-testid="best-time-detail">
+      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+        <CalendarIcon className="h-4 w-4" aria-hidden="true" />
+        <span>{formatDate(bestTime.competition?.date ?? bestTime.created_at, "numeric")}</span>
+      </div>
+      {bestTime.competition?.title ? (
+        <p className="text-base font-semibold text-blue-600">{bestTime.competition.title}</p>
+      ) : null}
+      {bestTime.note ? (
+        <p className="text-sm text-gray-500">{bestTime.note}</p>
+      ) : !bestTime.competition?.title ? (
+        <p className="text-sm text-gray-500">{bulkEntryNote}</p>
+      ) : null}
     </div>
   );
 }

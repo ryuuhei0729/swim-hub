@@ -14,7 +14,8 @@
  *   [V-BASE] 長水路タブ×100m個人メドレーは base time が無いため「—」
  *   [V-D5] タブ切替をしてもトグル状態(ON/OFF)は維持される
  *   [V-D4] 凡例文言がモードによって変わる (WAポイントモードでは「R: 引き継ぎあり」を出さない)
- *   [V-REG] 既存の時間表示・Newバッジ・ホバーツールチップ・チェックボックスの回帰確認
+ *   [V-REG] 既存の時間表示・Newバッジ・マスを押したときの詳細・チェックボックスの回帰確認
+ *   [V-DETAIL] マスを押すと詳細 (大会名・日付・備考) を開く (ホバーだけだとスマホのブラウザで見られないため。mobile と同じ)
  *
  * ## [V-QUAD] 追加スプリント (2026-08-30, 一括登録 note 併記) Sprint Contract 検証観点
  * competition と note の4象限 (A: 両方あり / B: competitionのみ / C: noteのみ / D: どちらも無し)
@@ -123,6 +124,13 @@ const cellTestId = (style: keyof typeof STYLE_KEY_MAP, distance: number) =>
   `best-times-cell-${STYLE_KEY_MAP[style]}-${distance}`;
 
 const getToggle = () => screen.getByTestId("best-times-wa-points-toggle");
+
+/** マス (自由形100m) を押して詳細を開き、詳細の要素を返す */
+async function openDetail(user: ReturnType<typeof userEvent.setup>) {
+  const cell = screen.getByTestId(cellTestId("自由形", 100));
+  await user.click(within(cell).getByRole("button"));
+  return screen.getByTestId("best-time-detail");
+}
 const getCheckbox = () =>
   screen.getByRole("checkbox", { name: "引き継ぎタイムも含めて表示" });
 
@@ -357,7 +365,7 @@ describe("[V-D4] 凡例文言がモードで変わる (WAポイントモード�
 });
 
 // ---------------------------------------------------------------------------
-// [V-REG] 既存の時間表示・Newバッジ・ホバーツールチップ・チェックボックスの回帰確認
+// [V-REG] 既存の時間表示・Newバッジ・マスを押したときの詳細・チェックボックスの回帰確認
 // ---------------------------------------------------------------------------
 describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更されないこと)", () => {
   it("大会実施日が30日以内なら New バッジが表示される (記録の作成日が何年も前でも)", () => {
@@ -387,10 +395,29 @@ describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更され
     expect(within(cell).queryByText("New")).not.toBeInTheDocument();
   });
 
-  it("ホバー時の詳細情報 (大会名) がDOMに存在する (タイムモード)", () => {
+  it("[V-DETAIL] 詳細はマスを押すまで出ず、押すと大会名・日付を出し、閉じると消える (タイムモード)", async () => {
+    const user = userEvent.setup();
     const bt = buildBestTime({ competition: { title: "全国大会", date: "2020-01-01" } });
     renderWithLocale([bt]);
-    expect(screen.getByText("全国大会")).toBeInTheDocument();
+    expect(screen.queryByText("全国大会")).not.toBeInTheDocument();
+
+    const detail = await openDetail(user);
+    expect(within(detail).getByText("全国大会")).toBeInTheDocument();
+    expect(within(detail).getByText("2020/01/01")).toBeInTheDocument();
+    // 見出しは「距離 種目」
+    expect(screen.getByRole("heading", { name: "100m 自由形" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: jaMessages.common.aria.close }));
+    expect(screen.queryByTestId("best-time-detail")).not.toBeInTheDocument();
+  });
+
+  it("[V-DETAIL] 一括登録 (大会なし・備考なし) の記録は詳細に「一括登録」相当の文言を出す", async () => {
+    const user = userEvent.setup();
+    renderWithLocale([buildBestTime({ competition: undefined })]);
+    const detail = await openDetail(user);
+    expect(
+      within(detail).getByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
+    ).toBeInTheDocument();
   });
 
   it("引き継ぎタイムを含めるチェックボックスは初期状態で未チェック", () => {
@@ -402,7 +429,7 @@ describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更され
 
 // ---------------------------------------------------------------------------
 // [V-NOTE-RELAY] リレー引き継ぎ候補が採用されたとき、親記録ではなく引き継ぎ側
-// (relayingTime) の note がホバーツールチップに表示される (CodeRabbit 指摘の回帰テスト)
+// (relayingTime) の note がマスを押したときの詳細に表示される (CodeRabbit 指摘の回帰テスト)
 //
 // getBestTime には candidates.push({...bt, ...}) が3箇所ある (ALLタブの短水路分岐 /
 // ALLタブの長水路分岐 / 短水路・長水路単独タブの分岐、後者は「短水路タブ」「長水路タブ」
@@ -437,6 +464,7 @@ describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note �
     // 引き継ぎ側 (20.00秒) が親 (40.00秒) より速いため、こちらが採用されていることを確認する
     expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
 
+    await openDetail(user);
     expect(screen.getByText("引き継ぎノート(短水路タブ)")).toBeInTheDocument();
     expect(screen.queryByText("親ノート(短水路タブ)")).not.toBeInTheDocument();
   });
@@ -465,6 +493,7 @@ describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note �
     const cell = screen.getByTestId(cellTestId("自由形", 100));
     expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
 
+    await openDetail(user);
     expect(screen.getByText("引き継ぎノート(長水路タブ)")).toBeInTheDocument();
     expect(screen.queryByText("親ノート(長水路タブ)")).not.toBeInTheDocument();
   });
@@ -491,6 +520,7 @@ describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note �
     const cell = screen.getByTestId(cellTestId("自由形", 100));
     expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
 
+    await openDetail(user);
     expect(screen.getByText("引き継ぎノート(ALL短水路分岐)")).toBeInTheDocument();
     expect(screen.queryByText("親ノート(ALL短水路分岐)")).not.toBeInTheDocument();
   });
@@ -517,6 +547,7 @@ describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note �
     const cell = screen.getByTestId(cellTestId("自由形", 100));
     expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
 
+    await openDetail(user);
     expect(screen.getByText("引き継ぎノート(ALL長水路分岐)")).toBeInTheDocument();
     expect(screen.queryByText("親ノート(ALL長水路分岐)")).not.toBeInTheDocument();
   });
@@ -526,7 +557,8 @@ describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note �
 // [V-QUAD-A] 象限A: competition と note が両方ある記録は、大会名と note の両方が表示される
 // ---------------------------------------------------------------------------
 describe("[V-QUAD-A] 象限A: 大会記録に note があるときは大会名と note の両方が表示される", () => {
-  it("competition と note が両方ある記録は、ホバー詳細に大会名と note の両方が表示され、一括登録ラベルは出ない", () => {
+  it("competition と note が両方ある記録は、詳細に大会名と note の両方が表示され、一括登録ラベルは出ない", async () => {
+    const user = userEvent.setup();
     const bt = buildBestTime({
       time: 54.97,
       pool_type: 0,
@@ -534,12 +566,12 @@ describe("[V-QUAD-A] 象限A: 大会記録に note があるときは大会名�
       competition: { title: "併記確認用大会XYZ789", date: "2020-01-01" },
     });
     renderWithLocale([bt]);
-    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    const detail = await openDetail(user);
 
-    expect(within(cell).getByText("併記確認用大会XYZ789")).toBeInTheDocument();
-    expect(within(cell).getByText("併記確認用メモABC123")).toBeInTheDocument();
+    expect(within(detail).getByText("併記確認用大会XYZ789")).toBeInTheDocument();
+    expect(within(detail).getByText("併記確認用メモABC123")).toBeInTheDocument();
     expect(
-      within(cell).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
+      within(detail).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
     ).not.toBeInTheDocument();
   });
 });
@@ -548,18 +580,19 @@ describe("[V-QUAD-A] 象限A: 大会記録に note があるときは大会名�
 // [V-QUAD-B] 象限B: competition があり note が無い記録は、大会名のみで一括登録ラベルは出ない
 // ---------------------------------------------------------------------------
 describe("[V-QUAD-B] 象限B: 大会記録に note が無いときは大会名のみで一括登録ラベルは出ない", () => {
-  it("competition があり note が無い記録は、大会名のみ表示され一括登録ラベルは表示されない", () => {
+  it("competition があり note が無い記録は、大会名のみ表示され一括登録ラベルは表示されない", async () => {
+    const user = userEvent.setup();
     const bt = buildBestTime({
       time: 54.97,
       pool_type: 0,
       competition: { title: "備考なし確認大会DEF456", date: "2020-01-01" },
     });
     renderWithLocale([bt]);
-    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    const detail = await openDetail(user);
 
-    expect(within(cell).getByText("備考なし確認大会DEF456")).toBeInTheDocument();
+    expect(within(detail).getByText("備考なし確認大会DEF456")).toBeInTheDocument();
     expect(
-      within(cell).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
+      within(detail).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
     ).not.toBeInTheDocument();
   });
 });
@@ -570,7 +603,7 @@ describe("[V-QUAD-B] 象限B: 大会記録に note が無いときは大会名�
 // container innerHTML のDOM構造完全一致で検証する
 // ---------------------------------------------------------------------------
 describe("[V-QUAD-BOUNDARY] 境界値: note='' は note=undefined と同一のDOM構造になる", () => {
-  it("competitionがある記録で、note='' と note=undefined のホバー詳細DOMが完全一致する", () => {
+  it("competitionがある記録で、note='' と note=undefined の詳細DOMが完全一致する", async () => {
     const buildBoundary = (note?: string) =>
       buildBestTime({
         time: 54.97,
@@ -579,16 +612,45 @@ describe("[V-QUAD-BOUNDARY] 境界値: note='' は note=undefined と同一のDO
         competition: { title: "境界確認大会GHI000", date: "2020-01-01" },
       });
 
-    const renderCellHtml = (note?: string) => {
+    const renderDetailHtml = async (note?: string) => {
+      const user = userEvent.setup();
       const { unmount } = renderWithLocale([buildBoundary(note)]);
-      const html = screen.getByTestId(cellTestId("自由形", 100)).innerHTML;
+      const html = (await openDetail(user)).innerHTML;
       unmount();
       return html;
     };
 
-    const htmlUndefined = renderCellHtml(undefined);
-    const htmlEmptyString = renderCellHtml("");
+    const htmlUndefined = await renderDetailHtml(undefined);
+    const htmlEmptyString = await renderDetailHtml("");
 
     expect(htmlEmptyString).toBe(htmlUndefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [V-EDIT-RESET] 一括入力に入ったら点数表示をタイムに戻す (mobile と同じ)。
+// 入力を終えたあとはタイム表示のまま戻る (点数表示には戻らない)
+// ---------------------------------------------------------------------------
+describe("[V-EDIT-RESET] 一括入力に入ると点数表示をタイムに戻す", () => {
+  it("点数表示のまま入力モードに入り、抜けるとタイム表示に戻っている", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({ time: 54.97, pool_type: 0 });
+    const renderTable = (edit?: React.ComponentProps<typeof BestTimesTable>["edit"]) => (
+      <NextIntlClientProvider locale="ja" messages={MESSAGES.ja}>
+        <BestTimesTable bestTimes={[bt]} gender={0} edit={edit} />
+      </NextIntlClientProvider>
+    );
+    const { rerender } = render(renderTable());
+
+    await user.click(getToggle());
+    expect(getToggle()).toHaveAttribute("aria-pressed", "true");
+
+    rerender(renderTable({ render: () => <div>入力の表</div>, footer: null }));
+    expect(screen.getByText("入力の表")).toBeInTheDocument();
+
+    rerender(renderTable());
+    expect(getToggle()).toHaveAttribute("aria-pressed", "false");
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(54.97))).toBeInTheDocument();
   });
 });

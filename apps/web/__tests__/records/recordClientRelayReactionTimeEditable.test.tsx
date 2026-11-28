@@ -29,6 +29,7 @@ import { renderWithQueryClient as render, screen, fireEvent } from "@/__tests__/
 import { describe, it, expect, vi } from "vitest";
 import type { Style } from "@apps/shared/types";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
+import { selectionOfFirstEvent } from "../utils/recordEventSelection";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({ default: () => null }));
 vi.mock("@/i18n/navigation");
@@ -116,6 +117,7 @@ function renderRecordClient(existingRecords: ExistingRecordFixture[]) {
       styles={STYLES}
       entries={[]}
       bestTimesByUser={{}}
+      selection={selectionOfFirstEvent(existingRecords, STYLES)}
     />,
   );
 }

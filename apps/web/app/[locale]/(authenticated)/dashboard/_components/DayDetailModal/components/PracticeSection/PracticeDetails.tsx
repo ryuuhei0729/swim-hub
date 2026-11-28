@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -29,6 +29,7 @@ import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/util
 import { DEFAULT_PRACTICE_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import type { PracticeLogWithTimes, PracticeTag, TimeEntry } from "@apps/shared/types";
 import { usePracticeDetailQuery } from "@/hooks/queries/dayDetailQueries";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { AttendanceButton } from "../AttendanceSection";
 import type { PracticeDetailsProps } from "../../types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
@@ -57,6 +58,7 @@ export function PracticeDetails({
   teamName,
   onShowAttendance,
   color,
+  targetLogId,
 }: PracticeDetailsProps) {
   const { supabase, user } = useAuth();
   const wrapperColor = color ?? DEFAULT_PRACTICE_COLOR;
@@ -65,6 +67,7 @@ export function PracticeDetails({
   const isDefaultColor = wrapperColor === DEFAULT_PRACTICE_COLOR;
   const t = useTranslations("practice");
   const tDash = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const userId = user?.id;
 
   // 種目コードをローカライズラベルに変換。practice_logs.style は CHECK 制約の無い
@@ -81,6 +84,10 @@ export function PracticeDetails({
   const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
+  // 削除確認中の練習メニューID(null は確認ダイアログを閉じている状態。mobile と同じく削除前に確認する)
+  const [pendingDeleteLogId, setPendingDeleteLogId] = useState<string | null>(null);
+  // ConfirmDialog は onCancel の参照が変わるたびにフォーカス移動をやり直すため、参照を固定する
+  const closeDeleteLogConfirm = useCallback(() => setPendingDeleteLogId(null), []);
 
   // 練習詳細 (開くたびに取り直す。同じ練習を開き直したときは前回の内容を先に表示する)
   const {
@@ -127,6 +134,11 @@ export function PracticeDetails({
   }
 
   const practiceLogs = practice.practiceLogs || [];
+  // 一覧カードから開いたとき(targetLogId 指定)は押したメニュー1件だけを出す。
+  // シェアは従来どおり練習全体(practiceLogs)を対象にする
+  const visibleLogs = targetLogId
+    ? practiceLogs.filter((log) => log.id === targetLogId)
+    : practiceLogs;
 
   return (
     <div className="mt-3">
@@ -227,7 +239,7 @@ export function PracticeDetails({
           )}
 
           {/* PracticeLogsがある場合の表示 */}
-          {practiceLogs.map((log, index: number) => {
+          {visibleLogs.map((log, index: number) => {
             const formattedLog = log;
             const allTimes = formattedLog.times || [];
 
@@ -392,7 +404,7 @@ export function PracticeDetails({
                       <PencilIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                     <button
-                      onClick={() => onDeletePracticeLog?.(formattedLog.id)}
+                      onClick={() => setPendingDeleteLogId(formattedLog.id)}
                       className="p-1 sm:p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                       title={tDash("practice.deleteMenuTitle")}
                       data-testid="delete-practice-log-button"
@@ -619,6 +631,23 @@ export function PracticeDetails({
           </div>
         )}
       </div>
+
+      {/* 練習メニューの削除確認 */}
+      <ConfirmDialog
+        isOpen={pendingDeleteLogId !== null}
+        onConfirm={() => {
+          const logId = pendingDeleteLogId;
+          setPendingDeleteLogId(null);
+          if (logId) onDeletePracticeLog?.(logId);
+        }}
+        onCancel={closeDeleteLogConfirm}
+        title={tDash("mobile.deletePracticeConfirmTitle")}
+        message={tDash("mobile.deleteMenuConfirmMessage")}
+        confirmLabel={tDash("mobile.deleteButton")}
+        cancelLabel={tCommon("cancel")}
+        variant="danger"
+        initialFocus="cancel"
+      />
 
       {/* シェアカードモーダル */}
       {showShareModal && sharePracticeData && (

@@ -41,6 +41,12 @@ export interface PracticeDetailsProps {
   onShowAttendance?: () => void;
   /** カレンダー記録色設定から解決された練習の表示色(hex)。未指定時はデフォルト緑 */
   color?: string;
+  /**
+   * 指定時はこのIDの練習メニュー1件だけを表示する(練習履歴の一覧カードから開いたとき)。
+   * 未指定(ダッシュボードの日別詳細)はその練習の全メニューを表示する。
+   * mobile の DayDetailModal(targetId) と同じ仕様
+   */
+  targetLogId?: string;
 }
 
 // CompetitionDetailsのProps
@@ -66,6 +72,12 @@ export interface CompetitionDetailsProps {
   onShowAttendance?: () => void;
   /** カレンダー記録色設定から解決された大会の表示色(hex)。未指定時はデフォルト青 */
   color?: string;
+  /**
+   * 指定時はこのIDの記録1件だけを表示する(大会記録の一覧カードから開いたとき)。
+   * 未指定(ダッシュボードの日別詳細)はその大会の自分の記録をすべて表示する。
+   * mobile の RecordDetail(targetRecordId) と同じ仕様
+   */
+  targetRecordId?: string;
 }
 
 // RecordSplitTimesのProps

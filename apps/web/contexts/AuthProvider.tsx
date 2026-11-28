@@ -211,8 +211,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           useCompetitionRecordStore,
           useCommonFormStore,
           useAttendanceTabStore,
-          useTeamDetailStore,
-          useTeamAdminStore,
           useModalStore,
         } = await import("@/stores");
 
@@ -225,8 +223,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         useCompetitionRecordStore.getState().reset();
         useCommonFormStore.getState().reset();
         useAttendanceTabStore.getState().reset();
-        useTeamDetailStore.getState().reset();
-        useTeamAdminStore.getState().reset();
         useModalStore.getState().reset();
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {

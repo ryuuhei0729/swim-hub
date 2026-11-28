@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import {
   PencilIcon,
@@ -46,6 +46,7 @@ import { AttendanceButton } from "../AttendanceSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
 import type { CompetitionDetailsProps } from "../../types";
 import { RecordAPI } from "@apps/shared/api/records";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
@@ -84,6 +85,7 @@ export function CompetitionDetails({
   teamName,
   onShowAttendance,
   color,
+  targetRecordId,
 }: CompetitionDetailsProps) {
   const t = useTranslations("dashboard");
   const tPractice = useTranslations("practice");
@@ -92,6 +94,7 @@ export function CompetitionDetails({
   // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
   const isDefaultColor = wrapperColor === DEFAULT_COMPETITION_COLOR;
   const tCompetition = useTranslations("competition");
+  const tCommon = useTranslations("common");
   const tStyles = useTranslations("practice.styles");
   const locale = useLocale();
   const { supabase, user } = useAuth();
@@ -151,6 +154,10 @@ export function CompetitionDetails({
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareRecordData, setShareRecordData] =
     useState<CompetitionShareData | null>(null);
+  // 削除確認中の記録ID(null は確認ダイアログを閉じている状態。mobile と同じく削除前に確認する)
+  const [pendingDeleteRecordId, setPendingDeleteRecordId] = useState<string | null>(null);
+  // ConfirmDialog は onCancel の参照が変わるたびにフォーカス移動をやり直すため、参照を固定する
+  const closeDeleteRecordConfirm = useCallback(() => setPendingDeleteRecordId(null), []);
 
   // 大会の記録 (開くたびに取り直す。同じ大会を開き直したときは前回の内容を先に表示する)
   const { data: competitionRecords, error: recordsError } =
@@ -159,7 +166,15 @@ export function CompetitionDetails({
       isTeamCompetition,
       userId: user?.id ?? null,
     });
-  const actualRecords = competitionRecords?.records ?? EMPTY_RECORDS;
+  const allRecords = competitionRecords?.records ?? EMPTY_RECORDS;
+  // 一覧カードから開いたとき(targetRecordId 指定)は押した記録1件だけを出す(同じ大会の他種目は出さない)
+  const actualRecords = useMemo(
+    () =>
+      targetRecordId
+        ? allRecords.filter((record) => record.id === targetRecordId)
+        : allRecords,
+    [allRecords, targetRecordId],
+  );
   // フィードバック件数 (閲覧できるものだけ)。件数がある記録にだけ一覧を出す
   const feedbackSummaries = useRecordFeedbackSummaries(actualRecords.map((r) => r.id));
   // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)。
@@ -532,7 +547,7 @@ export function CompetitionDetails({
                           <PencilIcon className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => onDeleteRecord?.(record.id)}
+                          onClick={() => setPendingDeleteRecordId(record.id)}
                           className="p-1 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                           title={t("competition.deleteRecord")}
                           data-testid="delete-record-button"
@@ -684,6 +699,23 @@ export function CompetitionDetails({
           </div>
         )}
       </div>
+
+      {/* 大会記録の削除確認 */}
+      <ConfirmDialog
+        isOpen={pendingDeleteRecordId !== null}
+        onConfirm={() => {
+          const recordId = pendingDeleteRecordId;
+          setPendingDeleteRecordId(null);
+          if (recordId) onDeleteRecord?.(recordId);
+        }}
+        onCancel={closeDeleteRecordConfirm}
+        title={t("mobile.deletePracticeConfirmTitle")}
+        message={t("mobile.deleteRecordConfirmMessage")}
+        confirmLabel={t("mobile.deleteButton")}
+        cancelLabel={tCommon("cancel")}
+        variant="danger"
+        initialFocus="cancel"
+      />
 
       {/* シェアカードモーダル */}
       {showShareModal && shareRecordData && (

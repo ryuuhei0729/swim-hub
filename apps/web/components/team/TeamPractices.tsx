@@ -1,8 +1,13 @@
 "use client";
 
+// =============================================================================
+// 予定タブの「練習」側: カードと、カードの操作 (編集・削除・タイム一覧・記録追加・代理入力) と
+// そのモーダル群。一覧の取得と並べ方は TeamSchedule.tsx が持つ (練習と大会を 1 本に
+// 混ぜるため。mobile の TeamPracticeList の PracticeItem / useTeamPracticeActions と同じ分け方)。
+// =============================================================================
+
 import React, {
   useState,
-  useEffect,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -13,11 +18,10 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTranslations } from "next-intl";
 import {
-  PlusIcon,
   CalendarDaysIcon,
   MapPinIcon,
-  ClockIcon,
   PencilSquareIcon,
+  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { format, isValid, parseISO } from "date-fns";
@@ -29,17 +33,12 @@ import { resolveGalleryImages } from "@/lib/image-url";
 import { hasParentImageChanges, saveParentImages } from "@/utils/parentImageSave";
 import { TeamPracticesAPI } from "@apps/shared/api/teams/practices";
 import { PracticeAPI } from "@apps/shared/api/practices";
-import Pagination from "@/components/ui/Pagination";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import TeamPracticeDetailModal from "./TeamPracticeDetailModal";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import type { EditingData } from "@/stores/types";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  TEAM_PRACTICES_PAGE_SIZE,
-  useTeamPracticesPageQuery,
-  type TeamPractice,
-} from "@/hooks/queries/teamPracticeQueries";
+import type { TeamPractice } from "@/hooks/queries/teamPracticeQueries";
 import { invalidateTeamPracticeQueries } from "@/hooks/queries/teamDetailKeys";
 
 const PracticeBasicForm = dynamic(
@@ -59,22 +58,33 @@ const PracticeTabModal = dynamic(
 
 export type { TeamPractice } from "@/hooks/queries/teamPracticeQueries";
 
-export interface TeamPracticesProps {
+export interface TeamPracticeActionsOptions {
   teamId: string;
   isAdmin?: boolean;
 }
 
-export default function TeamPractices({
+export interface TeamPracticeActions {
+  /** 練習 1 件分のカード */
+  renderCard: (practice: TeamPractice) => React.ReactNode;
+  /** 作成・編集フォーム・記録追加・タイム一覧・削除確認のモーダル (一覧の外に 1 回だけ置く) */
+  modals: React.ReactNode;
+  /** 管理者ビュー: 練習を追加 */
+  openAddForm: () => void;
+  /** 保存・削除の失敗 (一覧の代わりに表示する) */
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useTeamPracticeActions({
   teamId,
   isAdmin = false,
-}: TeamPracticesProps) {
+}: TeamPracticeActionsOptions): TeamPracticeActions {
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
   const queryClient = useQueryClient();
   // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   // タイム一覧モーダルで開いている練習 (null なら閉じている)
   const [selectedPractice, setSelectedPractice] = useState<{
     id: string;
@@ -82,21 +92,6 @@ export default function TeamPractices({
   } | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const pageSize = TEAM_PRACTICES_PAGE_SIZE;
-
-  // チームの練習記録 (ページ単位)。タブを開くたびに再取得するが (staleTime 0)、
-  // 再取得中は前回の内容をそのまま表示する
-  const practicesQuery = useTeamPracticesPageQuery(supabase, teamId, currentPage, pageSize);
-  const practices = practicesQuery.data?.practices ?? [];
-  const totalCount = practicesQuery.data?.totalCount ?? 0;
-  // スケルトン / 取得エラーは「表示できるデータが1件も無い」ときだけ出す
-  const loading = practicesQuery.isPending;
-  const displayError =
-    error ?? (practicesQuery.isError && !practicesQuery.data ? t("practices.error") : null);
-  const fetchError = practicesQuery.error;
-  useEffect(() => {
-    if (fetchError) console.error("チーム練習情報の取得に失敗:", fetchError);
-  }, [fetchError]);
 
   const {
     isBasicFormOpen,
@@ -130,10 +125,10 @@ export default function TeamPractices({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 練習一覧 (全ページ)・出欠の月別サマリ・(指定時は) その練習の詳細モーダルを最新化する。
+  // 練習一覧 (今日以降・過去)・出欠の月別サマリ・(指定時は) その練習の詳細モーダルを最新化する。
   // 保存・削除の直後に呼び、保存前の内容が残らないよう再取得の完了まで待つ。
-  // 表示していないページ・閉じている詳細モーダルのキャッシュは捨てるので、保存後に
-  // 1 ページ目へ戻したり詳細を開き直したりしても保存前の内容は出ない
+  // 表示していない一覧・閉じている詳細モーダルのキャッシュは捨てるので、保存後に
+  // 過去を開き直したり詳細を開き直したりしても保存前の内容は出ない
   // (refreshQueriesAfterWrite の docstring 参照)
   const loadTeamPractices = useCallback(
     async (practiceId?: string) => {
@@ -241,7 +236,6 @@ export default function TeamPractices({
 
       closeBasicForm();
       await loadTeamPractices(practiceId);
-      setCurrentPage(1);
       if (imageSaveFailed) setError(t("practiceForm.imageSaveFailed"));
     } catch (err) {
       console.error("練習の保存に失敗:", err);
@@ -281,10 +275,11 @@ export default function TeamPractices({
     }
   };
 
-  // 一般メンバー向け: カードの「記録追加」から、その練習に自分のログを付ける
+  // 利用者ビュー向け: カードの「記録追加」から、その練習に自分のログを付ける
   // (PracticeTabModal の practiceLog タブを、既存の練習の編集モードで開く)。
   // 練習の ID を渡さずに開くと、保存時に team_id 付きの新しい練習が作られてしまう
   // (swimhub-tasks#57)。モバイルの TeamPracticeList の handleAddLog と同じ導線。
+  // 管理者ビューには出さない (mobile と同じく代理入力の導線だけ。swimhub-tasks#112)
   const handleOpenSelfLog = (practice: TeamPractice) => {
     openTabModal(
       new Date(practice.date),
@@ -364,11 +359,6 @@ export default function TeamPractices({
     return handleSelfLogTabSave(params);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // 新しいページのクエリは useTeamPracticesPageQuery がキーの変化で取得する
-  };
-
   // 管理者向け: 練習ログの代理入力ページへ遷移 (カードの「記録代理入力」ボタン)
   const handleOpenLogInput = (practiceId: string) => {
     if (isAdmin) {
@@ -377,260 +367,135 @@ export default function TeamPractices({
   };
 
   // メンバー全員のタイム一覧モーダルを開く (admin/非admin 共通)
-  const handleOpenDetail = (practice: TeamPractice, practiceDate: string) => {
+  const handleOpenTimes = (practice: TeamPractice, practiceDate: string) => {
     setSelectedPractice({
       id: practice.id,
       heading: practice.title ? `${practiceDate} ${practice.title}` : practiceDate,
     });
   };
 
-  // ヘッダーのアクションボタン(管理者向け追加)はデータ読み込み中でも
-  // 即座に操作できるよう、読み込み/エラー状態のゲートより外側で常に描画する。
-  return (
-    <>
-      <div className="bg-white rounded-lg shadow p-6">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6 gap-2">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {t("practices.title", { count: practices.length })}
-          </h2>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
+  const renderCard = (practice: TeamPractice): React.ReactNode => {
+    const parsedPracticeDate = parseISO(practice.date);
+    const practiceDate = isValid(parsedPracticeDate)
+      ? format(parsedPracticeDate, "M月d日(E)", { locale: ja })
+      : "-";
+    // 記録が無くてもカード全体を押してメンバー全員のタイム一覧を開く (admin/非admin 共通。
+    // 0件なら一覧側で空表示。mobile と同じ。swimhub-tasks#103)。
+    // 中のボタンは stopPropagation してカードのクリックと分ける
+    const openTimes = () => handleOpenTimes(practice, practiceDate);
+
+    return (
+      <div
+        key={practice.id}
+        onClick={openTimes}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openTimes();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+        aria-label={t("practices.card.viewTimesAriaLabel", { date: practiceDate })}
+        data-testid="team-practice-card"
+        className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-2">
+              <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+              <span className="text-lg font-medium text-gray-900">
+                {practiceDate}
+              </span>
+            </div>
+
+            {practice.title && (
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-sm font-medium text-gray-900">
+                  {practice.title}
+                </span>
+              </div>
+            )}
+
+            {practice.place && (
+              <div className="flex items-center space-x-2 mb-1">
+                <MapPinIcon className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-600">
+                  {practice.place}
+                </span>
+              </div>
+            )}
+
+            {practice.note && (
+              <p className="text-sm text-gray-600 mb-2">
+                {practice.note}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            {isAdmin ? (
+              <div className="flex flex-wrap justify-end gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenLogInput(practice.id);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  data-testid="team-practice-log-input-button"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
+                >
+                  <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
+                  {t("practices.card.recordBulkButton")}
+                </button>
+                <button
+                  onClick={(e) => handleEditPractice(e, practice)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  data-testid="team-practice-edit-button"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  aria-label={t("practices.card.editButton")}
+                >
+                  <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
+                  {t("practices.card.editButton")}
+                </button>
+                <button
+                  onClick={(e) => handleRequestDelete(e, practice.id)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  data-testid="team-practice-delete-button"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                  aria-label={t("practices.card.deleteButton")}
+                >
+                  <TrashIcon className="h-3.5 w-3.5 mr-1" />
+                  {t("practices.card.deleteButton")}
+                </button>
+              </div>
+            ) : (
+              // この練習に自分のログを付ける (管理者ビューは「記録代理入力」から入力する)
               <button
-                onClick={handleAddPractice}
-                className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenSelfLog(practice);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+                data-testid="team-practice-add-log-button"
+                className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                aria-label={t("practices.card.addLogAriaLabel", {
+                  date: practiceDate,
+                })}
               >
-                <PlusIcon className="h-5 w-5 mr-1 sm:mr-2" />
-                {t("practices.addButton")}
+                <PlusIcon className="h-3.5 w-3.5 mr-1" />
+                {t("practices.card.addLogButton")}
               </button>
             )}
           </div>
         </div>
-
-        {/* 練習記録一覧 */}
-        {loading ? (
-          <div className="animate-pulse">
-            <div className="space-y-3">
-              {[...Array(3)].map((_, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-32 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-20"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : displayError ? (
-          <div className="text-center py-8">
-            <p className="text-red-600 mb-4">{displayError}</p>
-            <button
-              onClick={() => {
-                setError(null);
-                void practicesQuery.refetch();
-                router.refresh();
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              {t("practices.retry")}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {practices.map((practice) => {
-              const parsedDate = parseISO(practice.date);
-              const practiceDate = isValid(parsedDate)
-                ? format(parsedDate, "M月d日(E)", { locale: ja })
-                : "-";
-              const createdAt = new Date(practice.createdAt);
-              const createdAtLabel = isValid(createdAt) ? format(createdAt, "M/d HH:mm") : "-";
-              const hasLogs =
-                practice.practiceLogs && practice.practiceLogs.length > 0;
-              // 大会カード (TeamCompetitions) と同じく、記録があればカード全体を押して
-              // メンバー全員のタイム一覧を開く (admin/非admin 共通)。
-              // admin のログ代理入力は「記録代理入力」ボタンに分ける
-              const canViewTimes = !!hasLogs;
-              const openTimes = () => handleOpenDetail(practice, practiceDate);
-
-              return (
-                <div
-                  key={practice.id}
-                  onClick={canViewTimes ? openTimes : undefined}
-                  onKeyDown={(e) => {
-                    if (canViewTimes && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      openTimes();
-                    }
-                  }}
-                  tabIndex={canViewTimes ? 0 : undefined}
-                  role={canViewTimes ? "button" : undefined}
-                  aria-label={
-                    canViewTimes
-                      ? t("practices.card.viewTimesAriaLabel", { date: practiceDate })
-                      : undefined
-                  }
-                  data-testid="team-practice-card"
-                  className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
-                    canViewTimes
-                      ? "cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      : "cursor-default"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                        <span className="text-lg font-medium text-gray-900">
-                          {practiceDate}
-                        </span>
-                        {isAdmin && (
-                          <span className="text-sm text-gray-500">
-                            by{" "}
-                            {practice.users?.name ||
-                              practice.createdByUser?.name ||
-                              "Unknown"}
-                          </span>
-                        )}
-                      </div>
-
-                      {practice.title && (
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="text-sm font-medium text-gray-900">
-                            {practice.title}
-                          </span>
-                        </div>
-                      )}
-
-                      {practice.place && (
-                        <div className="flex items-center space-x-2 mb-1">
-                          <MapPinIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            {practice.place}
-                          </span>
-                        </div>
-                      )}
-
-                      {practice.note && (
-                        <p className="text-sm text-gray-600 mb-2">
-                          {practice.note}
-                        </p>
-                      )}
-
-                      {hasLogs ? (
-                        <div className="flex items-center space-x-2">
-                          <ClockIcon className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-green-600 font-medium">
-                            {t("practices.card.logsCount", {
-                              count: practice.practiceLogs!.length,
-                            })}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <ClockIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">
-                            {t("practices.card.noLogsLabel")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <p className="text-xs text-gray-500">{createdAtLabel}</p>
-                      {isAdmin && (
-                        <div className="flex flex-wrap justify-end gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenLogInput(practice.id);
-                            }}
-                            onKeyDown={(e) => e.stopPropagation()}
-                            data-testid="team-practice-log-input-button"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
-                          >
-                            <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
-                            {t("practices.card.recordBulkButton")}
-                          </button>
-                          <button
-                            onClick={(e) => handleEditPractice(e, practice)}
-                            onKeyDown={(e) => e.stopPropagation()}
-                            data-testid="team-practice-edit-button"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                            aria-label={t("practices.card.editButton")}
-                          >
-                            <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
-                            {t("practices.card.editButton")}
-                          </button>
-                          <button
-                            onClick={(e) => handleRequestDelete(e, practice.id)}
-                            onKeyDown={(e) => e.stopPropagation()}
-                            data-testid="team-practice-delete-button"
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
-                            aria-label={t("practices.card.deleteButton")}
-                          >
-                            <TrashIcon className="h-3.5 w-3.5 mr-1" />
-                            {t("practices.card.deleteButton")}
-                          </button>
-                        </div>
-                      )}
-                      {!isAdmin && (
-                        // この練習に自分のログを付ける (管理者は「記録代理入力」から入力する)
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenSelfLog(practice);
-                          }}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          data-testid="team-practice-add-log-button"
-                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
-                          aria-label={t("practices.card.addLogAriaLabel", {
-                            date: practiceDate,
-                          })}
-                        >
-                          <PlusIcon className="h-3.5 w-3.5 mr-1" />
-                          {t("practices.card.addLogButton")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {practices.length === 0 && (
-              <div className="text-center py-8">
-                <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">{t("practices.empty")}</p>
-                {isAdmin && (
-                  <button
-                    onClick={handleAddPractice}
-                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                  >
-                    {t("practices.addButton")}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ページング */}
-        {totalCount > 0 && (
-          <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(totalCount / pageSize)}
-              totalItems={totalCount}
-              itemsPerPage={pageSize}
-              onPageChange={handlePageChange}
-            />
-          </div>
-        )}
       </div>
+    );
+  };
 
+  const modals = (
+    <>
       {/* チーム練習記録作成・編集モーダル */}
       <Suspense fallback={null}>
         <PracticeBasicForm
@@ -693,4 +558,12 @@ export default function TeamPractices({
       )}
     </>
   );
+
+  return {
+    renderCard,
+    modals,
+    openAddForm: handleAddPractice,
+    error,
+    clearError: () => setError(null),
+  };
 }

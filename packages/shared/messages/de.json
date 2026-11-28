@@ -1240,11 +1240,6 @@
       "Fly": "Fly",
       "IM": "IM"
     },
-    "categories": {
-      "Swim": "Schwimmen",
-      "Pull": "Pull",
-      "Kick": "Kick"
-    },
     "form": {
       "dateLabel": "Datum",
       "datePlaceholder": "JJJJ-MM-TT",
@@ -1826,10 +1821,6 @@
       "splitTimePlaceholder": "2.00.00",
       "subtitle": "Geben Sie für jede Disziplin die Ergebnisse der Mitglieder ein",
       "competitionFallback": "Wettkampf",
-      "entryHeader": "Disziplin {num}",
-      "eventLabel": "Disziplin",
-      "selectPlaceholder": "Bitte auswählen",
-      "individualEvents": "Einzeldisziplinen",
       "selectSwimmer": "Schwimmer auswählen",
       "timePlaceholder": "2.00.00",
       "distancePlaceholder": "Distanz",
@@ -1845,8 +1836,6 @@
         "atLeastOneRecord": "Bitte geben Sie mindestens ein Ergebnis ein"
       },
       "error": {
-        "splitDeleteFailed": "Zwischenzeiten konnten nicht gelöscht werden",
-        "recordDeleteFailed": "Vorhandene Datensätze konnten nicht gelöscht werden",
         "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
       },
       "errorVideoUploadUrlFailed": "{name}: Abrufen der Upload-URL fehlgeschlagen ({status})",
@@ -3034,11 +3023,6 @@
       "description": "Liste der Teams, denen Sie beigetreten sind"
     },
     "pending": {
-      "sectionTitle": "Ausstehende Genehmigung ({count})",
-      "loading": "Wird geladen...",
-      "inviteCodeLabel": "Einladungscode:",
-      "waitingWithCode": "Ihre Anfrage wartet auf Genehmigung",
-      "waitingNoCode": "Ihre Anfrage wartet auf Genehmigung",
       "appliedAtLabel": "Beantragt:"
     },
     "empty": {
@@ -3066,14 +3050,6 @@
     },
     "loading": {
       "text": "Wird geladen..."
-    },
-    "tabs": {
-      "attendance": "Anwesenheit",
-      "members": "Mitglieder",
-      "practices": "Trainings",
-      "competitions": "Wettkämpfe",
-      "rankings": "Ranglisten",
-      "settings": "Einstellungen"
     },
     "createModal": {
       "errorTitle": "Ein Fehler ist aufgetreten",
@@ -3114,19 +3090,11 @@
       "confirmMessageToSwimmer": "{name} als Schwimmer markieren?"
     },
     "practices": {
-      "title": "Teamtrainings ({count})",
       "addButton": "Training hinzufügen",
-      "empty": "Keine Trainingseinträge",
-      "error": "Teamtrainingsinformationen konnten nicht geladen werden",
-      "retry": "Erneut versuchen",
       "card": {
         "detailButton": "Details",
         "manageButton": "Verwalten",
         "noLogs": "Keine Protokolle",
-        "logsCount": "Erfasste Sätze: {count}",
-        "noLogsLabel": "Keine Trainingseinträge",
-        "clickToEdit": "Zum Bearbeiten klicken",
-        "clickToAdd": "Zum Hinzufügen klicken",
         "editAriaLabel": "Trainingseintrag für {date} bearbeiten",
         "addAriaLabel": "Trainingseintrag für {date} hinzufügen",
         "viewAriaLabel": "Trainingseintrag für {date} anzeigen",
@@ -3149,11 +3117,7 @@
       "noLogs": "Keine Trainingsprotokolle"
     },
     "competitions": {
-      "title": "Teamwettkämpfe ({count})",
       "addButton": "Wettkampf hinzufügen",
-      "empty": "Keine Wettkämpfe",
-      "error": "Teamwettkampfinformationen konnten nicht geladen werden",
-      "retry": "Erneut versuchen",
       "fallbackTitle": "Wettkampf",
       "card": {
         "entryButton": "Meldung",
@@ -3162,13 +3126,7 @@
         "editButton": "Bearbeiten",
         "deleteButton": "Löschen",
         "entryBulkInputButton": "Meldungen eingeben",
-        "recordCount": "Ergebnisse: {count}",
-        "tapForDetails": "Für Details tippen",
-        "noRecords": "Noch keine Ergebnisse",
-        "addable": "Ergebnis hinzufügen",
-        "viewRecordsAriaLabel": "Ergebnisse von {title} anzeigen",
-        "entryCount": "Meldungen: {count}",
-        "createdBy": "Erstellt von:"
+        "viewRecordsAriaLabel": "Ergebnisse von {title} anzeigen"
       },
       "entryStatus": {
         "before": "Noch nicht geöffnet",
@@ -3396,7 +3354,6 @@
     "attendance": {
       "statusOpen": "Geöffnet",
       "statusClosed": "Geschlossen",
-      "statusUnset": "Nicht festgelegt",
       "none": "Keine",
       "loading": "Wird geladen...",
       "error": "Ein Fehler ist aufgetreten",
@@ -3411,9 +3368,7 @@
     "memberStats": {
       "title": "Mitgliederverwaltung ({count})",
       "includeRelay": "Staffelzeiten einbeziehen",
-      "totalLabel": "Mitglieder gesamt: {count}",
-      "adminLabel": "Administratoren: {count}",
-      "userLabel": "Benutzer: {count}"
+      "totalLabel": "Mitglieder gesamt: {count}"
     },
     "membersTimeTable": {
       "col": {
@@ -3465,20 +3420,15 @@
     "recentAttendance": {
       "title": "Aktuelle Anwesenheit",
       "empty": "Keine Termine",
-      "saveButton": "Speichern",
       "thisMonth": "Dieser Monat",
-      "nextMonth": "Nächster Monat",
-      "notePlaceholder": "Anmerkung hinzufügen (optional)"
+      "nextMonth": "Nächster Monat"
     },
     "monthDetail": {
       "title": "Monatliche Anwesenheit",
       "close": "Schließen",
-      "saveButton": "Speichern",
-      "saving": "Wird gespeichert...",
-      "error": "Ein Fehler ist aufgetreten",
-      "loading": "Wird geladen...",
       "practiceLabel": "Training",
-      "notePlaceholder": "Anmerkung hinzufügen (optional)"
+      "notePlaceholder": "Anmerkung hinzufügen (optional)",
+      "openAttendanceAriaLabel": "Anwesenheit für {title} am {date} anzeigen"
     },
     "attendanceStatus": {
       "present": "Anwesend",
@@ -3511,18 +3461,8 @@
     "attendanceStatusHook": {
       "loadError": "Anwesenheitsinformationen konnten nicht geladen werden"
     },
-    "monthDetailHook": {
-      "loadError": "Anwesenheitsinformationen konnten nicht geladen werden"
-    },
     "monthListHook": {
       "loadError": "Monatsliste konnte nicht geladen werden"
-    },
-    "recentAttendanceHook": {
-      "loadError": "Aktuelle Anwesenheitsinformationen konnten nicht geladen werden",
-      "saveSuccess": "Gespeichert",
-      "confirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({date}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
-      "authRequired": "Authentifizierung erforderlich",
-      "saveError": "Anwesenheitsinformationen konnten nicht gespeichert werden"
     },
     "entryCompetitionCard": {
       "placeLabel": "Ort:",
@@ -3622,7 +3562,8 @@
       "filledCountIndividual": "{n} Schwimmer",
       "filledCountRelay": "{n} Teams",
       "emptyLabel": "Nicht eingegeben",
-      "entryCountLabel": "({n} Meldungen)"
+      "entryCountLabel": "({n} Meldungen)",
+      "backToList": "Zurück zu den Disziplinen"
     },
     "practiceForm": {
       "title": "Training hinzufügen",
@@ -3868,28 +3809,8 @@
     "badge": {
       "admin": "Administrator"
     },
-    "client": {
-      "notFound": {
-        "title": "Team nicht gefunden",
-        "description": "Das angegebene Team existiert nicht oder Sie haben keine Zugriffsberechtigung."
-      },
-      "unauthorized": {
-        "title": "Kein Zugriff",
-        "description": "Für den Zugriff auf diese Seite benötigen Sie Administratorrechte."
-      },
-      "inviteCodeLabel": "Einladungscode:"
-    },
     "tabs": {
-      "attendance": "Anwesenheit",
-      "announcements": "Ankündigungen",
-      "members": "Mitglieder",
-      "groups": "Gruppen",
-      "practices": "Trainings",
-      "competitions": "Wettkämpfe",
-      "rankings": "Ranglisten",
-      "goals": "Ziele",
-      "bulkRegister": "Sammelregistrierung",
-      "settings": "Einstellungen"
+      "bulkRegister": "Sammelregistrierung"
     },
     "settings": {
       "title": "Teameinstellungen",
@@ -4108,15 +4029,14 @@
     "eventListItem": {
       "openButton": "Geöffnet",
       "closedButton": "Geschlossen",
-      "saveButton": "Speichern",
-      "saving": "Wird gespeichert..."
+      "confirmOpen": "Anwesenheitseinreichung für diesen Termin öffnen?",
+      "confirmClose": "Anwesenheitseinreichung für diesen Termin schließen?"
     },
     "bulkChange": {
       "title": "Anwesenheitsstatus gesammelt ändern",
       "empty": "Keine Termine vorhanden",
       "statusOpen": "Geöffnet",
       "statusClosed": "Geschlossen",
-      "statusUnset": "Nicht festgelegt",
       "competitionLabel": "(Wettkampf)",
       "openButton": "Auf Geöffnet setzen",
       "closedButton": "Auf Geschlossen setzen"
@@ -4295,8 +4215,7 @@
       "modeTabManual": "Manuelle Eingabe"
     },
     "common": {
-      "close": "Schließen",
-      "copyTitle": "Kopieren"
+      "close": "Schließen"
     },
     "bulkRegisterHook": {
       "invalidFileType": "Bitte wählen Sie eine Excel-Datei (.xlsx oder .xls) aus",
@@ -4584,7 +4503,7 @@
       "cancel": "Abbrechen",
       "helpTitle": "Tipps zur Zeiteingabe",
       "helpBodyBasic": "Trennen Sie die Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (. - : usw.). Punkte allein genügen, sodass Sie alles über den Ziffernblock eingeben können. Beispiele: „1.23.4“ → 1:23.4, „2.00.00“ → 2:00.00, „31-2“ → 31.2, „1m12s3“ → 1:12.3.",
-      "helpBody": "Trennen Sie die Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (. - : usw.). Punkte allein genügen, sodass Sie alles über den Ziffernblock eingeben können. Beispiele: „1.23.4“ → 1:23.4, „2.00.00“ → 2:00.00, „31-2“ → 31.2, „1m12s3“ → 1:12.3.\n\nWenn Sie in einer Zelle „33-2“ eingeben, genügt in der nächsten „3-2“ und es wird automatisch zu „33.2“ ergänzt (Übernahme der Zehnerstelle). Das Leeren einer Zelle setzt die Übernahme zurück."
+      "helpBody": "Trennen Sie die Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (. - : usw.). Punkte allein genügen, sodass Sie alles über den Ziffernblock eingeben können. Beispiele: „1.23.4“ → 1:23.4, „2.00.00“ → 2:00.00, „31-2“ → 31.2, „1m12s3“ → 1:12.3.\n\nAb der 2. Wiederholung ist beim Öffnen der Zelle die Zehnerstelle der vorherigen Wiederholung (bei über 1 Minute auch die Minuten) bereits eingetragen. Geben Sie nur die restlichen Ziffern ein, der Dezimalpunkt wird automatisch gesetzt (z. B. beginnt die Zelle bei der vorherigen Zeit „33.2“ mit „3“, und „45“ ergibt „34.5“). Mit einem Trennzeichen wie in „3-2“ wird weiterhin die Zehnerstelle übernommen und „33.2“ erkannt. Um neu zu beginnen, löschen Sie die übernommenen Ziffern mit der Rücktaste."
     },
     "record": {
       "title_create": "Ergebnis hinzufügen",

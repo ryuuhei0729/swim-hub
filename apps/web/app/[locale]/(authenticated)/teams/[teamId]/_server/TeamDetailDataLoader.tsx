@@ -1,5 +1,5 @@
 // =============================================================================
-// チーム詳細データローダー（すべてのデータを並行取得）
+// チーム詳細データローダー
 // =============================================================================
 
 import React from "react";
@@ -14,47 +14,66 @@ interface TeamDetailDataLoaderProps {
   initialAdminView: boolean;
 }
 
+type ServerSupabase = Awaited<ReturnType<typeof createAuthenticatedServerClient>>;
+
+interface TeamPageData {
+  team: TeamWithMembers | null;
+  /** 承認済み・在籍中のメンバーシップ (それ以外は null) */
+  membership: TeamMembership | null;
+  /** 承認待ちならチーム名 (読めなければ null)。承認待ちでなければ undefined */
+  pendingTeamName?: string | null;
+}
+
 /**
- * チーム情報とメンバーシップを取得
+ * 自分のメンバーシップを先に確認し、承認済みならチーム情報を、承認待ちなら
+ * 「承認待ち」画面に出すチーム名だけを取得する。
+ *
+ * 承認待ちのチームも開けるようにしている (mobile と同じ。swimhub-tasks #101)。
+ * 承認待ちでは getTeam() が PENDING_APPROVAL を投げる (requireTeamMembership) ので、その結果は使わない。
+ * チーム名は getMyTeams() と同じく自分のメンバーシップ経由で読む。
  */
 async function getTeamData(
-  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
+  supabase: ServerSupabase,
   teamId: string,
   userId: string,
-): Promise<{
-  team: TeamWithMembers | null;
-  membership: TeamMembership | null;
-}> {
+): Promise<TeamPageData> {
   const coreAPI = new TeamCoreAPI(supabase);
 
   try {
-    // チーム情報とメンバーシップ情報を並列で取得（パフォーマンス最適化）
-    const [teamData, membershipResult] = await Promise.all([
-      // チーム情報を取得（メンバー情報も含む）
-      coreAPI.getTeam(teamId),
-      // 現在のユーザーのメンバーシップ情報を取得（承認済みのみ）
-      // 承認待ちのメンバーはこのページにアクセスできない
+    // チーム情報と自分のメンバーシップを並列で取得する (パフォーマンス最適化)。
+    // getTeam() は承認待ち・未所属だと例外になるので、ここでは握りつぶして後で判定する
+    let teamError: unknown = null;
+    const [team, membershipResult] = await Promise.all([
+      coreAPI.getTeam(teamId).catch((error: unknown) => {
+        teamError = error;
+        return null;
+      }),
       supabase
         .from("team_memberships")
-        .select("*")
+        .select("*, teams:teams(name)")
         .eq("team_id", teamId)
         .eq("user_id", userId)
-        .eq("status", "approved")
-        .eq("is_active", true)
-        .single(),
+        .in("status", ["approved", "pending"]),
     ]);
+    const { data: ownMemberships, error: membershipError } = membershipResult;
+    if (membershipError) throw membershipError;
 
-    const { data: membershipData, error: membershipError } = membershipResult;
+    const rows = (ownMemberships ?? []) as (TeamMembership & {
+      teams?: { name: string | null } | null;
+    })[];
+    const approved = rows.find((row) => row.status === "approved" && row.is_active === true);
 
-    // メンバーシップが見つからない場合はnullを返す（エラーではない）
-    if (membershipError && membershipError.code !== "PGRST116") {
-      throw membershipError;
+    if (!approved) {
+      const pending = rows.find((row) => row.status === "pending");
+      if (pending) {
+        return { team: null, membership: null, pendingTeamName: pending.teams?.name ?? null };
+      }
+      return { team: null, membership: null };
     }
 
-    return {
-      team: teamData,
-      membership: membershipData as TeamMembership | null,
-    };
+    if (!team) throw teamError;
+    const { teams: _teams, ...membership } = approved;
+    return { team, membership: membership as TeamMembership };
   } catch (error) {
     console.error("チーム情報の取得に失敗:", error);
     return { team: null, membership: null };
@@ -62,8 +81,7 @@ async function getTeamData(
 }
 
 /**
- * すべてのチーム詳細ページデータを並行取得するServer Component
- * Waterfall問題を完全に解消
+ * チームページのデータを取得する Server Component
  */
 export default async function TeamDetailDataLoader({
   teamId,
@@ -76,6 +94,7 @@ export default async function TeamDetailDataLoader({
   if (!user) {
     return (
       <TeamPageClient
+        key={teamId}
         teamId={teamId}
         initialTeam={null}
         initialMembership={null}
@@ -85,17 +104,16 @@ export default async function TeamDetailDataLoader({
     );
   }
 
-  // チーム情報とメンバーシップを取得
-  const teamDataResult = await getTeamData(supabase, teamId, user.id).catch((error) => {
-    console.error("チームデータ取得エラー:", error);
-    return { team: null, membership: null };
-  });
+  const teamDataResult = await getTeamData(supabase, teamId, user.id);
 
+  // key: 別のチームへ移ったらタブ・重ねた画面などの状態を持ち越さないよう作り直す
   return (
     <TeamPageClient
+      key={teamId}
       teamId={teamId}
       initialTeam={teamDataResult.team}
       initialMembership={teamDataResult.membership}
+      pendingTeamName={teamDataResult.pendingTeamName}
       initialTab={initialTab}
       initialAdminView={initialAdminView}
     />
