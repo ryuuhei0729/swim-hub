@@ -98,7 +98,16 @@ vi.mock("@/providers/ToastProvider", () => ({
   }),
 }));
 
-vi.mock("../TeamMemberList", () => ({ TeamMemberList: () => <span>MEMBERS_MARKER</span> }));
+// メンバー詳細の管理操作 (権限変更・泳者区分・削除) を出すかも分かるように、
+// isCurrentUserAdmin が true のときだけ MEMBER_ADMIN_CONTROLS_MARKER を描く (swimhub-tasks #67)
+vi.mock("../TeamMemberList", () => ({
+  TeamMemberList: ({ isCurrentUserAdmin }: { isCurrentUserAdmin: boolean }) => (
+    <>
+      <span>MEMBERS_MARKER</span>
+      {isCurrentUserAdmin && <span>MEMBER_ADMIN_CONTROLS_MARKER</span>}
+    </>
+  ),
+}));
 vi.mock("../PendingMembersSection", () => ({
   PendingMembersSection: () => <span>PENDING_MEMBERS_MARKER</span>,
 }));

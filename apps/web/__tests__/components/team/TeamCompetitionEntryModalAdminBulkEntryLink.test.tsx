@@ -93,14 +93,15 @@ const makeCompetitionRow = (overrides: Record<string, unknown> = {}) => ({
 function renderModal(
   role: "admin" | "user",
   entryStatus: "before" | "open" | "closed" = "open",
-  // ルート固定の isAdmin (往路が /teams/ か /teams-admin/ か)。本ファイルの大半のテストは
-  // 往路を検証対象にしていないため、既定値は false (= /teams/ 起点) に固定する。
-  routeIsAdmin = false,
+  // 表示中のビュー (管理者ビューか)。管理者の操作は管理者ビューでだけ出すので
+  // (swimhub-tasks #67)、既定値は「管理者なら管理者ビュー」にする。
+  routeIsAdmin = role === "admin",
+  date = "2099-01-01",
 ) {
   vi.mocked(useAuth).mockReturnValue(buildAuthContext({
     user: null,
     supabase: buildSupabaseMock({
-      competitions: { data: makeCompetitionRow({ entry_status: entryStatus }), error: null },
+      competitions: { data: makeCompetitionRow({ entry_status: entryStatus, date }), error: null },
       team_memberships: { data: { role }, error: null },
     }),
   }));
@@ -139,14 +140,16 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin/非admin 
       expect(screen.queryByTestId("team-competition-entry-self-button")).not.toBeInTheDocument();
     });
 
-    it("admin が /teams/ 起点 (routeIsAdmin=false) で bulk-button を押すと ?origin=member を付与して遷移する", async () => {
-      const user = userEvent.setup();
+    // 表示中のビューで判定する (swimhub-tasks #67): 実ロール admin でも利用者ビューなら
+    // 一般メンバーと同じ「エントリーを追加」を出し、受付状況も変更できない (mobile と同じ)
+    it("admin でも利用者ビュー (routeIsAdmin=false) なら self-button を出し、受付状況のセレクトは出さない", async () => {
       renderModal("admin", "open", false);
 
-      const bulkButton = await screen.findByTestId("team-competition-entry-bulk-button");
-      await user.click(bulkButton);
-
-      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/c-1/entries?origin=member");
+      const selfButton = await screen.findByTestId("team-competition-entry-self-button");
+      expect(selfButton).toHaveTextContent("エントリーを追加");
+      expect(screen.queryByTestId("team-competition-entry-bulk-button")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("team-competition-entry-status-select")).not.toBeInTheDocument();
+      expect(screen.getByTestId("team-competition-entry-status-badge")).toHaveTextContent("受付中");
     });
 
     // [D6注意・解消済み] 旧コメントは「handleAdminBulkEntryClick は呼び出し元
@@ -185,5 +188,15 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin/非admin 
         expect(screen.queryByTestId("team-competition-entry-self-button")).not.toBeInTheDocument();
       },
     );
+  });
+
+  // swimhub-tasks #68: 大会日が過去なら DB の値に関わらず締切として表示し、変更できない
+  it("過去の大会は管理者ビューでも受付状況を変更できず、締切として表示する", async () => {
+    renderModal("admin", "open", true, "2000-01-01");
+
+    const badge = await screen.findByTestId("team-competition-entry-status-badge");
+    expect(badge).toHaveTextContent("受付終了");
+    expect(screen.queryByTestId("team-competition-entry-status-select")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("team-competition-entry-bulk-button")).not.toBeInTheDocument();
   });
 });
