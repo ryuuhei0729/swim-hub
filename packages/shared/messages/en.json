@@ -3627,6 +3627,7 @@
       "creating": "Creating...",
       "createButton": "Create",
       "updateFailed": "Failed to update the team practice record.",
+      "imageSaveFailed": "The practice was saved, but the images could not be saved",
       "deleteFailed": "Failed to delete the team practice record."
     },
     "competitionForm": {
@@ -3638,6 +3639,7 @@
       "authRequired": "Authentication required",
       "createFailed": "Failed to create team competition",
       "updateFailed": "Failed to update team competition",
+      "imageSaveFailed": "The competition was saved, but the images could not be saved",
       "deleteFailed": "Failed to delete team competition",
       "competitionNameLabel": "Competition Name",
       "competitionNamePlaceholder": "e.g. Prefectural Championships (leave blank to show \"Competition\")",

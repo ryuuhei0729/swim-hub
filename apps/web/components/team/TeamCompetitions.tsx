@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   Suspense,
 } from "react";
 import { useRouter } from "@/i18n/navigation";
@@ -27,6 +28,9 @@ import { ja } from "date-fns/locale";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
+import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
+import { resolveGalleryImages } from "@/lib/image-url";
+import { hasParentImageChanges, saveParentImages } from "@/utils/parentImageSave";
 import TeamCompetitionEntryModal from "./TeamCompetitionEntryModal";
 import TeamCompetitionRecordsModal from "./TeamCompetitionRecordsModal";
 import Pagination from "@/components/ui/Pagination";
@@ -146,6 +150,7 @@ export default function TeamCompetitions({
     openBasicForm,
     closeBasicForm,
     setLoading: setFormLoading,
+    setEditingData,
     // タブモーダル (エントリー編集/追加。D2/D6, R6): CompetitionBasicForm と
     // isOpen/isBasicFormOpen が排他制御されることを除き selectedDate/editingData/isLoading の
     // 状態スロットは共有する (store 自身の設計。openTabModal が isBasicFormOpen を false にする)
@@ -188,13 +193,16 @@ export default function TeamCompetitions({
     openBasicForm(new Date());
   };
 
+  // 編集フォームに既存の画像を出すための取得。開き直したときに前の取得結果を反映しないよう番号で区別する
+  const editImageRequestIdRef = useRef(0);
+
   // 管理者向け: 既存の大会を編集(CompetitionBasicForm を editData 付きで開く)
   const handleEditCompetition = (
     e: React.MouseEvent,
     competition: TeamCompetition,
   ) => {
     e.stopPropagation();
-    openBasicForm(new Date(competition.date), {
+    const baseEditData = {
       id: competition.id,
       type: "competition",
       date: competition.date,
@@ -203,7 +211,37 @@ export default function TeamCompetitions({
       place: competition.place || "",
       pool_type: competition.pool_type,
       note: competition.note || "",
-    } as EditingData);
+    };
+    openBasicForm(new Date(competition.date), baseEditData as EditingData);
+
+    // 既存の画像は署名付き URL の解決を待たずにフォームを開き、解決後に editingData へ足す
+    // (ダッシュボードの編集と同じ。swimhub-tasks#58)
+    const requestId = ++editImageRequestIdRef.current;
+    void (async () => {
+      try {
+        const { data, error: imagePathsError } = await supabase
+          .from("competitions")
+          .select("image_paths")
+          .eq("id", competition.id)
+          .single();
+        if (imagePathsError) throw imagePathsError;
+        const paths = (data as { image_paths: string[] | null } | null)?.image_paths ?? [];
+        if (paths.length === 0) return;
+        const images = await resolveGalleryImages("competition-images", paths);
+        const state = useCompetitionStore.getState();
+        if (
+          editImageRequestIdRef.current !== requestId ||
+          !state.isBasicFormOpen ||
+          state.editingData?.id !== competition.id ||
+          images.length === 0
+        ) {
+          return;
+        }
+        setEditingData({ ...baseEditData, images } as EditingData);
+      } catch (err) {
+        console.error("大会の画像の取得に失敗:", err);
+      }
+    })();
   };
 
   const handleCompetitionBasicSubmit = async (
@@ -215,7 +253,7 @@ export default function TeamCompetitions({
       poolType: number;
       note: string;
     },
-    _imageData?: CompetitionImageData,
+    imageData?: CompetitionImageData,
     _options?: { continueToNext?: boolean; skipEntry?: boolean },
   ) => {
     if (!user) {
@@ -228,8 +266,9 @@ export default function TeamCompetitions({
     try {
       const api = new TeamRecordsAPI(supabase);
 
-      if (editingData?.id) {
-        await api.update(editingData.id, {
+      let competitionId = editingData?.id;
+      if (competitionId) {
+        await api.update(competitionId, {
           date: basicData.date,
           end_date: basicData.endDate || null,
           title: basicData.title || null,
@@ -238,7 +277,7 @@ export default function TeamCompetitions({
           note: basicData.note || null,
         });
       } else {
-        await api.create({
+        const created = await api.create({
           user_id: user.id,
           team_id: teamId,
           date: basicData.date,
@@ -248,6 +287,18 @@ export default function TeamCompetitions({
           pool_type: basicData.poolType,
           note: basicData.note || null,
         });
+        competitionId = created.id;
+      }
+
+      // 画像 (追加・削除)。大会本体は保存済みなので、失敗しても一覧は更新して理由を出す
+      let imageSaveFailed = false;
+      if (competitionId && imageData && hasParentImageChanges(imageData)) {
+        try {
+          await saveParentImages(supabase, "competition", competitionId, imageData);
+        } catch (imageErr) {
+          console.error("大会の画像の保存に失敗:", imageErr);
+          imageSaveFailed = true;
+        }
       }
 
       closeBasicForm();
@@ -256,8 +307,9 @@ export default function TeamCompetitions({
         // (作成は記録が紐づいていないので対象外。判断軸は invalidateTeamRankings の docstring)
         invalidateRankings();
       }
-      await loadTeamCompetitions(editingData?.id);
+      await loadTeamCompetitions(competitionId);
       setCurrentPage(1);
+      if (imageSaveFailed) setError(t("competitionForm.imageSaveFailed"));
     } catch (err) {
       console.error(
         editingData?.id ? "大会の更新に失敗:" : "大会の作成に失敗:",
@@ -1052,6 +1104,7 @@ export default function TeamCompetitions({
                   place: (editingData as { place?: string }).place,
                   pool_type: (editingData as { pool_type?: number }).pool_type,
                   note: (editingData as { note?: string }).note,
+                  images: (editingData as { images?: ExistingImage[] }).images,
                 }
               : undefined
           }

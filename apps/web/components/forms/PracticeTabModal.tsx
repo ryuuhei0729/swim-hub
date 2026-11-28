@@ -25,9 +25,12 @@ import { PracticeMenuItem } from "@/components/forms/practice-log/components";
 import { PracticeLogTemplateSelectModal } from "@/components/practice-log-templates/PracticeLogTemplateSelectModal";
 import { usePracticeLogForm } from "@/components/forms/practice-log/hooks";
 import { useAuth } from "@/contexts";
-import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
+import {
+  checkIsPremium,
+  canUploadImage,
+  findLogsOverPracticeTimeLimit,
+} from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
 import { useCreatePracticeLogTemplateMutation } from "@swim-hub/shared/hooks";
 import { PracticeAPI } from "@apps/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
@@ -237,14 +240,18 @@ export default function PracticeTabModal({
   const createTemplateMutation = useCreatePracticeLogTemplateMutation(supabase);
 
   // Practice time limit check
-  const getTotalPracticeTimesCount = useCallback(() => {
-    return menus.reduce((total, menu) => {
-      return total + (menu.times || []).filter((t) => t.time > 0).length;
-    }, 0);
-  }, [menus]);
+  // 上限は「1メニュー(= 1練習ログ)あたり」で数える。練習全体の合計では数えない
+  // (モバイルの PracticeTimeFormScreen・料金表の「1ログあたり」と同じ数え方)。
+  const overLimitMenuIndices = useMemo(
+    () =>
+      findLogsOverPracticeTimeLimit(
+        menus.map((menu) => (menu.times || []).filter((t) => t.time > 0).length),
+        isPremium,
+      ),
+    [menus, isPremium],
+  );
 
-  const isPracticeTimeLimitReached =
-    !isPremium && getTotalPracticeTimesCount() > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+  const isPracticeTimeLimitReached = overLimitMenuIndices.length > 0;
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -521,10 +528,12 @@ export default function PracticeTabModal({
   const isSubmittingRef = useRef(false);
 
   const executeSave = useCallback(async () => {
-    if (!isPremium) {
-      const total = getTotalPracticeTimesCount();
-      const validation = validatePracticeTimeLimit(total, false);
-      if (!validation.valid) return;
+    const [firstOverLimitMenuIndex] = overLimitMenuIndices;
+    if (firstOverLimitMenuIndex !== undefined) {
+      // 上限超えの理由が見えるよう、超えている最初のメニューを開いてから止める
+      setActiveTab("practiceLog");
+      setActivePracticeIndex(firstOverLimitMenuIndex);
+      return;
     }
 
     // 未編集かつログ未保存の場合、デフォルトメニュー(100m×4)を保存しない。練習ログは opt-in。
@@ -548,8 +557,7 @@ export default function PracticeTabModal({
     });
     pendingVideosRef.current.clear();
   }, [
-    isPremium,
-    getTotalPracticeTimesCount,
+    overLimitMenuIndices,
     hasMenuChanges,
     prepareSubmitData,
     menus,
@@ -983,17 +991,22 @@ export default function PracticeTabModal({
                   </ItemTabs>
                 );
               })()}
-
-              {isPracticeTimeLimitReached && (
-                <PremiumBadge
-                  message={tPremium("practiceTimeLimit", {
-                    limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
-                  })}
-                />
-              )}
             </div>
           </div>
           </div>
+
+          {/* 上限超えで保存できない理由は、どのタブを開いていても見えるようフッターの直前に出す */}
+          {isPracticeTimeLimitReached && (
+            <div className="shrink-0 px-4 pt-3 sm:px-6" data-testid="practice-time-limit-message">
+              <PremiumBadge
+                message={`${overLimitMenuIndices
+                  .map((index) => tPracticeLog("menuHeader", { n: index + 1 }))
+                  .join("・")}: ${tPremium("practiceTimeLimit", {
+                  limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
+                })}`}
+              />
+            </div>
+          )}
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

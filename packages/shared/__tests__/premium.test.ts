@@ -3,6 +3,7 @@ import {
   checkIsPremium,
   canAddSplitTimes,
   canAddPracticeTimes,
+  findLogsOverPracticeTimeLimit,
   canUploadImage,
 } from "../utils/premium";
 import { FREE_PLAN_LIMITS } from "../constants/premium";
@@ -128,6 +129,29 @@ describe("canAddPracticeTimes", () => {
 
   it("should allow premium user regardless of count", () => {
     expect(canAddPracticeTimes(100, true)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findLogsOverPracticeTimeLimit
+// ---------------------------------------------------------------------------
+describe("findLogsOverPracticeTimeLimit", () => {
+  const limit = FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG; // 18
+
+  it("練習全体の合計が上限を超えても、各ログが上限以内なら空 (10件+10件は保存できる)", () => {
+    expect(findLogsOverPracticeTimeLimit([10, 10], false)).toEqual([]);
+  });
+
+  it("ちょうど上限のログは超えていない扱い", () => {
+    expect(findLogsOverPracticeTimeLimit([limit], false)).toEqual([]);
+  });
+
+  it("上限を超えたログの位置だけを返す", () => {
+    expect(findLogsOverPracticeTimeLimit([3, limit + 1, 0, limit + 5], false)).toEqual([1, 3]);
+  });
+
+  it("Premium は件数に関係なく空", () => {
+    expect(findLogsOverPracticeTimeLimit([100, 200], true)).toEqual([]);
   });
 });
 
