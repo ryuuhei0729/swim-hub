@@ -58,6 +58,12 @@ const PracticeTabModal = dynamic(
 
 export type { TeamPractice } from "@/hooks/queries/teamPracticeQueries";
 
+/** カード・タイム一覧の見出しに出す練習日 (例: 3月1日(土)) */
+function formatPracticeCardDate(date: string, locale: SupportedLocale): string {
+  const parsed = parseISO(date);
+  return isValid(parsed) ? formatDate(parsed, "shortWithWeekday", locale) : "-";
+}
+
 export interface TeamPracticeActionsOptions {
   teamId: string;
   isAdmin?: boolean;
@@ -70,6 +76,8 @@ export interface TeamPracticeActions {
   modals: React.ReactNode;
   /** 管理者ビュー: 練習を追加 */
   openAddForm: () => void;
+  /** メンバー全員のタイム一覧を開く (カードを押したときと同じ。外からのリンク用) */
+  openTimes: (practice: TeamPractice) => void;
   /** 保存・削除の失敗 (一覧の代わりに表示する) */
   error: string | null;
   clearError: () => void;
@@ -368,22 +376,20 @@ export function useTeamPracticeActions({
   };
 
   // メンバー全員のタイム一覧モーダルを開く (admin/非admin 共通)
-  const handleOpenTimes = (practice: TeamPractice, practiceDate: string) => {
+  const handleOpenTimes = useCallback((practice: TeamPractice) => {
+    const practiceDate = formatPracticeCardDate(practice.date, locale);
     setSelectedPractice({
       id: practice.id,
       heading: practice.title ? `${practiceDate} ${practice.title}` : practiceDate,
     });
-  };
+  }, [locale]);
 
   const renderCard = (practice: TeamPractice): React.ReactNode => {
-    const parsedPracticeDate = parseISO(practice.date);
-    const practiceDate = isValid(parsedPracticeDate)
-      ? formatDate(parsedPracticeDate, "shortWithWeekday", locale)
-      : "-";
+    const practiceDate = formatPracticeCardDate(practice.date, locale);
     // 記録が無くてもカード全体を押してメンバー全員のタイム一覧を開く (admin/非admin 共通。
     // 0件なら一覧側で空表示。mobile と同じ。swimhub-tasks#103)。
     // 中のボタンは stopPropagation してカードのクリックと分ける
-    const openTimes = () => handleOpenTimes(practice, practiceDate);
+    const openTimes = () => handleOpenTimes(practice);
 
     return (
       <div
@@ -564,6 +570,7 @@ export function useTeamPracticeActions({
     renderCard,
     modals,
     openAddForm: handleAddPractice,
+    openTimes: handleOpenTimes,
     error,
     clearError: () => setError(null),
   };

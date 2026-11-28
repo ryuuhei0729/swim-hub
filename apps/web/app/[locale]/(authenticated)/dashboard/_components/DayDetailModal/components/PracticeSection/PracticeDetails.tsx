@@ -31,6 +31,7 @@ import type { PracticeLogWithTimes, PracticeTag, TimeEntry } from "@apps/shared/
 import { usePracticeDetailQuery } from "@/hooks/queries/dayDetailQueries";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { AttendanceButton } from "../AttendanceSection";
+import { TeamRecordsButton } from "../TeamRecordsSection";
 import type { PracticeDetailsProps } from "../../types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
@@ -57,6 +58,7 @@ export function PracticeDetails({
   teamId,
   teamName,
   onShowAttendance,
+  onShowTeamRecords,
   color,
   targetLogId,
 }: PracticeDetailsProps) {
@@ -155,7 +157,7 @@ export function PracticeDetails({
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2" data-testid="practice-log-summary">
+            <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="practice-log-summary">
               <span
                 className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
                   isDefaultColor
@@ -182,6 +184,9 @@ export function PracticeDetails({
               </span>
               {isTeamPractice && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
+              )}
+              {isTeamPractice && teamId && onShowTeamRecords && (
+                <TeamRecordsButton onClick={onShowTeamRecords} />
               )}
             </div>
             <div className="flex items-center gap-4 mb-2 flex-wrap">

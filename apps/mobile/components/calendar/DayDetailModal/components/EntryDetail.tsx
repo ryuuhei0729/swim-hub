@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
-import { View, Text, Pressable } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +10,8 @@ import {
   useIsAwaitingFreshData,
 } from "@/hooks/cachedQuery";
 import { DAY_DETAIL_QUERY_OPTIONS, dayDetailKeys } from "@/hooks/dayDetailQueries";
+import { useGalleryImages } from "@/hooks/useGalleryImages";
+import { ImageViewerModal } from "@/components/shared/ImageViewerModal";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import type { CalendarItem } from "@apps/shared/types/ui";
@@ -16,6 +19,7 @@ import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/util
 import { darkenHex } from "@/utils/colorTone";
 import { styles } from "../styles";
 import type { EntryDetailProps, EntryData } from "../types";
+import { TeamRecordsButton } from "./TeamRecordsButton";
 
 // DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色 (旧デフォルト青)。
 // RecordDetail と同一の判定・フォールバック値を使う(見た目のパリティのため)。
@@ -48,10 +52,12 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   note,
   entries,
   isTeamCompetition,
+  teamId = null,
   color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
   onDeleteCompetition,
   onEditEntry,
+  onDeleteEntry,
   onAddRecord,
   onClose,
 }) => {
@@ -113,6 +119,26 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   // カレンダー側のエントリーが差し替わったら (編集・削除のあと) 取り直す
   useInvalidateWhenChanged(entries, entriesKey);
   const awaitingFresh = useIsAwaitingFreshData(entriesKey, entriesQuery.isFetching);
+
+  // 大会の添付画像 (web の CompetitionWithEntry と同じく、エントリー済みの大会にも出す)。
+  // 失効する署名付きURLはキャッシュに入れず、パスだけ持って useGalleryImages で解決する
+  const imagesKey = dayDetailKeys.competitionImages(competitionId);
+  const imagesQuery = useQuery({
+    queryKey: imagesKey,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("competitions")
+        .select("image_paths")
+        .eq("id", competitionId);
+      if (error) throw error;
+      const row = (data as Array<{ image_paths?: string[] | null }> | null)?.[0];
+      return row?.image_paths ?? [];
+    },
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  const competitionImages = useGalleryImages("competition-images", imagesQuery.data);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const entryRows = entriesQuery.data;
   // 取得できるまでは読み込み中。取得に失敗した場合は0件として扱う
@@ -295,7 +321,14 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         ) : (
           <View style={styles.entryList}>
             {actualEntries.map((entry) => (
-              <View key={entry.id} style={[styles.entryCard, { borderColor: entryBoxBorderColor }]}>
+              <View
+                key={entry.id}
+                style={[
+                  styles.entryCard,
+                  { borderColor: entryBoxBorderColor },
+                  onDeleteEntry && localStyles.entryCardWithDelete,
+                ]}
+              >
                 {/* 「100m自由形（エントリー 54.97）」。括弧は ja のみ全角 */}
                 <Text style={styles.entryCardStyleName}>
                   {entry.styleName}
@@ -312,6 +345,18 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 </Text>
                 {entry.note && entry.note.trim().length > 0 && (
                   <Text style={styles.entryCardNote}>{entry.note}</Text>
+                )}
+                {/* エントリー1件の削除 (確認は onDeleteEntry 側で出す。web と同じ) */}
+                {onDeleteEntry && (
+                  <Pressable
+                    style={localStyles.entryDeleteButton}
+                    onPress={() => onDeleteEntry(entry.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("dashboard.entry.deleteEntry")}
+                    testID={`delete-entry-button-${entry.id}`}
+                  >
+                    <Feather name="trash-2" size={16} color="#EF4444" />
+                  </Pressable>
                 )}
               </View>
             ))}
@@ -336,6 +381,73 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addCompetitionRecord")}</Text>
         </Pressable>
       )}
+
+      {/* チーム大会: メンバー全員の記録はチーム画面の予定タブの詳細で見る */}
+      {isTeamCompetition && teamId && (
+        <TeamRecordsButton
+          teamId={teamId}
+          kind="competition"
+          eventId={competitionId}
+          onClose={onClose}
+        />
+      )}
+
+      {/* 添付画像 */}
+      {competitionImages.length > 0 && (
+        <View style={localStyles.gallery}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {competitionImages.map((img, index) => (
+              <Pressable
+                key={img.id}
+                onPress={() => {
+                  setViewerIndex(index);
+                  setViewerVisible(true);
+                }}
+              >
+                <Image
+                  source={{ uri: img.url }}
+                  style={localStyles.image}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      <ImageViewerModal
+        images={competitionImages.map((img) => ({ uri: img.url }))}
+        visible={viewerVisible}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </View>
   );
 };
+
+// 画像ギャラリーは RecordDetail と同じ見た目にする
+const localStyles = StyleSheet.create({
+  entryCardWithDelete: {
+    paddingRight: 36,
+  },
+  entryDeleteButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    padding: 4,
+  },
+  gallery: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#DBEAFE",
+  },
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: "#F3F4F6",
+  },
+});

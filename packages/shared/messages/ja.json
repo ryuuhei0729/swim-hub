@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "この練習記録を削除しますか？\nこの操作は取り消せません。",
       "deleteMenuConfirmMessage": "この練習メニューを削除しますか？\nこの操作は取り消せません。",
       "deleteRecordConfirmMessage": "この大会記録を削除しますか？\nこの操作は取り消せません。",
+      "deleteEntryConfirmMessage": "このエントリーを削除しますか？\nこの操作は取り消せません。",
+      "entryNotOpenMessage": "エントリーは{status}のため、エントリー登録はできません。",
       "deleteCompetitionConfirmMessage": "この大会を削除しますか？\nこの操作は取り消せません。",
       "deleteButton": "削除"
     },
@@ -974,7 +976,8 @@
       "recordMemoLabel": "メモ",
       "recordsLoading": "記録を読み込み中...",
       "recordsEmpty": "記録がありません",
-      "entryTypeCompetition": "大会"
+      "entryTypeCompetition": "大会",
+      "viewTeamRecords": "チームの記録を見る"
     },
     "deleteConfirm": {
       "title": "記録を削除",
@@ -4356,6 +4359,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
+      "segmentHeader": "区間",
       "splitTimeHeader": "Time"
     },
     "bestBadge": {

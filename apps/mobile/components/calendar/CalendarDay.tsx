@@ -175,8 +175,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         isFirstColumn && styles.dayContainerFirstColumn,
         isLastColumn && styles.dayContainerLastColumn,
       ]}
+      // 前月末・翌月初めの日も押せる (web と同じ。予定は見えている範囲全体を取得している)
       onPress={() => onPress(date)}
-      disabled={!isCurrentMonth}
     >
       {/* 今日の枠線(グリッド線と独立した内側インセット・オーバーレイ) */}
       {isTodayDate && <View pointerEvents="none" style={styles.todayBorderOverlay} />}
@@ -196,9 +196,9 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         </Text>
       </View>
 
-      {/* エントリー表示 */}
-      {isCurrentMonth && (
-        <View style={styles.entriesContainer}>
+      {/* エントリー表示 (前月末・翌月初めの日は薄く出す) */}
+      {displayEntries.length > 0 && (
+        <View style={[styles.entriesContainer, !isCurrentMonth && styles.entriesContainerOtherMonth]}>
           {displayEntries.map((item) => {
             const itemStyle = getItemStyle(item);
             const title = getEntryTitle(item);
@@ -305,6 +305,9 @@ const styles = StyleSheet.create({
   },
   entriesContainer: {
     gap: 2,
+  },
+  entriesContainerOtherMonth: {
+    opacity: 0.6,
   },
   entryItem: {
     paddingHorizontal: 4,

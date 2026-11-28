@@ -5,6 +5,8 @@
  *   - 今日以降: from(table).select(...).eq("team_id", id).gte("date", today).order("date", asc)
  *   - 過去    : from(table).select(...).eq("team_id", id).lt("date", today)
  *                 .order("date", desc).range(from, to)
+ *   - 1 件    : from(table).select(...).eq("team_id", id).eq("id", rowId).maybeSingle()
+ *                 (外から予定の詳細を開くとき。fetchTeam*ById)
  * 行は日付で振り分け・並べ替え・切り出しを実際に行う。
  * `nextList` に関数を入れると、次の取得 1 回の結果をテストから制御できる (保留・失敗)。
  */
@@ -39,6 +41,8 @@ export function buildScheduleSupabaseMock(initial: {
       competitions: initial.competitions ?? [],
     } as Record<ScheduleTable, ScheduleMockRow[]>,
     calls: [] as ScheduleListCall[],
+    /** 1 件取得 (fetchTeam*ById) の呼び出し */
+    byIdCalls: [] as { table: ScheduleTable; teamId: string; id: string }[],
     nextList: null as null | ((call: ScheduleListCall) => Promise<ScheduleListResult> | null),
   };
 
@@ -61,7 +65,14 @@ export function buildScheduleSupabaseMock(initial: {
 
   const from = vi.fn((table: ScheduleTable) => ({
     select: () => ({
-      eq: () => ({
+      eq: (_teamColumn: string, teamId: string) => ({
+        eq: (_idColumn: string, id: string) => ({
+          maybeSingle: () => {
+            state.byIdCalls.push({ table, teamId, id });
+            const row = state.rows[table].find((candidate) => candidate.id === id) ?? null;
+            return Promise.resolve({ data: row, error: null });
+          },
+        }),
         gte: (_column: string, today: string) => ({
           order: () => resolve({ table, when: "upcoming", today }),
         }),

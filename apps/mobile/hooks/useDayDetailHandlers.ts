@@ -23,6 +23,9 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import { RecordAPI } from "@apps/shared/api/records";
+import { EntryAPI } from "@apps/shared/api/entries";
+import { resolveEntryStatus, type EntryStatus } from "@apps/shared/utils/entryStatus";
+import { isEntryTabVisible } from "@/utils/tabFormUtils";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import type { MainStackParamList } from "@/navigation/types";
@@ -43,9 +46,9 @@ export interface UseDayDetailHandlersReturn {
   handleDeletePracticeLog: (logId: string) => Promise<void>;
   handleEditRecord: (item: CalendarItem) => void;
   handleDeleteRecord: (recordId: string) => Promise<void>;
-  handleEditEntry: (item: CalendarItem) => void;
+  handleEditEntry: (item: CalendarItem) => Promise<void>;
   handleDeleteEntry: (entryId: string) => Promise<void>;
-  handleAddEntry: (competitionId: string, date: string) => void;
+  handleAddEntry: (competitionId: string, date: string) => Promise<void>;
   handleEditCompetition: (item: CalendarItem) => void;
   handleDeleteCompetition: (competitionId: string, isTeamCompetition: boolean) => Promise<void>;
 }
@@ -84,12 +87,8 @@ export function useDayDetailHandlers(
     enableRealtime: false,
   });
 
-  // エントリータップ
-  // 到達するのはエントリー/記録が紐づかない裸の大会アイテム(competition/team_competition)のみ
-  // (practice/practice_log/record/entry は DayDetailModal 内の各コンポーネントで
-  // 編集/削除が完結しており onEntryPress を経由しない)。
-  // 大会の詳細画面は未実装のため、現状は no-op
-  // TODO: CompetitionDetail画面を実装したら追加
+  // エントリータップ (no-op)。日付詳細のカード本体を押しても何もしない (web と同じ)。
+  // チーム練習・チーム大会のメンバー全員の記録は「チームの記録を見る」ボタンから開く
   const handleEntryPress = (_item: CalendarItem) => {};
 
   // 練習追加（個人フロー → タブ統合画面）
@@ -284,34 +283,125 @@ export function useDayDetailHandlers(
     );
   };
 
-  // エントリー編集（個人フロー → タブ統合画面のエントリータブへ）
-  const handleEditEntry = (item: CalendarItem) => {
-    const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id;
-    const dateParam = item.date;
-
-    if (competitionId) {
-      navigation.navigate("CompetitionTabForm", {
-        competitionId,
-        date: dateParam,
-        initialTab: "entry",
-      });
+  /**
+   * 大会のエントリー・記録の入力画面をどのタブで開くかを決める (web の useCalendarHandlers と同じ考え方)。
+   * - 今日・過去の大会: エントリータブが無いので記録タブ
+   * - 先の日付の大会: エントリータブ。ただしチーム大会は受付状況 (resolveEntryStatus) が
+   *   受付中でなければエントリーできないので案内を出し、開かない
+   *   (先の日付の大会は記録も入力できないため、web のように記録タブへは進めない)
+   * 大会の取得に失敗したときは、渡された日付だけで決める (web と同じく編集は止めない)
+   */
+  const resolveCompetitionInputTab = async (
+    competitionId: string,
+    fallbackDate: string,
+    purpose: "editEntry" | "add",
+  ): Promise<"entry" | "record" | null> => {
+    let competitionDate = fallbackDate;
+    let teamId: string | null = null;
+    let entryStatus: EntryStatus | null = null;
+    try {
+      const { data, error } = await supabase
+        .from("competitions")
+        .select("date, team_id, entry_status")
+        .eq("id", competitionId)
+        .single();
+      if (!error && data) {
+        const row = data as { date?: string | null; team_id?: string | null; entry_status?: EntryStatus | null };
+        competitionDate = row.date || fallbackDate;
+        teamId = row.team_id ?? null;
+        entryStatus = row.entry_status ?? null;
+      }
+    } catch (error) {
+      console.warn("大会の受付状況の取得エラー:", error);
     }
+
+    const status = resolveEntryStatus(competitionDate, entryStatus);
+    const statusLabel =
+      status === "before" ? t("dashboard.entry.statusBefore") : t("dashboard.entry.statusClosed");
+
+    if (!isEntryTabVisible(competitionDate)) {
+      // チーム大会のエントリー編集を押したときだけ、エントリーできない理由を伝えてから記録へ進む
+      if (purpose === "editEntry" && teamId && status !== "open") {
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            t("dashboard.entry.editEntry"),
+            t("dashboard.entry.statusAlert", { status: statusLabel }),
+            [{ text: "OK", onPress: () => resolve() }],
+            { cancelable: false },
+          );
+        });
+      }
+      return "record";
+    }
+
+    if (teamId && status !== "open") {
+      Alert.alert(
+        t("dashboard.entry.editEntry"),
+        t("dashboard.mobile.entryNotOpenMessage", { status: statusLabel }),
+      );
+      return null;
+    }
+    return "entry";
   };
 
-  // 大会エントリー追加（個人フロー → タブ統合画面、isEntryTabVisible に従いタブ決定）
-  const handleAddEntry = (competitionId: string, date: string) => {
+  // エントリー編集（個人フロー → タブ統合画面。受付状況・日付でタブを決める）
+  const handleEditEntry = async (item: CalendarItem) => {
+    const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id;
+    const dateParam = item.date;
+    if (!competitionId) return;
+
+    const tab = await resolveCompetitionInputTab(competitionId, dateParam, "editEntry");
+    if (!tab) return;
     navigation.navigate("CompetitionTabForm", {
       competitionId,
-      date,
-      initialTab: "entry",
+      date: dateParam,
+      initialTab: tab,
     });
   };
 
-  // エントリー削除
-  // EntryDetail内で削除確認と削除処理が完結しているため、
-  // ここでは削除成功後に一覧をリフレッシュするだけ
-  const handleDeleteEntry = async (_entryId: string) => {
-    refetch();
+  // 大会の「記録追加」（エントリー・記録の無い大会から。今日・過去は記録タブ、先の日付はエントリータブ）
+  const handleAddEntry = async (competitionId: string, date: string) => {
+    const tab = await resolveCompetitionInputTab(competitionId, date, "add");
+    if (!tab) return;
+    navigation.navigate("CompetitionTabForm", {
+      competitionId,
+      date,
+      initialTab: tab,
+    });
+  };
+
+  // エントリー削除（エントリー1件。確認してから削除する）
+  const handleDeleteEntry = async (entryId: string) => {
+    Alert.alert(
+      t("dashboard.mobile.deletePracticeConfirmTitle"),
+      t("dashboard.mobile.deleteEntryConfirmMessage"),
+      [
+        {
+          text: t("common.cancel"),
+          style: "cancel",
+        },
+        {
+          text: t("dashboard.mobile.deleteButton"),
+          style: "destructive",
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await new EntryAPI(supabase).deleteEntry(entryId);
+              refetch();
+            } catch (error) {
+              console.error("削除エラー:", error);
+              Alert.alert(
+                t("common.error"),
+                toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
+                [{ text: "OK" }],
+              );
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   // 大会編集（個人フロー → タブ統合画面）

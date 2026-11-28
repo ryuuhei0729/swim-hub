@@ -910,6 +910,8 @@
       "deletePracticeConfirmMessage": "确定删除该训练记录吗？\n此操作无法撤销。",
       "deleteMenuConfirmMessage": "确定删除该训练菜单吗？\n此操作无法撤销。",
       "deleteRecordConfirmMessage": "确定删除该比赛记录吗？\n此操作无法撤销。",
+      "deleteEntryConfirmMessage": "要删除此报名吗？\n此操作无法撤销。",
+      "entryNotOpenMessage": "报名{status}，无法进行报名登记。",
       "deleteCompetitionConfirmMessage": "确定删除该比赛吗？\n此操作无法撤销。",
       "deleteButton": "删除"
     },
@@ -974,7 +976,8 @@
       "recordMemoLabel": "备注",
       "recordsLoading": "正在加载记录...",
       "recordsEmpty": "暂无记录",
-      "entryTypeCompetition": "比赛"
+      "entryTypeCompetition": "比赛",
+      "viewTeamRecords": "查看团队记录"
     },
     "deleteConfirm": {
       "title": "删除记录",
@@ -4356,6 +4359,7 @@
       "noStyle": "请选择项目",
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
+      "segmentHeader": "区间",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {

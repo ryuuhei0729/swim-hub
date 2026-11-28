@@ -907,6 +907,8 @@
       "deletePracticeConfirmMessage": "Delete this practice record?\nThis cannot be undone.",
       "deleteMenuConfirmMessage": "Delete this practice menu?\nThis cannot be undone.",
       "deleteRecordConfirmMessage": "Delete this race record?\nThis cannot be undone.",
+      "deleteEntryConfirmMessage": "Delete this entry?\nThis cannot be undone.",
+      "entryNotOpenMessage": "Entries are {status}, so you can't register an entry.",
       "deleteCompetitionConfirmMessage": "Delete this competition?\nThis cannot be undone.",
       "deleteButton": "Delete"
     },
@@ -971,7 +973,8 @@
       "recordMemoLabel": "Note",
       "recordsLoading": "Loading records...",
       "recordsEmpty": "No records yet",
-      "entryTypeCompetition": "Competition"
+      "entryTypeCompetition": "Competition",
+      "viewTeamRecords": "View team records"
     },
     "deleteConfirm": {
       "title": "Delete Record",
@@ -4353,6 +4356,7 @@
       "noStyle": "Please select an event",
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
+      "segmentHeader": "Segment",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {

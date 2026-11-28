@@ -14,6 +14,10 @@
 //
 // カードと各操作 (編集・削除・記録入力・エントリー等) とモーダルは
 // TeamPractices.tsx / TeamCompetitions.tsx の useTeam*Actions をそのまま使う。
+//
+// 外から特定の練習・大会の詳細を開ける (`?tab=schedule&practice=<id>` / `&competition=<id>`。
+// ダッシュボードの日付詳細の「チームの記録を見る」から)。URL の読み取りは TeamPageClient が行い、
+// ここでは linkedItem を 1 件取得して、カードを押したときと同じ詳細を開く (過去の予定でも開ける)。
 // =============================================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -27,14 +31,17 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
+  fetchTeamPracticeById,
   teamPastPracticesInfiniteQueryOptions,
   teamUpcomingPracticesQueryOptions,
 } from "@/hooks/queries/teamPracticeQueries";
 import {
+  fetchTeamCompetitionById,
   teamPastCompetitionsInfiniteQueryOptions,
   teamUpcomingCompetitionsQueryOptions,
 } from "@/hooks/queries/teamCompetitionQueries";
 import { buildScheduleItems, getScheduleToday, type ScheduleKind } from "@/utils/teamSchedule";
+import type { TeamScheduleLink } from "@/utils/teamView";
 import { useTeamPracticeActions } from "./TeamPractices";
 import { useTeamCompetitionActions } from "./TeamCompetitions";
 
@@ -63,12 +70,18 @@ export interface TeamScheduleProps {
   isAdmin?: boolean;
   /** 管理者ビュー: 一括登録の画面を開く */
   onOpenBulkRegister?: () => void;
+  /** 開いたらすぐ詳細を出す練習・大会 (URL の `?practice=` / `?competition=`) */
+  linkedItem?: TeamScheduleLink | null;
+  /** linkedItem を処理し終えた (詳細を開いた・見つからなかった)。URL からクエリを外すのに使う */
+  onLinkedItemHandled?: () => void;
 }
 
 export default function TeamSchedule({
   teamId,
   isAdmin = false,
   onOpenBulkRegister,
+  linkedItem,
+  onLinkedItemHandled,
 }: TeamScheduleProps) {
   const t = useTranslations("teams");
   const tCommon = useTranslations("common");
@@ -101,6 +114,44 @@ export default function TeamSchedule({
 
   const practiceActions = useTeamPracticeActions({ teamId, isAdmin });
   const competitionActions = useTeamCompetitionActions({ teamId, isAdmin });
+
+  // 外から指定された練習・大会の詳細を開く。一覧の読み込み範囲 (今日以降 / 過去の何ページ目) に
+  // 関係なく開けるよう 1 件だけ取得する。過去の予定なら、閉じたあとに一覧で見えるよう「過去」に切り替える
+  const linkedKind = linkedItem?.kind;
+  const linkedId = linkedItem?.id;
+  const { openTimes } = practiceActions;
+  const { openRecords } = competitionActions;
+  useEffect(() => {
+    if (!linkedKind || !linkedId) return;
+    let cancelled = false;
+    const openLinkedItem = async () => {
+      try {
+        if (linkedKind === "practice") {
+          const practice = await fetchTeamPracticeById(supabase, teamId, linkedId);
+          if (cancelled) return;
+          if (practice) {
+            if (practice.date < today) setShowPast(true);
+            openTimes(practice);
+          }
+        } else {
+          const competition = await fetchTeamCompetitionById(supabase, teamId, linkedId);
+          if (cancelled) return;
+          if (competition) {
+            if (competition.date < today) setShowPast(true);
+            openRecords(competition);
+          }
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error("リンクされた予定の取得に失敗:", err);
+      }
+      onLinkedItemHandled?.();
+    };
+    void openLinkedItem();
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedKind, linkedId, supabase, teamId, today, openTimes, openRecords, onLinkedItemHandled]);
 
   const practicesQuery = showPast ? pastPracticesQuery : upcomingPracticesQuery;
   const competitionsQuery = showPast ? pastCompetitionsQuery : upcomingCompetitionsQuery;

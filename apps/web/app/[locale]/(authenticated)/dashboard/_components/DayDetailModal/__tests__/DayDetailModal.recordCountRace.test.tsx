@@ -55,6 +55,11 @@ vi.mock("@/contexts", () => ({
   useAuth: () => ({ user: { id: "user-1" }, supabase: {} }),
 }));
 
+// 「チームの記録を見る」の遷移用 (本テストの関心事外)
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock("@apps/shared/api/records", () => ({
   RecordAPI: class {
     countRecordsByCompetition = countRecordsByCompetitionMock;

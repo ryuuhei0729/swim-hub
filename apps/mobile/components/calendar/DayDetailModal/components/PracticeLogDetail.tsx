@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useInvalidateWhenChanged,
@@ -25,34 +25,23 @@ import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/util
 import { darkenHex } from "@/utils/colorTone";
 import { AttendanceGroupModal } from "@/components/teams/AttendanceGroupModal";
 import type { MainStackParamList } from "@/navigation/types";
+import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "../styles";
 import { MemoizedTimeTable } from "./TimeTable";
-import type {
-  PracticeLogDetailProps,
-  PracticeLogData,
-  PracticeLogDetailData,
-  PracticeLogFromDB,
-} from "../types";
-
-/** practice_logs の行 (タグ・タイムつき)。キャッシュにはこの形のまま持つ */
-type PracticeLogRow = Omit<PracticeLogFromDB, "practice_id"> & {
-  practice_id: string | null;
-  video_path?: string | null;
-  video_thumbnail_path?: string | null;
-  practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
-};
+import { TeamRecordsButton } from "./TeamRecordsButton";
+import type { PracticeLogDetailProps, PracticeLogData, PracticeLogFromDB } from "../types";
 
 /** practices の行とそのメニュー */
 interface PracticeWithLogsRow {
   image_paths?: string[] | null;
   practice_logs?: Array<
-    PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> }
+    PracticeLogFromDB & {
+      user_id?: string | null;
+      video_path?: string | null;
+      video_thumbnail_path?: string | null;
+      practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
+    }
   > | null;
-}
-
-interface PracticeLogRowWithImages {
-  log: PracticeLogRow;
-  imagePaths: string[];
 }
 
 /** PostgREST: .single() で該当行が0件だったときのエラーコード */
@@ -71,7 +60,11 @@ const LEGACY_PRACTICE_ACCENT = "#10B981";
 const LEGACY_COMPETITION_ACCENT = "#2563EB";
 
 /**
- * Practice_Logの詳細表示コンポーネント
+ * 練習1件 (メニューごと) と、エントリー・記録の無い大会の詳細表示コンポーネント
+ *
+ * 練習はメニューの有無にかかわらず練習1件を1枚のカードで出す (web の PracticeDetails と同じ):
+ * 練習タイトル・場所・練習メモ・練習の編集/削除 (個人練習のみ)・出欠 (チーム練習) を見出しに、
+ * その下に自分のメニューを並べ、メニューごとに共有・編集・削除を置く。
  */
 export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   item,
@@ -79,10 +72,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   color,
   typeLabel,
   isPractice,
-  isPracticeLog,
   practiceId,
+  targetLogId,
+  practiceLogUpdateKey,
   hasEntriesOrRecords = false,
-  onEntryPress,
   onClose,
   onEditPractice,
   onDeletePractice,
@@ -107,7 +100,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const badgeTextColor = isDefaultAccent ? "#FFFFFF" : darkenHex(color, 0.65);
   const borderLeftAccentColor = isDefaultAccent ? color : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
   // 練習内容ボックス・タイム表の枠線は練習系のみ(このコンポーネント内で練習内容を
-  // 表示するのは isPractice/isPracticeLog の場合のみだが、判定用の色は共通で使い回す)
+  // 表示するのは isPractice の場合のみだが、判定用の色は共通で使い回す)
   const practiceBoxBorderColor = isDefaultAccent ? LEGACY_PRACTICE_ACCENT : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
   const practiceAccentBarColor = isDefaultAccent ? LEGACY_PRACTICE_ACCENT : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_ACCENT_BAR);
   const practiceAccentTextColor = isDefaultAccent ? "#059669" : color;
@@ -121,7 +114,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const locale = useDateLocale();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   // チームの練習/大会のみ出欠確認ボタンを表示する（web PracticeDetails/CompetitionDetails の
-  // `isTeamPractice && teamId` 条件と同一。個人の練習には出さない）
+  // `isTeamPractice && teamId` 条件と同一。個人の練習には出さない）。
+  // 自分のメニューがあるチーム練習も、DayDetailModal で type="team_practice" の練習1件にまとめて
+  // 渡されるので、自分のログの有無にかかわらず出る
   const teamId = item.metadata?.team_id ?? null;
   const isTeamEvent =
     (item.type === "team_practice" || item.type === "team_competition") && !!teamId;
@@ -134,17 +129,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const [shareVisible, setShareVisible] = useState(false);
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
-  const [logViewerVisible, setLogViewerVisible] = useState(false);
-  const [logViewerIndex, setLogViewerIndex] = useState(0);
-
   // ---------------------------------------------------------------------------
   // 詳細データの取得
   // 同じ日を開き直したときは前回の内容をすぐ表示し、裏で取り直す。保存・削除で無効化された
   // ものは取り直しが済むまで読み込み中にする。キャッシュには DB の行をそのまま持たせ、
   // 失効する画像の署名付きURLは useGalleryImages で表示のたびに解決する。
   // ---------------------------------------------------------------------------
-
-  const queryClient = useQueryClient();
 
   // 練習1件とそのメニュー
   const practiceKey = dayDetailKeys.practice(practiceId ?? "");
@@ -185,145 +175,53 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     enabled: practiceEnabled,
     ...DAY_DETAIL_QUERY_OPTIONS,
   });
+  // カレンダー側のメニューが差し替わったら (編集・削除のあと) 取り直す
+  useInvalidateWhenChanged(practiceLogUpdateKey, practiceKey);
   const practiceAwaitingFresh = useIsAwaitingFreshData(practiceKey, practiceQuery.isFetching);
   const practiceData = practiceQuery.data;
   const loading =
     practiceEnabled &&
     ((practiceData === undefined && !practiceQuery.isError) || practiceAwaitingFresh);
 
+  // 自分のメニューだけ (チーム練習には他のメンバーのメニューも付いているが、日付詳細には
+  // 自分の分だけを出す。web の日付詳細と同じ。他のメンバーの記録は「チームの記録を見る」から)
   const practiceLogs = useMemo<PracticeLogData[]>(
     () =>
-      (practiceData?.practice_logs || []).map((log) => ({
-        id: log.id,
-        practiceId: log.practice_id,
-        style: log.style,
-        swim_category: log.swim_category,
-        repCount: log.rep_count,
-        setCount: log.set_count,
-        distance: log.distance,
-        circle: log.circle,
-        note: log.note,
-        times: (log.practice_times || []).map((time: PracticeTime) => ({
-          id: time.id,
-          time: time.time,
-          repNumber: time.rep_number,
-          setNumber: time.set_number,
+      (practiceData?.practice_logs || [])
+        .filter((log) => !userId || !log.user_id || log.user_id === userId)
+        .map((log) => ({
+          id: log.id,
+          practiceId: log.practice_id,
+          style: log.style,
+          swim_category: log.swim_category,
+          repCount: log.rep_count,
+          setCount: log.set_count,
+          distance: log.distance,
+          circle: log.circle,
+          note: log.note,
+          times: (log.practice_times || []).map((time: PracticeTime) => ({
+            id: time.id,
+            time: time.time,
+            repNumber: time.rep_number,
+            setNumber: time.set_number,
+          })),
+          tags: (log.practice_log_tags || [])
+            .map((plt) => plt.practice_tags)
+            .filter(Boolean) as PracticeTag[],
+          videoPath: log.video_path ?? null,
+          videoThumbnailPath: log.video_thumbnail_path ?? null,
         })),
-        tags: (log.practice_log_tags || [])
-          .map((plt) => plt.practice_tags)
-          .filter(Boolean) as PracticeTag[],
-      })),
-    [practiceData],
+    [practiceData, userId],
+  );
+  // 練習タブで押したメニュー1件から開いたときは、そのメニューだけを出す (シェアは練習全体)
+  const visibleLogs = useMemo(
+    () => (targetLogId ? practiceLogs.filter((log) => log.id === targetLogId) : practiceLogs),
+    [practiceLogs, targetLogId],
   );
   // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
   const practiceImages = useGalleryImages(
     "practice-images",
     practiceEnabled ? practiceData?.image_paths : null,
-  );
-
-  // 練習メニュー1件
-  const practiceLogKey = dayDetailKeys.practiceLog(practiceId ?? "", item.id ?? "");
-  const practiceLogEnabled = isPracticeLog && !!item.id;
-  const practiceLogQuery = useQuery({
-    queryKey: practiceLogKey,
-    queryFn: async (): Promise<PracticeLogRowWithImages | null> => {
-      try {
-        const { data, error } = await supabase
-          .from("practice_logs")
-          .select(
-            `
-          *,
-          practice_times (*),
-          practice_log_tags (
-            practice_tag_id,
-            practice_tags (
-              id,
-              name,
-              color
-            )
-          )
-        `,
-          )
-          .eq("id", item.id)
-          .single();
-
-        if (error) throw error;
-        if (!data) return null;
-
-        const log = data as PracticeLogRow;
-
-        // 紐づく練習の画像パス。取得に失敗しても練習メニュー自体は表示し、画像パスは前回の
-        // ものを保つ (「画像なし」をキャッシュに上書きすると、次に成功するまで画像が消える)
-        const previousImagePaths = () =>
-          queryClient.getQueryData<PracticeLogRowWithImages | null>(practiceLogKey)?.imagePaths ??
-          [];
-        let imagePaths: string[] = [];
-        if (log.practice_id) {
-          try {
-            const { data: practiceRow, error: practiceError } = await supabase
-              .from("practices")
-              .select("image_paths")
-              .eq("id", log.practice_id)
-              .single();
-            if (practiceError) {
-              imagePaths = previousImagePaths();
-            } else if (practiceRow) {
-              imagePaths =
-                (practiceRow as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-            }
-          } catch (err) {
-            console.warn("practice_log 画像取得に失敗:", err);
-            imagePaths = previousImagePaths();
-          }
-        }
-
-        return { log, imagePaths };
-      } catch (error) {
-        console.error("練習ログ詳細の取得エラー:", error);
-        throw error;
-      }
-    },
-    enabled: practiceLogEnabled,
-    ...DAY_DETAIL_QUERY_OPTIONS,
-  });
-  const practiceLogAwaitingFresh = useIsAwaitingFreshData(
-    practiceLogKey,
-    practiceLogQuery.isFetching,
-  );
-  const practiceLogData = practiceLogQuery.data;
-  const loadingLogDetail =
-    practiceLogEnabled &&
-    ((practiceLogData === undefined && !practiceLogQuery.isError) || practiceLogAwaitingFresh);
-
-  const practiceLogDetail = useMemo<PracticeLogDetailData | null>(() => {
-    const log = practiceLogData?.log;
-    if (!log) return null;
-    return {
-      id: log.id,
-      style: log.style,
-      swim_category: log.swim_category,
-      repCount: log.rep_count,
-      setCount: log.set_count,
-      distance: log.distance,
-      circle: log.circle,
-      note: log.note,
-      times: (log.practice_times || []).map((time: PracticeTime) => ({
-        id: time.id,
-        time: time.time,
-        repNumber: time.rep_number,
-        setNumber: time.set_number,
-      })),
-      tags: (log.practice_log_tags || [])
-        .map((plt) => plt.practice_tags)
-        .filter(Boolean) as PracticeTag[],
-      videoPath: log.video_path ?? null,
-      videoThumbnailPath: log.video_thumbnail_path ?? null,
-    };
-  }, [practiceLogData]);
-  // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
-  const practiceLogImages = useGalleryImages(
-    "practice-images",
-    practiceLogEnabled ? practiceLogData?.imagePaths : null,
   );
 
   // 記録詳細を取得（record表示用）
@@ -380,9 +278,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     ((latestRecordQuery.data === undefined && !latestRecordQuery.isError) ||
       latestRecordAwaitingFresh);
 
-  // 共有ボタン押下: その日の practiceLogs 全件を menuItems に集約する
-  // （web PracticeDetails.tsx の share-practice-log-button と同一方針。押されたログに
-  // 関わらず常に全件集約する）
+  // 共有ボタン押下: その練習の自分のメニュー全件を menuItems に集約する
+  // （web PracticeDetails.tsx の share-practice-log-button と同一方針。押されたメニューに
+  // 関わらず常に全件集約する。練習タブでメニュー1件から開いたときも練習全体を共有する）
   const handleSharePractice = useCallback(() => {
     const menuItems: PracticeMenuItem[] = practiceLogs.map((log) => ({
       style: log.style,
@@ -418,172 +316,18 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     setShareVisible(true);
   }, [practiceLogs, item.date, item.place, item.note, title, locale]);
 
+  // メニューの編集・削除に渡す項目 (useDayDetailHandlers は metadata.practice_id で練習を開く)
+  const buildPracticeLogItem = (logId: string): CalendarItem => ({
+    ...item,
+    id: logId,
+    type: "practice_log",
+    metadata: { ...item.metadata, practice_id: practiceId },
+  });
 
-  if (isPracticeLog) {
-    return (
-      <>
-      <View style={[styles.entryItem, { borderLeftColor: borderLeftAccentColor }]}>
-        <View style={styles.entryContent}>
-          <View style={styles.entryHeader}>
-            <View style={[styles.entryTypeBadge, { backgroundColor: badgeBackgroundColor }]}>
-              <Text style={[styles.entryTypeText, { color: badgeTextColor }]}>{typeLabel}</Text>
-            </View>
-            <View style={styles.actionButtons}>
-              {onEditPracticeLog && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onEditPracticeLog(item);
-                    onClose();
-                  }}
-                >
-                  <Feather name="edit-2" size={18} color="#2563EB" />
-                </Pressable>
-              )}
-              {onDeletePracticeLog && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onDeletePracticeLog(item.id);
-                  }}
-                >
-                  <Feather name="trash-2" size={16} color="#EF4444" />
-                </Pressable>
-              )}
-            </View>
-          </View>
-
-          {loadingLogDetail ? (
-            <Text style={styles.loadingText}>{t("common.loading")}</Text>
-          ) : practiceLogDetail ? (
-            <>
-              {/* タグ表示 */}
-              {practiceLogDetail.tags && practiceLogDetail.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
-                  {practiceLogDetail.tags.map((tag) => (
-                    <View key={tag.id} style={[styles.tagChip, { backgroundColor: tag.color }]}>
-                      <Text style={styles.tagChipText}>{tag.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* 練習内容 */}
-              <View style={[styles.practiceContentContainer, { borderColor: practiceBoxBorderColor }]}>
-                <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
-                <Text style={styles.practiceContentText}>
-                  <Text style={styles.practiceContentValue}>{practiceLogDetail.distance}</Text>m ×{" "}
-                  <Text style={styles.practiceContentValue}>{practiceLogDetail.repCount}</Text>
-                  {practiceLogDetail.setCount > 1 && (
-                    <>
-                      {" × "}
-                      <Text style={styles.practiceContentValue}>{practiceLogDetail.setCount}</Text>
-                    </>
-                  )}
-                  {"　　"}
-                  <Text style={styles.practiceContentValue}>
-                    {formatCircleTime(practiceLogDetail.circle)}
-                  </Text>
-                  {"　"}
-                  <Text style={styles.practiceContentValue}>
-                    {getStyleLabel(practiceLogDetail.style, t)}
-                  </Text>
-                </Text>
-              </View>
-
-              {/* タイム表示 */}
-              {practiceLogDetail.times.length > 0 && (
-                <View style={styles.timeContainer}>
-                  <View style={styles.timeHeader}>
-                    <View style={[styles.timeHeaderBar, { backgroundColor: practiceAccentBarColor }]} />
-                    <Text style={[styles.timeHeaderText, { color: practiceAccentTextColor }]}>
-                      {t("practice.modal.time")}
-                    </Text>
-                  </View>
-                  <View style={[styles.timeTableContainer, { borderColor: practiceBoxBorderColor }]}>
-                    <MemoizedTimeTable
-                      times={practiceLogDetail.times}
-                      repCount={practiceLogDetail.repCount}
-                      setCount={practiceLogDetail.setCount}
-                    />
-                  </View>
-                </View>
-              )}
-
-              {practiceLogDetail.note && (
-                <View style={styles.noteContainer}>
-                  <Text style={styles.noteLabel}>{t("practice.modal.memo")}</Text>
-                  <Text style={styles.noteText}>{practiceLogDetail.note}</Text>
-                </View>
-              )}
-
-              {practiceLogDetail.videoPath && (
-                <VideoPlayer
-                  videoPath={practiceLogDetail.videoPath}
-                  thumbnailPath={practiceLogDetail.videoThumbnailPath}
-                />
-              )}
-
-              {practiceLogImages.length > 0 && (
-                <View style={imageGalleryStyles.gallery}>
-                  <Text style={imageGalleryStyles.galleryTitle}>{t("common.imageGallery.attachedImages")}</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {practiceLogImages.map((img, index) => (
-                      <Pressable
-                        key={img.id}
-                        onPress={() => {
-                          setLogViewerIndex(index);
-                          setLogViewerVisible(true);
-                        }}
-                      >
-                        <Image
-                          source={{ uri: img.url }}
-                          style={imageGalleryStyles.image}
-                          contentFit="cover"
-                          transition={200}
-                        />
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </>
-          ) : null}
-
-          {item.place && (
-            <View style={styles.entryPlaceContainer}>
-              <Feather name="map-pin" size={14} color="#6B7280" />
-              <Text style={styles.entryPlace} numberOfLines={1}>
-                {item.place}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <ImageViewerModal
-        images={practiceLogImages.map((img) => ({ uri: img.url }))}
-        visible={logViewerVisible}
-        initialIndex={logViewerIndex}
-        onClose={() => setLogViewerVisible(false)}
-      />
-      </>
-    );
-  }
-
-  // Practiceの場合は展開可能
   return (
     <View style={[styles.entryItem, { borderLeftColor: borderLeftAccentColor }]}>
-      <Pressable
-        style={styles.entryContentWrapper}
-        onPress={() => {
-          if (isPractice) return;
-          onEntryPress?.(item);
-          onClose();
-        }}
-      >
+      {/* カード本体は押しても何もしない (web と同じ。閉じるだけにならないよう Pressable にしない) */}
+      <View style={styles.entryContentWrapper}>
         <View style={styles.entryContent}>
           <View style={styles.entryHeader}>
             <View style={[styles.entryTypeBadge, { backgroundColor: badgeBackgroundColor }]}>
@@ -598,6 +342,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     onEditPractice(item);
                     onClose();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("dashboard.practice.editTitle")}
                 >
                   <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
@@ -609,6 +355,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     e.stopPropagation();
                     onDeletePractice(item.id);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("dashboard.practice.deleteTitle")}
                 >
                   <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
@@ -739,13 +487,11 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               </Text>
             </View>
           )}
-          {item.note && (
-            <Text style={styles.entryNote} numberOfLines={2}>
-              {item.note}
-            </Text>
-          )}
-          {/* 練習ログ追加ボタン */}
-          {isPractice && onAddPracticeLog && (
+          {/* 練習メモ・大会メモ */}
+          {item.note && <Text style={styles.entryNote}>{item.note}</Text>}
+          {/* 練習ログ追加ボタン (メニューの無い練習だけ。web の PracticeDetails と同じ。メニューのある練習は
+              DayDetailModal でメニュー行からまとめたもので、practiceLogUpdateKey が付いている) */}
+          {isPractice && !practiceLogUpdateKey && onAddPracticeLog && (
             <Pressable
               style={styles.addLogButton}
               onPress={(e) => {
@@ -778,17 +524,26 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <Text style={styles.addLogButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
               </Pressable>
             )}
+          {/* チーム練習・チーム大会: メンバー全員の記録はチーム画面の予定タブの詳細で見る */}
+          {isTeamEvent && teamId && (
+            <TeamRecordsButton
+              teamId={teamId}
+              kind={item.type === "team_practice" ? "practice" : "competition"}
+              eventId={item.type === "team_practice" ? practiceId : item.id}
+              onClose={onClose}
+            />
+          )}
         </View>
-      </Pressable>
+      </View>
 
       {isPractice && (
         <View style={styles.expandedContent}>
           {loading ? (
             <Text style={styles.loadingText}>{t("common.loading")}</Text>
-          ) : practiceLogs.length === 0 ? (
+          ) : visibleLogs.length === 0 ? (
             <Text style={styles.emptyText}>{t("practice.modal.noPracticeMenus")}</Text>
           ) : (
-            practiceLogs.map((log) => (
+            visibleLogs.map((log) => (
               <View
                 key={log.id}
                 style={[styles.practiceLogDetail, { backgroundColor: practiceLogBoxBackgroundColor }]}
@@ -804,24 +559,53 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   </View>
                 )}
 
-                {/* 練習内容（右上にシェアボタン） */}
+                {/* 練習内容（右上にシェア・編集・削除ボタン） */}
                 <View
                   style={[
                     styles.practiceContentContainer,
                     { borderColor: practiceBoxBorderColor },
                     localStyles.practiceContentRelative,
-                    localStyles.practiceContentWithShareButton,
+                    localStyles.practiceContentWithActions,
                   ]}
                 >
-                  {/* シェアボタン（右上、web の share-practice-log-button と同じ配置） */}
-                  <Pressable
-                    style={localStyles.shareButton}
-                    onPress={handleSharePractice}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("dashboard.practice.shareTitle")}
-                  >
-                    <Feather name="share-2" size={16} color="#0891B2" />
-                  </Pressable>
+                  {/* シェア・編集・削除（右上、web の PracticeDetails と同じ配置） */}
+                  <View style={localStyles.logActions}>
+                    <Pressable
+                      style={localStyles.logActionButton}
+                      onPress={handleSharePractice}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("dashboard.practice.shareTitle")}
+                    >
+                      <Feather name="share-2" size={16} color="#0891B2" />
+                    </Pressable>
+                    {onEditPracticeLog && (
+                      <Pressable
+                        style={localStyles.logActionButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          onEditPracticeLog(buildPracticeLogItem(log.id));
+                          onClose();
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("dashboard.practice.editMenuTitle")}
+                      >
+                        <Feather name="edit-2" size={16} color="#2563EB" />
+                      </Pressable>
+                    )}
+                    {onDeletePracticeLog && (
+                      <Pressable
+                        style={localStyles.logActionButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          onDeletePracticeLog(log.id);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("dashboard.practice.deleteMenuTitle")}
+                      >
+                        <Feather name="trash-2" size={16} color="#EF4444" />
+                      </Pressable>
+                    )}
+                  </View>
 
                   <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
                   <Text style={styles.practiceContentText}>
@@ -837,6 +621,13 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     <Text style={styles.practiceContentValue}>{formatCircleTime(log.circle)}</Text>
                     {"　"}
                     <Text style={styles.practiceContentValue}>{getStyleLabel(log.style, t)}</Text>
+                    {/* 種別 (Swim 以外のときだけ。Kick/Pull は言語に関係なく英語で出す) */}
+                    {log.swim_category && log.swim_category !== "Swim" && (
+                      <>
+                        {" "}
+                        <Text style={styles.practiceContentValue}>{log.swim_category}</Text>
+                      </>
+                    )}
                   </Text>
                 </View>
 
@@ -864,6 +655,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     <Text style={styles.noteLabel}>{t("practice.modal.memo")}</Text>
                     <Text style={styles.noteText}>{log.note}</Text>
                   </View>
+                )}
+
+                {log.videoPath && (
+                  <VideoPlayer videoPath={log.videoPath} thumbnailPath={log.videoThumbnailPath} />
                 )}
               </View>
             ))
@@ -915,7 +710,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           onClose={() => setAttendanceModalVisible(false)}
           supabase={supabase}
           teamId={teamId}
-          eventId={item.id}
+          eventId={item.type === "team_practice" ? practiceId : item.id}
           eventType={item.type === "team_practice" ? "practice" : "competition"}
           eventDate={item.date}
           locale={locale}
@@ -941,15 +736,20 @@ const localStyles = StyleSheet.create({
   practiceContentRelative: {
     position: "relative",
   },
-  practiceContentWithShareButton: {
-    paddingRight: 32,
+  // 右上のシェア・編集・削除 (最大3つ) と内容が重ならないよう右側を空ける
+  practiceContentWithActions: {
+    paddingRight: 88,
   },
-  shareButton: {
+  logActions: {
     position: "absolute",
     top: 6,
     right: 6,
-    padding: 4,
+    flexDirection: "row",
+    alignItems: "center",
     zIndex: 1,
+  },
+  logActionButton: {
+    padding: 4,
   },
 });
 

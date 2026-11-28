@@ -11,7 +11,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { addMonths, endOfMonth, startOfMonth } from "date-fns";
+import { addDays, addMonths, endOfMonth, getDay, startOfMonth } from "date-fns";
 import { toISODateString } from "@apps/shared/utils/date";
 import { useEffect, useMemo } from "react";
 
@@ -22,10 +22,25 @@ export interface UseCalendarQueryOptions {
 
 const CALENDAR_STALE_TIME = 5 * 60 * 1000; // 5分
 
-/** 指定した日が属する月の、カレンダー取得クエリの設定 */
+/**
+ * 月表示のカレンダーで見えている範囲 (日曜始まりの週で、前月末・翌月初めを含む)。
+ * CalendarView の日付の並べ方と同じ計算 (web の getCalendarGridRange とも同じ)。
+ */
+export function getCalendarGridRange(dateInMonth: Date): { startDate: string; endDate: string } {
+  const monthStart = startOfMonth(dateInMonth);
+  const monthEnd = endOfMonth(dateInMonth);
+  return {
+    startDate: toISODateString(addDays(monthStart, -getDay(monthStart))),
+    endDate: toISODateString(addDays(monthEnd, 6 - getDay(monthEnd))),
+  };
+}
+
+/**
+ * 指定した日が属する月の、カレンダー取得クエリの設定。
+ * 前月末・翌月初めの日も押して予定を見られるよう、見えている範囲全体を取る
+ */
 function calendarMonthQueryOptions(api: DashboardAPI, dateInMonth: Date) {
-  const startDate = toISODateString(startOfMonth(dateInMonth));
-  const endDate = toISODateString(endOfMonth(dateInMonth));
+  const { startDate, endDate } = getCalendarGridRange(dateInMonth);
   return {
     queryKey: ["calendar", startDate, endDate] as const,
     queryFn: () => api.getCalendarEntries(startDate, endDate),
@@ -35,7 +50,7 @@ function calendarMonthQueryOptions(api: DashboardAPI, dateInMonth: Date) {
 
 /**
  * カレンダーデータ取得クエリ
- * 指定された月のカレンダーエントリーを取得
+ * 指定された月のカレンダーエントリーを取得 (前月末・翌月初めの見えている日を含む)
  *
  * 表示中の月が取得できたら、前後の月も先に取得しておく。月を送ったときに
  * 読み込みを待たずに表示できる (取得済みで新しければ何もしない)。

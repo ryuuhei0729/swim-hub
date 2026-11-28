@@ -12,6 +12,7 @@ import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 import TeamOthersTab from "@/components/team/TeamOthersTab";
 import type { TeamSubScreen, TeamTabType } from "@/components/team/teamTabDefs";
 import type { TeamMembership } from "@apps/shared/types";
+import type { TeamScheduleLink } from "@/utils/teamView";
 import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
 
 // タブコンテンツは一度に1つしか表示されないため遅延読み込み。
@@ -58,6 +59,10 @@ interface TeamDetailClientProps {
   attendanceBadgeCount?: number;
   /** メンバータブのバッジ (承認待ち数。自分が管理者のときだけ数える) */
   pendingBadgeCount?: number;
+  /** 予定タブで詳細を開く練習・大会 (URL の `?practice=` / `?competition=`) */
+  scheduleLink?: TeamScheduleLink | null;
+  /** scheduleLink を処理し終えた */
+  onScheduleLinkHandled?: () => void;
 }
 
 /**
@@ -79,6 +84,8 @@ export default function TeamDetailClient({
   onOpenSubScreen,
   attendanceBadgeCount = 0,
   pendingBadgeCount = 0,
+  scheduleLink,
+  onScheduleLinkHandled,
 }: TeamDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("teams");
@@ -164,6 +171,8 @@ export default function TeamDetailClient({
             teamId={teamId}
             isAdmin={isAdminView}
             onOpenBulkRegister={isAdminView ? () => onOpenSubScreen("bulkRegister") : undefined}
+            linkedItem={scheduleLink}
+            onLinkedItemHandled={onScheduleLinkHandled}
           />
         );
       case "attendance":

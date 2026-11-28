@@ -31,14 +31,15 @@ describe("formatTime", () => {
     expect(formatTime(60.999)).toBe("1:01.00");
   });
 
-  it("負の値を正しくフォーマットする", () => {
-    // formatTime関数は負の値もそのまま処理する
-    // -30.5の場合: minutes = -1 (Math.floor(-30.5/60) = -1), remainingSeconds = 29.50
-    // minutes > 0 は false なので remainingSeconds が返される
-    expect(formatTime(-30.5)).toBe("-30.50");
-    // -60の場合: minutes = -1, remainingSeconds = 0.00
-    // minutes > 0 は false なので remainingSeconds が返される
+  it("負の値・数値でない値は 0.00 にする (web と同じ共通の関数)", () => {
+    expect(formatTime(-30.5)).toBe("0.00");
     expect(formatTime(-60)).toBe("0.00");
+    expect(formatTime(Number.NaN)).toBe("0.00");
+  });
+
+  it("丸めてから分と秒に分ける (59.995 秒は 60.00 ではなく 1:00.00)", () => {
+    expect(formatTime(59.995)).toBe("1:00.00");
+    expect(formatTime(119.996)).toBe("2:00.00");
   });
 
   it("大きな値を正しくフォーマットする", () => {

@@ -56,6 +56,7 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
   const selectTeam = useTeamViewStore((state) => state.selectTeam);
   const setTab = useTeamViewStore((state) => state.setTab);
   const setAdminView = useTeamViewStore((state) => state.setAdminView);
+  const requestOpenEvent = useTeamViewStore((state) => state.requestOpenEvent);
 
   // チーム一覧取得
   const {
@@ -90,20 +91,30 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
   const requestedTeamId = route.params?.teamId;
   const requestedTab = route.params?.initialTab;
   const requestedAsMember = route.params?.asMember === true;
+  // 予定タブで開く詳細 (日付詳細の「チームの記録を見る」から)
+  const requestedOpenEvent = route.params?.openEvent;
   useLayoutEffect(() => {
     if (!hydrated || !requestedTeamId) return;
     selectTeam(requestedTeamId);
     if (requestedTab) setTab(requestedTeamId, requestedTab);
     if (requestedAsMember) setAdminView(requestedTeamId, false);
-    navigation.setParams({ teamId: undefined, initialTab: undefined, asMember: undefined });
+    if (requestedOpenEvent) requestOpenEvent({ teamId: requestedTeamId, ...requestedOpenEvent });
+    navigation.setParams({
+      teamId: undefined,
+      initialTab: undefined,
+      asMember: undefined,
+      openEvent: undefined,
+    });
   }, [
     hydrated,
     requestedTeamId,
     requestedTab,
     requestedAsMember,
+    requestedOpenEvent,
     selectTeam,
     setTab,
     setAdminView,
+    requestOpenEvent,
     navigation,
   ]);
 

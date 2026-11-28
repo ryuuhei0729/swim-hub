@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   deleteCompetitionMutateAsync: vi.fn(),
   deletePracticeLog: vi.fn(),
   countRecordsByCompetition: vi.fn(),
+  deleteEntry: vi.fn(),
   syncPractice: vi.fn(),
   syncCompetition: vi.fn(),
 }));
@@ -85,6 +86,12 @@ vi.mock("@apps/shared/api/practices", () => ({
 vi.mock("@apps/shared/api/records", () => ({
   RecordAPI: class {
     countRecordsByCompetition = mocks.countRecordsByCompetition;
+  },
+}));
+
+vi.mock("@apps/shared/api/entries", () => ({
+  EntryAPI: class {
+    deleteEntry = mocks.deleteEntry;
   },
 }));
 
@@ -307,26 +314,152 @@ describe("useDayDetailHandlers", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it("エントリー削除ハンドラは (呼び出し元で削除済みのため) refetch のみ実行する", async () => {
+  it("エントリー削除は Alert.alert で確認し、確認後に deleteEntry と refetch を呼ぶ (#83)", async () => {
     const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+    const alertSpy = vi.spyOn(Alert, "alert");
+    refetch.mockClear();
+    mocks.deleteEntry.mockResolvedValue(undefined);
 
     await act(async () => {
       await result.current.handleDeleteEntry("entry-1");
     });
+    expect(alertSpy).toHaveBeenCalledWith(
+      "dashboard.mobile.deletePracticeConfirmTitle",
+      "dashboard.mobile.deleteEntryConfirmMessage",
+      expect.any(Array),
+    );
+    expect(mocks.deleteEntry).not.toHaveBeenCalled();
 
+    await act(async () => {
+      await getConfirmOnPress(Alert.alert)();
+    });
+    expect(mocks.deleteEntry).toHaveBeenCalledWith("entry-1");
     expect(refetch).toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+});
+
+describe("useDayDetailHandlers エントリー・記録の入力タブ (#143)", () => {
+  const refetch = vi.fn();
+
+  /** competitions の1件取得 (date / team_id / entry_status) だけを返す supabase */
+  function makeSupabase(row: { date: string; team_id: string | null; entry_status: string | null }) {
+    const chain = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      single: vi.fn().mockResolvedValue({ data: row, error: null }),
+    };
+    return { from: vi.fn(() => chain) } as unknown as SupabaseClient;
+  }
+
+  function lastAlertButtons() {
+    const calls = vi.mocked(Alert.alert).mock.calls;
+    return (calls[calls.length - 1]?.[2] ?? []) as Array<{ onPress?: () => void }>;
+  }
+
+  beforeEach(() => {
+    mocks.navigate.mockClear();
+    vi.mocked(Alert.alert).mockClear();
   });
 
-  it("エントリー追加は CompetitionTabForm(entry) へ遷移する", () => {
+  it("今日・過去の大会の「記録追加」は記録タブで開く", async () => {
+    const supabase = makeSupabase({ date: "2020-01-01", team_id: "team-1", entry_status: "open" });
     const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
 
-    result.current.handleAddEntry("comp-1", "2026-07-10");
+    await act(async () => {
+      await result.current.handleAddEntry("comp-1", "2020-01-01");
+    });
 
     expect(mocks.navigate).toHaveBeenCalledWith("CompetitionTabForm", {
       competitionId: "comp-1",
-      date: "2026-07-10",
+      date: "2020-01-01",
+      initialTab: "record",
+    });
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it("先の日付の個人大会はエントリータブで開く", async () => {
+    const supabase = makeSupabase({ date: "2099-01-01", team_id: null, entry_status: null });
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleAddEntry("comp-1", "2099-01-01");
+    });
+
+    expect(mocks.navigate).toHaveBeenCalledWith("CompetitionTabForm", {
+      competitionId: "comp-1",
+      date: "2099-01-01",
       initialTab: "entry",
+    });
+  });
+
+  it("先の日付のチーム大会で受付中でなければ案内を出し、入力画面を開かない", async () => {
+    const supabase = makeSupabase({ date: "2099-01-01", team_id: "team-1", entry_status: "before" });
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleAddEntry("comp-1", "2099-01-01");
+    });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "dashboard.entry.editEntry",
+      'dashboard.mobile.entryNotOpenMessage:{"status":"dashboard.entry.statusBefore"}',
+    );
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("先の日付のチーム大会で受付中ならエントリータブで開く", async () => {
+    const supabase = makeSupabase({ date: "2099-01-01", team_id: "team-1", entry_status: "open" });
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+    const item = {
+      id: "comp-1",
+      type: "entry",
+      date: "2099-01-01",
+      metadata: { competition: { id: "comp-1", team_id: "team-1" } },
+    } as unknown as CalendarItem;
+
+    await act(async () => {
+      await result.current.handleEditEntry(item);
+    });
+
+    expect(mocks.navigate).toHaveBeenCalledWith("CompetitionTabForm", {
+      competitionId: "comp-1",
+      date: "2099-01-01",
+      initialTab: "entry",
+    });
+  });
+
+  it("過去のチーム大会のエントリー編集は受付終了の案内を出してから記録タブで開く", async () => {
+    const supabase = makeSupabase({ date: "2020-01-01", team_id: "team-1", entry_status: "open" });
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+    const item = {
+      id: "comp-1",
+      type: "entry",
+      date: "2020-01-01",
+      metadata: { competition: { id: "comp-1", team_id: "team-1" } },
+    } as unknown as CalendarItem;
+
+    let pending: Promise<void> | undefined;
+    await act(async () => {
+      pending = result.current.handleEditEntry(item);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "dashboard.entry.editEntry",
+      'dashboard.entry.statusAlert:{"status":"dashboard.entry.statusClosed"}',
+      expect.any(Array),
+      { cancelable: false },
+    );
+    expect(mocks.navigate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      lastAlertButtons()[0]?.onPress?.();
+      await pending;
+    });
+    expect(mocks.navigate).toHaveBeenCalledWith("CompetitionTabForm", {
+      competitionId: "comp-1",
+      date: "2020-01-01",
+      initialTab: "record",
     });
   });
 });
