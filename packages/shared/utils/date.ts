@@ -31,6 +31,8 @@ export type DateStyle =
   | "iso"
   | "short"
   | "shortWithWeekday"
+  /** 日と曜日だけ (月の見出しの下に並べる一覧など) */
+  | "dayWithWeekday"
   | "long"
   | "longWithWeekday"
   | "longPadded"
@@ -47,6 +49,7 @@ const DATE_PATTERNS: Record<DateStyle, Record<SupportedLocale, string>> = {
     ko: "M월 d일 (E)",
     de: "EEE, d. MMM",
   },
+  dayWithWeekday: { ja: "d日(E)", en: "EEE d", zh: "d日(E)", ko: "d일 (E)", de: "EEE, d." },
   long: {
     ja: "yyyy年M月d日",
     en: "MMM d, yyyy",

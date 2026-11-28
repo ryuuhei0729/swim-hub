@@ -11,8 +11,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { TrophyIcon } from "@heroicons/react/24/solid";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useTranslations } from "next-intl";
 
 const ShareCardModal = dynamic(
@@ -502,17 +501,9 @@ export function CompetitionDetails({
                                 competition?.title ||
                                 t("competition.defaultName"),
                               date: competition?.date
-                                ? format(
-                                    new Date(competition.date),
-                                    "yyyy年M月d日",
-                                    { locale: ja },
-                                  )
+                                ? formatDate(competition.date, "long", locale as SupportedLocale)
                                 : record.date
-                                  ? format(
-                                      new Date(record.date),
-                                      "yyyy年M月d日",
-                                      { locale: ja },
-                                    )
+                                  ? formatDate(record.date, "long", locale as SupportedLocale)
                                   : "",
                               place: place || competition?.place || "",
                               poolType:

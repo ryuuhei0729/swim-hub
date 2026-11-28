@@ -6,8 +6,7 @@ import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useRecordLogForm } from "./hooks/useRecordLogForm";
 import { RecordLogEntry } from "./components";
 import type { RecordLogFormProps, StyleOption } from "./types";
@@ -47,7 +46,7 @@ export default function RecordLogForm({
   const tTimeError = useTranslations("bulkBestTime.error");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const dateFnsLocale = locale === "ja" ? ja : enUS;
+  const dateLocale = locale as SupportedLocale;
 
   const COMPETITION_STEPS = useMemo(
     () => [
@@ -275,16 +274,14 @@ export default function RecordLogForm({
                       {competitionDate && competitionTitle && (
                         <>
                           <span className="text-base font-semibold text-blue-700">
-                            {format(new Date(competitionDate), "yyyy年M月d日(E)", {
-                              locale: dateFnsLocale,
-                            })}
+                            {formatDate(competitionDate, "longWithWeekday", dateLocale)}
                           </span>
                           <span className="ml-3">{competitionTitle}</span>
                         </>
                       )}
                       {competitionDate &&
                         !competitionTitle &&
-                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: dateFnsLocale })}
+                        formatDate(competitionDate, "longWithWeekday", dateLocale)}
                       {!competitionDate && competitionTitle && competitionTitle}
                     </p>
                   </div>

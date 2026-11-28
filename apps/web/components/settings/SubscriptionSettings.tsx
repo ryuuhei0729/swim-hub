@@ -1,21 +1,14 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
-import { format, parseISO, isValid, differenceInDays } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid, differenceInDays } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import PricingCard from "@/components/settings/PricingCard";
 
 const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID ?? "";
 const YEARLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID ?? "";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "-";
-  return isValid(new Date(dateStr))
-    ? format(parseISO(dateStr), "yyyy年MM月dd日", { locale: ja })
-    : "-";
-}
 
 function getTrialDaysRemaining(trialEnd: string | null | undefined): number | null {
   if (!trialEnd) return null;
@@ -29,6 +22,7 @@ export default function SubscriptionSettings() {
   const { subscription, loading } = useAuth();
   const t = useTranslations("settings.subscription");
   const tErrors = useTranslations("settings.errors");
+  const locale = useLocale() as SupportedLocale;
   const [loadingPlan, setLoadingPlan] = useState<"monthly" | "yearly" | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +37,8 @@ export default function SubscriptionSettings() {
   const isTrialing = status === "trialing";
   const isActive = status === "active";
   const isPastDue = status === "past_due";
+  // アプリ (App Store / Google Play) で契約した場合は Stripe に顧客情報が無く、ポータルを開けない
+  const managedByStore = subscription?.provider === "revenucat";
 
   const handleCheckout = useCallback(async (priceId: string, interval: "monthly" | "yearly") => {
     setLoadingPlan(interval);
@@ -136,14 +132,16 @@ export default function SubscriptionSettings() {
           <p className="text-sm text-red-700 mt-1">
             {t("pastDueBanner.description")}
           </p>
-          <button
-            type="button"
-            onClick={handleManagePlan}
-            disabled={portalLoading}
-            className="mt-2 inline-block text-sm text-red-700 underline hover:text-red-900"
-          >
-            {t("pastDueBanner.updatePayment")}
-          </button>
+          {!managedByStore && (
+            <button
+              type="button"
+              onClick={handleManagePlan}
+              disabled={portalLoading}
+              className="mt-2 inline-block text-sm text-red-700 underline hover:text-red-900"
+            >
+              {t("pastDueBanner.updatePayment")}
+            </button>
+          )}
         </div>
       )}
 
@@ -159,7 +157,7 @@ export default function SubscriptionSettings() {
             </div>
             {trialDaysRemaining !== null && (
               <p className="text-sm text-gray-500">
-                {t("trialDaysRemaining", { days: trialDaysRemaining, date: formatDate(trialEnd) })}
+                {t("trialDaysRemaining", { days: trialDaysRemaining, date: formatDate(trialEnd, "long", locale) })}
               </p>
             )}
           </div>
@@ -172,7 +170,7 @@ export default function SubscriptionSettings() {
               </span>
             </div>
             {premiumExpiresAt && (
-              <p className="text-sm text-gray-500">{t("nextRenewal", { date: formatDate(premiumExpiresAt) })}</p>
+              <p className="text-sm text-gray-500">{t("nextRenewal", { date: formatDate(premiumExpiresAt, "long", locale) })}</p>
             )}
           </div>
         ) : isPremium && isActive ? (
@@ -184,7 +182,7 @@ export default function SubscriptionSettings() {
               </span>
             </div>
             {premiumExpiresAt && (
-              <p className="text-sm text-gray-500">{t("nextRenewal", { date: formatDate(premiumExpiresAt) })}</p>
+              <p className="text-sm text-gray-500">{t("nextRenewal", { date: formatDate(premiumExpiresAt, "long", locale) })}</p>
             )}
             {cancelAtPeriodEnd && (
               <p className="text-sm text-amber-600 mt-1">
@@ -234,8 +232,18 @@ export default function SubscriptionSettings() {
         </div>
       )}
 
+      {/* アプリで契約したユーザー: 管理はストアで行う案内 */}
+      {(isPremium || isTrialing || isPastDue) && managedByStore && (
+        <p
+          className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm"
+          data-testid="subscription-managed-by-store"
+        >
+          {t("managedByStore")}
+        </p>
+      )}
+
       {/* Premium / Trialing / PastDue ユーザー: 管理ボタン */}
-      {(isPremium || isTrialing || isPastDue) && (
+      {(isPremium || isTrialing || isPastDue) && !managedByStore && (
         <button
           type="button"
           onClick={handleManagePlan}

@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import type { ParsedData } from "@/types/bulk-register";
 
 interface DataPreviewProps {
@@ -15,6 +15,7 @@ interface DataPreviewProps {
 
 export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProps) {
   const t = useTranslations("teamsAdmin");
+  const locale = useLocale() as SupportedLocale;
   const errors = parsedData.type === "practice" ? parsedData.data.errors : parsedData.data.errors;
   const hasItems =
     parsedData.type === "practice"
@@ -87,7 +88,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {isValid(new Date(practice.date))
-                          ? format(new Date(practice.date), "yyyy年MM月dd日", { locale: ja })
+                          ? formatDate(new Date(practice.date), "longPadded", locale)
                           : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -145,12 +146,12 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {isValid(new Date(competition.date))
-                          ? format(new Date(competition.date), "yyyy年MM月dd日", { locale: ja })
+                          ? formatDate(new Date(competition.date), "longPadded", locale)
                           : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {competition.end_date && isValid(new Date(competition.end_date))
-                          ? format(new Date(competition.end_date), "yyyy年MM月dd日", { locale: ja })
+                          ? formatDate(new Date(competition.end_date), "longPadded", locale)
                           : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">

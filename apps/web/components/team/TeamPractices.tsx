@@ -16,7 +16,7 @@ import React, {
 import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CalendarDaysIcon,
   MapPinIcon,
@@ -24,8 +24,8 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format, isValid, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid, parseISO } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
@@ -82,6 +82,7 @@ export function useTeamPracticeActions({
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
+  const locale = useLocale() as SupportedLocale;
   const queryClient = useQueryClient();
   // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
@@ -377,7 +378,7 @@ export function useTeamPracticeActions({
   const renderCard = (practice: TeamPractice): React.ReactNode => {
     const parsedPracticeDate = parseISO(practice.date);
     const practiceDate = isValid(parsedPracticeDate)
-      ? format(parsedPracticeDate, "M月d日(E)", { locale: ja })
+      ? formatDate(parsedPracticeDate, "shortWithWeekday", locale)
       : "-";
     // 記録が無くてもカード全体を押してメンバー全員のタイム一覧を開く (admin/非admin 共通。
     // 0件なら一覧側で空表示。mobile と同じ。swimhub-tasks#103)。

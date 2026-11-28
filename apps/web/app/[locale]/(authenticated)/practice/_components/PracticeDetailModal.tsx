@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import {
   PracticeDetails,
   AttendanceModal,
@@ -61,13 +61,14 @@ export default function PracticeDetailModal({
   onDeletePracticeLog,
 }: PracticeDetailModalProps) {
   const t = useTranslations("dashboard");
+  const locale = useLocale() as SupportedLocale;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState<AttendanceModalState | null>(null);
 
   if (!isOpen) return null;
 
   const parsedDate = date ? parseISO(date) : null;
-  const headerDate = parsedDate && isValid(parsedDate) ? format(parsedDate, "M月d日(E)", { locale: ja }) : "";
+  const headerDate = parsedDate && isValid(parsedDate) ? formatDate(parsedDate, "shortWithWeekday", locale) : "";
 
   const handleDeleteConfirm = async () => {
     await onDeletePractice();

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import { TeamEvent } from "@swim-hub/shared/types";
-import { format, isValid, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid, parseISO } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import type { EventGroupedByMonth } from "@/types/admin-attendance";
 import { effectiveAttendanceStatus } from "@/utils/teamAttendance";
 
@@ -58,6 +58,7 @@ export function BulkChangeModal({
   onBulkUpdate,
 }: BulkChangeModalProps) {
   const t = useTranslations("teamsAdmin");
+  const locale = useLocale() as SupportedLocale;
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(
     new Set(),
   );
@@ -78,12 +79,12 @@ export function BulkChangeModal({
   };
 
   const getMonthLabel = (year: number, month: number) => {
-    return `${year}年${month}月`;
+    return formatDate(new Date(year, month - 1, 1), "yearMonth", locale);
   };
 
   const getDayLabel = (dateStr: string) => {
     const date = parseISO(dateStr);
-    return isValid(date) ? format(date, "d日（E）", { locale: ja }) : "-";
+    return isValid(date) ? formatDate(date, "dayWithWeekday", locale) : "-";
   };
 
   const handleUpdate = async (status: "open" | "closed") => {
