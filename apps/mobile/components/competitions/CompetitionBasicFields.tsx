@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Feather } from "@expo/vector-icons";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { formatDate } from "@apps/shared/utils/date";
 import {
@@ -39,6 +40,8 @@ interface CompetitionBasicFieldsProps {
   disabled?: boolean;
   /** 権限がなく読み取り専用の見た目にする */
   locked?: boolean;
+  /** 過去に使った場所の候補 (最近使った順)。渡したときだけ場所の入力中に候補を出す */
+  placeSuggestions?: string[];
 }
 
 /**
@@ -61,9 +64,11 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
   minDate,
   disabled = false,
   locked = false,
+  placeSuggestions,
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
+  const [placeFocused, setPlaceFocused] = useState(false);
   const days = competitionDaysFromRange(date, endDate);
 
   // 開始日を変えても日数は保つ (終了日を同じ日数だけずらす)
@@ -124,10 +129,48 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
           style={[styles.input, styles.horizontalInput, locked && styles.inputDisabled]}
           value={place}
           onChangeText={onPlaceChange}
+          onFocus={() => setPlaceFocused(true)}
+          onBlur={() => setPlaceFocused(false)}
           placeholder={t("competition.form.placePlaceholder")}
           editable={!disabled}
         />
       </View>
+      {/* 過去に使った場所のサジェスト (web PlaceCombobox 相当。練習フォームの場所サジェストと同じ形)。
+          候補の項目も disabled で塞ぐ: 入力不可のまま place を書き換える経路にしないため。 */}
+      {placeFocused &&
+        placeSuggestions &&
+        (() => {
+          const query = place.trim().toLowerCase();
+          const filtered = placeSuggestions
+            .filter(
+              (p) =>
+                p.toLowerCase() !== query && (query === "" || p.toLowerCase().includes(query)),
+            )
+            .slice(0, 5);
+          if (filtered.length === 0) return null;
+          return (
+            <View style={styles.placeSuggestions}>
+              {filtered.map((p) => (
+                <Pressable
+                  key={p}
+                  style={styles.placeSuggestionItem}
+                  onPress={() => {
+                    onPlaceChange(p);
+                    setPlaceFocused(false);
+                  }}
+                  disabled={disabled}
+                  accessibilityRole="button"
+                  accessibilityLabel={p}
+                >
+                  <Feather name="map-pin" size={13} color="#6B7280" />
+                  <Text style={styles.placeSuggestionText} numberOfLines={1}>
+                    {p}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          );
+        })()}
 
       <View style={[styles.section, styles.horizontalField]}>
         <Text style={[styles.label, styles.horizontalLabel]}>
@@ -244,5 +287,26 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: "#2563EB",
     fontWeight: "600",
+  },
+  placeSuggestions: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  placeSuggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#F3F4F6",
+  },
+  placeSuggestionText: {
+    fontSize: 14,
+    color: "#374151",
+    flex: 1,
   },
 });

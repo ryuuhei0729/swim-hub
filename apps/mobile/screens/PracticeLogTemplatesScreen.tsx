@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,14 @@ import {
   useDeletePracticeLogTemplateMutation,
   useTogglePracticeLogTemplateFavoriteMutation,
 } from "@apps/shared/hooks/queries/practiceLogTemplates";
+import {
+  usePracticeTagsQuery,
+  useCreatePracticeTagMutation,
+  useUpdatePracticeTagMutation,
+  useDeletePracticeTagMutation,
+} from "@apps/shared/hooks/queries/practices";
+import { useTagModalTransition } from "@/hooks/useTagModalTransition";
+import { TagChips, TagSelectModal, TagManageModal } from "@/components/shared";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { NumberStepper } from "@/components/ui/NumberStepper";
@@ -33,6 +41,7 @@ import { DistanceChips } from "@/components/practices/DistanceChips";
 import { SWIM_CATEGORIES } from "@/components/practices/StyleCategoryChips";
 import { formatTemplateCircle } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { SWIM_STYLES } from "@/utils/formatters";
+import type { PracticeTag } from "@apps/shared/types";
 import type {
   PracticeLogTemplate,
   CreatePracticeLogTemplateInput,
@@ -52,6 +61,8 @@ interface TemplateFormState {
   circleMin: number | "";
   circleSec: number | "";
   note: string;
+  /** 選択中のタグID (タグ一覧の取得前でも既存の選択を失わないよう ID で持つ) */
+  tagIds: string[];
 }
 
 function createDefaultFormState(): TemplateFormState {
@@ -65,6 +76,7 @@ function createDefaultFormState(): TemplateFormState {
     circleMin: 1,
     circleSec: 30,
     note: "",
+    tagIds: [],
   };
 }
 
@@ -80,6 +92,7 @@ function formStateFromTemplate(template: PracticeLogTemplate): TemplateFormState
     circleMin: circleTime ? Math.floor(circleTime / 60) : "",
     circleSec: circleTime ? circleTime % 60 : "",
     note: template.note || "",
+    tagIds: template.tag_ids ?? [],
   };
 }
 
@@ -109,6 +122,60 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
   const [form, setForm] = useState<TemplateFormState>(createDefaultFormState());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ---- タグ (web PracticeLogTemplateCreateModal のタグ欄相当) ----
+  const { data: availableTags = [] } = usePracticeTagsQuery(supabase);
+  const createTagMutation = useCreatePracticeTagMutation(supabase);
+  const updateTagMutation = useUpdatePracticeTagMutation(supabase);
+  const deleteTagMutation = useDeletePracticeTagMutation(supabase);
+  const [showTagSelectModal, setShowTagSelectModal] = useState(false);
+  const {
+    showTagManageModal,
+    editingTag,
+    openTagCreateModal,
+    openTagEditModal,
+    handleTagSelectModalClosed,
+    handleTagManageModalClosed,
+    closeTagManageModal,
+  } = useTagModalTransition(setShowTagSelectModal);
+  const selectedTags = useMemo(
+    () => availableTags.filter((tag) => form.tagIds.includes(tag.id)),
+    [availableTags, form.tagIds],
+  );
+
+  const handleTagsChange = useCallback((tags: PracticeTag[]) => {
+    setForm((prev) => ({ ...prev, tagIds: tags.map((tag) => tag.id) }));
+  }, []);
+
+  const handleSaveTag = useCallback(
+    async (name: string, color: string) => {
+      try {
+        if (editingTag) {
+          await updateTagMutation.mutateAsync({ id: editingTag.id, name, color });
+        } else {
+          const newTag = await createTagMutation.mutateAsync({ name, color });
+          setForm((prev) => ({ ...prev, tagIds: [...prev.tagIds, newTag.id] }));
+        }
+      } catch (err) {
+        console.error("タグ保存エラー:", err);
+        Alert.alert(t("common.error"), t("practice.mobile.tagSaveFailed"));
+      }
+    },
+    [editingTag, updateTagMutation, createTagMutation, t],
+  );
+
+  const handleDeleteTag = useCallback(
+    async (id: string) => {
+      try {
+        await deleteTagMutation.mutateAsync(id);
+        setForm((prev) => ({ ...prev, tagIds: prev.tagIds.filter((tagId) => tagId !== id) }));
+      } catch (err) {
+        console.error("タグ削除エラー:", err);
+        Alert.alert(t("common.error"), t("practice.mobile.tagDeleteFailed"));
+      }
+    },
+    [deleteTagMutation, t],
+  );
+
   const isAtLimit = (count || 0) >= MAX_TEMPLATES;
 
   const openCreateModal = useCallback(() => {
@@ -137,6 +204,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
         set_count: Number(form.sets) || 1,
         circle: circleTime > 0 ? circleTime : null,
         note: form.note.trim() || null,
+        tag_ids: form.tagIds,
       };
       if (editingTemplate) {
         await updateMutation.mutateAsync({ templateId: editingTemplate.id, input });
@@ -543,6 +611,24 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
                 </View>
               </View>
 
+              {/* タグ */}
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  {t("practiceLogTemplates.createModal.tagLabel")}
+                </Text>
+                <TagChips
+                  tags={selectedTags}
+                  onPress={() => setShowTagSelectModal(true)}
+                  onRemove={(tagId) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      tagIds: prev.tagIds.filter((id) => id !== tagId),
+                    }))
+                  }
+                  disabled={isSubmitting}
+                />
+              </View>
+
               {/* メモ */}
               <View style={styles.field}>
                 <Text style={styles.label}>
@@ -594,6 +680,28 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
             </View>
           </View>
         </FormKeyboardAvoidingView>
+
+        {/* タグ選択・管理モーダル。作成/編集モーダルを開いたまま上に重ねて出すため、
+            その <Modal> の子として置く (ネイティブのモーダルは表示中のモーダルの中から出す) */}
+        <TagSelectModal
+          visible={showTagSelectModal}
+          onClose={() => setShowTagSelectModal(false)}
+          onClosed={handleTagSelectModalClosed}
+          selectedTags={selectedTags}
+          availableTags={availableTags}
+          onTagsChange={handleTagsChange}
+          onCreateTag={openTagCreateModal}
+          onEditTag={openTagEditModal}
+          onDeleteTag={(tag) => void handleDeleteTag(tag.id)}
+        />
+        <TagManageModal
+          visible={showTagManageModal}
+          onClose={closeTagManageModal}
+          onClosed={handleTagManageModalClosed}
+          tag={editingTag}
+          onSave={handleSaveTag}
+          onDelete={handleDeleteTag}
+        />
       </Modal>
     </View>
   );

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
+import { sortMembersByAgeForGroup } from "@apps/shared/utils/memberSort";
 import { teamGroupSortDataQueryOptions } from "@/hooks/queries/teamMemberQueries";
 import type { TeamMember } from "./useMembers";
 
@@ -18,7 +19,16 @@ export interface MemberGroup<T = TeamMember> {
 // どちらもこの最小構造さえ満たせば groupMembers を再利用できるようにするだけの一般化)
 interface GroupSortableMember {
   user_id: string;
-  users?: { gender?: number };
+  users?: { gender?: number; name?: string | null; birthday?: string | null };
+}
+
+export interface UseMemberGroupSortOptions {
+  /**
+   * 各グループ内を年齢の降順 (同じ年齢は名前順、生年月日未設定は最後に名前順) に並べる。
+   * メンバー一覧 (TeamMemberManagement) だけが指定する。MemberSelectModal は渡された順
+   * (生年月日順) を保つので指定しない (mobile の TeamMemberGroupFilter と同じ)。
+   */
+  sortWithinGroupsByAge?: boolean;
 }
 
 const GENDER_CATEGORY = "__gender__";
@@ -45,12 +55,16 @@ const EMPTY_MEMBERSHIPS: TeamGroupMembership[] = [];
  *     再取得中は前回のグループ情報でグループ別表示を続ける。
  *   - staleTime: Infinity … マウント中に enabled を再トグルしただけでは再取得しない (修正H)。
  *     グループの変更は invalidateTeamGroupQueries で stale にするので、その後は再取得される。
+ *
+ * @param options.sortWithinGroupsByAge - グループ内を年齢順に並べるか (ryuuhei0729/swimhub-tasks#106)
  */
 export const useMemberGroupSort = (
   teamId: string,
   supabase: SupabaseClient,
   enabled: boolean = true,
+  options: UseMemberGroupSortOptions = {},
 ) => {
+  const sortWithinGroupsByAge = options.sortWithinGroupsByAge ?? false;
   const t = useTranslations("teams.memberGroupSort");
   const [activeCategory, setActiveCategory] = useState<string | null>(
     GENDER_CATEGORY,
@@ -110,11 +124,15 @@ export const useMemberGroupSort = (
     <T extends GroupSortableMember>(members: T[]): MemberGroup<T>[] | null => {
       if (!activeCategory) return null;
 
+      // グループ内の並び (sortWithinGroupsByAge のときだけ年齢順に並べ替える)
+      const orderInGroup = (list: T[]): T[] =>
+        sortWithinGroupsByAge ? sortMembersByAgeForGroup(list) : list;
+
       // 性別カテゴリの場合はユーザープロファイルのgenderで分類
       if (activeCategory === GENDER_CATEGORY) {
         const result: MemberGroup<T>[] = [];
-        const maleMembers = members.filter((m) => m.users?.gender === 0);
-        const femaleMembers = members.filter((m) => m.users?.gender === 1);
+        const maleMembers = orderInGroup(members.filter((m) => m.users?.gender === 0));
+        const femaleMembers = orderInGroup(members.filter((m) => m.users?.gender === 1));
 
         if (maleMembers.length > 0)
           result.push({ groupName: t("male"), members: maleMembers });
@@ -129,23 +147,25 @@ export const useMemberGroupSort = (
       const assigned = new Set<string>();
 
       for (const group of categoryGroups) {
-        const groupMemberList = members.filter((m) => {
-          const memberGroups = userGroupMap.get(m.user_id);
-          return memberGroups?.has(group.id);
-        });
+        const groupMemberList = orderInGroup(
+          members.filter((m) => {
+            const memberGroups = userGroupMap.get(m.user_id);
+            return memberGroups?.has(group.id);
+          }),
+        );
         result.push({ groupName: group.name, members: groupMemberList });
         groupMemberList.forEach((m) => assigned.add(m.user_id));
       }
 
       // 未所属メンバー
-      const unassigned = members.filter((m) => !assigned.has(m.user_id));
+      const unassigned = orderInGroup(members.filter((m) => !assigned.has(m.user_id)));
       if (unassigned.length > 0) {
         result.push({ groupName: t("unassigned"), members: unassigned });
       }
 
       return result;
     },
-    [activeCategory, groupsByCategory, userGroupMap, t],
+    [activeCategory, groupsByCategory, userGroupMap, sortWithinGroupsByAge, t],
   );
 
   const getCategoryLabel = useCallback(

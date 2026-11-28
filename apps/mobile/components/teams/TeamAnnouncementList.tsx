@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "@apps/shared/utils/date";
@@ -8,6 +8,7 @@ import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { cardSurface } from "@/constants/theme";
+import { CenterModal } from "@/components/ui/CenterModal";
 
 interface TeamAnnouncementListProps {
   announcements: TeamAnnouncement[];
@@ -25,6 +26,8 @@ interface TeamAnnouncementListProps {
 
 /**
  * チームお知らせ一覧コンポーネント
+ * 一覧では本文を3行までにし、項目を押すとポップアップで全文を見せる
+ * (ダッシュボードのお知らせ詳細 DashboardNoticesSection と同じ形)
  */
 export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   announcements,
@@ -40,6 +43,13 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
+  // 全文を表示するお知らせ。閉じるアニメーション中も中身を残すため、開閉フラグと分けて持つ
+  const [detailAnnouncement, setDetailAnnouncement] = useState<TeamAnnouncement | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const openDetail = (announcement: TeamAnnouncement) => {
+    setDetailAnnouncement(announcement);
+    setIsDetailOpen(true);
+  };
 
   // ローディング状態
   if (isLoading && announcements.length === 0) {
@@ -95,7 +105,13 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
             return (
               <View style={styles.announcementItem}>
                 <View style={styles.announcementHeader}>
-                  <View style={styles.announcementInfo}>
+                  <Pressable
+                    style={styles.announcementInfo}
+                    onPress={() => openDetail(item)}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.title}
+                    testID={`team-announcement-${item.id}`}
+                  >
                     <Text style={styles.announcementTitle} numberOfLines={2}>
                       {item.title}
                     </Text>
@@ -114,7 +130,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                         {t("teams.mobile.announcementPublishPeriod", { start: startAt, end: endAt })}
                       </Text>
                     )}
-                  </View>
+                  </Pressable>
                   {isAdmin && (onEdit || onDelete) && (
                     <View style={styles.announcementActions}>
                       {onEdit && (
@@ -151,9 +167,12 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                   )}
                 </View>
                 {item.content && (
-                  <Text style={styles.announcementContent} numberOfLines={3}>
-                    {item.content}
-                  </Text>
+                  // 読み上げではタイトルの項目から全文を開けるので、本文側は押せる領域としてだけ足す
+                  <Pressable onPress={() => openDetail(item)} accessible={false}>
+                    <Text style={styles.announcementContent} numberOfLines={3}>
+                      {item.content}
+                    </Text>
+                  </Pressable>
                 )}
               </View>
             );
@@ -170,11 +189,57 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
           )}
         </View>
       )}
+
+      {/* お知らせの全文 */}
+      <CenterModal
+        visible={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        closeAccessibilityLabel={t("common.close")}
+      >
+        {detailAnnouncement && (
+          <View
+            style={styles.detail}
+            testID={`team-announcement-detail-${detailAnnouncement.id}`}
+          >
+            <Text style={styles.detailTitle}>{detailAnnouncement.title}</Text>
+            <Text style={styles.detailDate}>
+              {detailAnnouncement.created_at
+                ? formatAnnouncementDate(detailAnnouncement.created_at)
+                : "-"}
+            </Text>
+            <ScrollView style={styles.detailBody}>
+              <Text style={styles.detailContent}>{detailAnnouncement.content}</Text>
+            </ScrollView>
+          </View>
+        )}
+      </CenterModal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  detail: {
+    gap: 4,
+    paddingRight: 24,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  detailDate: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  detailBody: {
+    marginTop: 8,
+    maxHeight: 360,
+  },
+  detailContent: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#374151",
+  },
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",

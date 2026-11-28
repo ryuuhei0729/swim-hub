@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, StyleSheet } from "react-native";
+import { Pressable, Text, View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +10,8 @@ interface RecordFeedbackToggleButtonProps {
   hasMine: boolean;
   /** 管理者として新しく書けるか (自分の記録でなく、まだ書いていない) */
   canWriteNew: boolean;
+  /** 自分の記録に自分宛ての未読 FB があるか (web RecordFeedbackCell の hasUnread と同じ判定) */
+  hasUnread?: boolean;
   open: boolean;
   onPress: () => void;
   testID?: string;
@@ -20,11 +22,13 @@ interface RecordFeedbackToggleButtonProps {
  * - FB があれば「FB n件」(自分が書いていれば「記入済み」を添える)
  * - 無くて書けるなら「FBを書く」
  * - どちらでもなければ何も出さない
+ * - 自分宛ての未読があれば件数の後ろに「NEW」の印を付ける
  */
 export const RecordFeedbackToggleButton: React.FC<RecordFeedbackToggleButtonProps> = ({
   count,
   hasMine,
   canWriteNew,
+  hasUnread = false,
   open,
   onPress,
   testID = "record-feedback-toggle",
@@ -38,6 +42,8 @@ export const RecordFeedbackToggleButton: React.FC<RecordFeedbackToggleButtonProp
         ? `${t("recordFeedbackMobile.countBadge", { count })} · ${t("recordFeedbackMobile.writtenByMe")}`
         : t("recordFeedbackMobile.countBadge", { count })
       : t("recordFeedbackMobile.write");
+  const showUnread = hasUnread && count > 0;
+  const newLabel = t("recordFeedbackMobile.newLabel");
 
   return (
     <Pressable
@@ -45,11 +51,16 @@ export const RecordFeedbackToggleButton: React.FC<RecordFeedbackToggleButtonProp
       style={styles.button}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={showUnread ? `${label} ${newLabel}` : label}
       accessibilityState={{ expanded: open }}
     >
       <Feather name={count > 0 ? "message-circle" : "edit-3"} size={12} color="#7C3AED" />
       <Text style={styles.text}>{label}</Text>
+      {showUnread && (
+        <View style={styles.newBadge} testID={`${testID}-unread`}>
+          <Text style={styles.newBadgeText}>{newLabel}</Text>
+        </View>
+      )}
       <Feather name={open ? "chevron-up" : "chevron-down"} size={12} color="#7C3AED" />
     </Pressable>
   );
@@ -67,5 +78,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#7C3AED",
+  },
+  // RecordFeedbackSection の「NEW」印と同じ見た目
+  newBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    backgroundColor: "#7C3AED",
+  },
+  newBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

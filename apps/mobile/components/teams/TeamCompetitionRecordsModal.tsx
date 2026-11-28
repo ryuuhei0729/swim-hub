@@ -76,6 +76,7 @@ function useRowFeedback(
         count={summary.count}
         hasMine={summary.hasMine}
         canWriteNew={canWriteNew}
+        hasUnread={isOwn && summary.unreadCount > 0}
         open={open}
         onPress={() => setOpen((prev) => !prev)}
       />

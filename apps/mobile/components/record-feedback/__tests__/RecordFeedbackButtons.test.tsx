@@ -41,6 +41,18 @@ describe("RecordFeedbackToggleButton", () => {
     expect(screen.getByText("FB 3件 · 記入済み")).toBeTruthy();
   });
 
+  it("自分宛ての未読があれば「NEW」の印を付ける", () => {
+    render(
+      <RecordFeedbackToggleButton {...base} count={2} hasMine={false} canWriteNew={false} hasUnread />,
+    );
+    expect(screen.getByText("NEW")).toBeTruthy();
+  });
+
+  it("未読が無ければ「NEW」の印は出さない", () => {
+    render(<RecordFeedbackToggleButton {...base} count={2} hasMine={false} canWriteNew={false} />);
+    expect(screen.queryByText("NEW")).toBeNull();
+  });
+
   it("押すと onPress が呼ばれる", () => {
     const onPress = vi.fn();
     render(

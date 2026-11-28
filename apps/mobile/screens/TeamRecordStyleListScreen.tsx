@@ -178,7 +178,7 @@ export const TeamRecordStyleListScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
           <Feather name="lock" size={40} color="#DC2626" />
-          <Text style={styles.permissionText}>{t("teams.mobile.webGuide")}</Text>
+          <Text style={styles.permissionText}>{t("teams.mobile.bulkRegisterAdminRequired")}</Text>
           <Pressable style={styles.permissionButton} onPress={() => navigation.goBack()}>
             <Text style={styles.permissionButtonText}>{t("teams.record.backButton")}</Text>
           </Pressable>
