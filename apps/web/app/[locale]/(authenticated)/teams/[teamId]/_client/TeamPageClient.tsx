@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +16,8 @@ import {
   type TeamTabType,
 } from "@/components/team/teamTabDefs";
 import { useTeamViewStore } from "@/stores/team/teamViewStore";
-import { teamViewSearch } from "@/utils/teamView";
+import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
+import { TEAM_SCHEDULE_LINK_PARAMS, readTeamScheduleLink, teamViewSearch } from "@/utils/teamView";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import type { TeamMembership, TeamWithMembers } from "@apps/shared/types";
 import TeamDetailClient from "./TeamDetailClient";
@@ -45,6 +46,8 @@ interface TeamPageClientProps {
  *
  * 開くタブの決め方: `?tab=` があればそれ (旧タブの ID は新しいタブへ読み替える)、
  * 無ければそのチームで最後に開いていたタブ (localStorage)、それも無ければメンバー。
+ * `?tab=schedule&practice=<id>` / `&competition=<id>` なら、予定タブでその練習・大会の詳細も開く
+ * (ダッシュボードの日付詳細の「チームの記録を見る」から)。開いたらそのクエリは URL から外す。
  *
  * お知らせ・チーム設定・ランキング・メンバーの目標・一括登録は、タブの上に重ねて開く
  * (mobile ではスタックに積む別画面)。
@@ -114,6 +117,16 @@ export default function TeamPageClient({
     if (isTabReady && isMember) storeTab(teamId, activeTab);
   }, [isTabReady, isMember, storeTab, teamId, activeTab]);
 
+  // 予定タブで詳細を開く練習・大会。予定タブを開いているときだけ渡す
+  const scheduleLink = activeTab === "schedule" ? readTeamScheduleLink(searchParams) : null;
+  const handleScheduleLinkHandled = useCallback(() => {
+    // 再読み込み・タブの切り替えで同じ詳細をまた開かないよう、URL から外す (`?tab=` などは残す)
+    const params = new URLSearchParams(window.location.search);
+    for (const name of TEAM_SCHEDULE_LINK_PARAMS) params.delete(name);
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, []);
+
   const handleTabChange = useCallback((tab: TeamTabType) => {
     setActiveTab(tab);
     setSubScreen(null);
@@ -140,6 +153,23 @@ export default function TeamPageClient({
     setAdminViewPref(nextAdminView);
   }, [isAdminView]);
 
+  // ---------------------------------------------------------------- 未対応件数のバッジ
+  // サイドバーの「チーム」の合計の内訳。このチームの分はタブ (出欠・メンバー) に、
+  // 他のチームの分はチーム名 (切替) の横と切替メニューの各チームに出す (mobile と同じ。swimhub-tasks #73)
+  const { total: badgeTotal, byTeam: badgeByTeam, countOf } = useTeamBadgeCounts();
+  const thisTeamCount = countOf(teamId);
+  const otherTeamsBadgeCount = Math.max(
+    0,
+    badgeTotal - thisTeamCount.unanswered - thisTeamCount.pendingMembers,
+  );
+  const switcherBadgeCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(badgeByTeam).map(([id, c]) => [id, c.unanswered + c.pendingMembers]),
+      ),
+    [badgeByTeam],
+  );
+
   // ---------------------------------------------------------------- 承認待ち
   const [isRefreshing, startRefresh] = useTransition();
   const handlePendingRetry = useCallback(() => {
@@ -157,6 +187,8 @@ export default function TeamPageClient({
           isCurrentUserAdmin={false}
           isAdminView={false}
           onToggleView={handleToggleView}
+          badgeCounts={switcherBadgeCounts}
+          otherTeamsBadgeCount={otherTeamsBadgeCount}
         />
         <div
           className="bg-white rounded-lg shadow px-6 py-12 flex flex-col items-center text-center"
@@ -208,6 +240,8 @@ export default function TeamPageClient({
         onToggleView={handleToggleView}
         onOpenAnnouncements={isMember ? () => setSubScreen("announcements") : undefined}
         onOpenSettings={isMember ? () => setSubScreen("settings") : undefined}
+        badgeCounts={switcherBadgeCounts}
+        otherTeamsBadgeCount={otherTeamsBadgeCount}
       />
 
       {visibleSubScreen ? (
@@ -226,6 +260,10 @@ export default function TeamPageClient({
           activeTab={activeTab}
           onTabChange={handleTabChange}
           onOpenSubScreen={setSubScreen}
+          attendanceBadgeCount={thisTeamCount.unanswered}
+          pendingBadgeCount={thisTeamCount.pendingMembers}
+          scheduleLink={scheduleLink}
+          onScheduleLinkHandled={handleScheduleLinkHandled}
         />
       ) : null}
     </div>

@@ -6,8 +6,7 @@ import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useRecordLogForm } from "./hooks/useRecordLogForm";
 import { RecordLogEntry } from "./components";
 import type { RecordLogFormProps, StyleOption } from "./types";
@@ -47,7 +46,7 @@ export default function RecordLogForm({
   const tTimeError = useTranslations("bulkBestTime.error");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const dateFnsLocale = locale === "ja" ? ja : enUS;
+  const dateLocale = locale as SupportedLocale;
 
   const COMPETITION_STEPS = useMemo(
     () => [
@@ -161,7 +160,7 @@ export default function RecordLogForm({
     setFormError(null);
     setIsSubmitted(true);
 
-    const { hasStyleError, hasTimeFormatError, timeRequiredIndex, submitList } =
+    const { hasStyleError, hasTimeFormatError, timeRequiredIndex, reactionTimeError, submitList } =
       prepareSubmitData();
 
     if (hasStyleError) {
@@ -172,6 +171,15 @@ export default function RecordLogForm({
 
     if (hasTimeFormatError) {
       setFormError(tTimeError("invalidTimeFormat"));
+      setIsSubmitted(false);
+      return;
+    }
+
+    // リアクションタイムが形式不正・範囲外 (-1〜2秒) なら保存しない
+    if (reactionTimeError) {
+      setFormError(
+        reactionTimeError.kind === "range" ? t("reactionTimeRange") : t("reactionTimeFormatInvalid"),
+      );
       setIsSubmitted(false);
       return;
     }
@@ -275,16 +283,14 @@ export default function RecordLogForm({
                       {competitionDate && competitionTitle && (
                         <>
                           <span className="text-base font-semibold text-blue-700">
-                            {format(new Date(competitionDate), "yyyy年M月d日(E)", {
-                              locale: dateFnsLocale,
-                            })}
+                            {formatDate(competitionDate, "longWithWeekday", dateLocale)}
                           </span>
                           <span className="ml-3">{competitionTitle}</span>
                         </>
                       )}
                       {competitionDate &&
                         !competitionTitle &&
-                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: dateFnsLocale })}
+                        formatDate(competitionDate, "longWithWeekday", dateLocale)}
                       {!competitionDate && competitionTitle && competitionTitle}
                     </p>
                   </div>

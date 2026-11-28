@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
+import { GenderToggle } from "@/components/ui/GenderToggle";
+import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { validatePassword, type PasswordChecks } from "@/utils/validatePassword";
 
 interface SignupFormProps {
@@ -78,6 +80,9 @@ function formatSignupError(t: TFunction, err: unknown): string {
 
 export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin }) => {
   const [name, setName] = useState("");
+  /** 0: 男性, 1: 女性 (web の新規登録と同じく初期値は男性) */
+  const [gender, setGender] = useState<number>(0);
+  const [birthday, setBirthday] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -147,7 +152,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
     setMessage(null);
 
     try {
-      const { error } = await signUp(email, password, name);
+      const { error } = await signUp(email, password, name, gender, birthday || undefined);
       if (error) {
         setError(formatSignupError(t, error));
       } else {
@@ -221,6 +226,15 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
               editable={!loading}
             />
           </View>
+
+          <GenderToggle value={gender} onChange={setGender} disabled={loading} />
+
+          <BirthdayInput
+            label={t("auth.fields.birthday")}
+            value={birthday}
+            onChange={setBirthday}
+            disabled={loading}
+          />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t("auth.fields.email")}</Text>

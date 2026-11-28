@@ -25,7 +25,6 @@ vi.mock("@/hooks/useExpiredGoalCheck", () => ({
 }));
 vi.mock("@/components/goals/GoalReflectionModal", () => ({
   GoalReflectionModal: (p: { goal: { id: string }; onSkip: () => void; onSaved: () => void; onGoToGoals?: () => void }) => (
-    // onGoToGoals は渡されないはず (v6): 渡されたら data 属性で観測できるようにする
     <div data-testid="goal-modal" data-id={p.goal.id}>
       <button onClick={p.onSkip}>goal-skip</button><button onClick={p.onSaved}>goal-saved</button>{p.onGoToGoals && <button onClick={p.onGoToGoals}>goal-go</button>}
     </div>
@@ -248,7 +247,7 @@ describe("DashboardScreen — 期限切れ振り返りモーダルの描画切�
     expect(screen.queryByTestId("ms-modal")).toBeNull();
   });
 
-  it("目標モーダル: スキップ = skipGoal のみ / 保存後 = handleGoalSaved / 目標モーダルに『目標管理を見る』の配線は無い (v6)", async () => {
+  it("目標モーダル: スキップ = skipGoal のみ / 保存後 = handleGoalSaved / 『目標管理を見る』で閉じて目標タブへ遷移 (web に揃える。swimhub-tasks#129)", async () => {
     check.state.expiredGoal = { id: "g1" };
     await mountDashboard();
     fireEvent.click(screen.getByText("goal-skip"));
@@ -257,8 +256,10 @@ describe("DashboardScreen — 期限切れ振り返りモーダルの描画切�
     fireEvent.click(screen.getByText("goal-saved"));
     expect(check.handlers.handleGoalSaved).toHaveBeenCalledTimes(1);
     expect(check.handlers.skipGoal).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("goal-go")).toBeNull();
     expect(nav.navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("goal-go"));
+    expect(check.handlers.skipGoal).toHaveBeenCalledTimes(2);
+    expect(nav.navigate).toHaveBeenCalledWith("MainTabs", { screen: "Goals" });
   });
 
   it("マイルストーンモーダル: スキップ = skipMilestone / 保存後 = handleMilestoneSaved / 『目標管理を見る』で目標タブへ遷移", async () => {

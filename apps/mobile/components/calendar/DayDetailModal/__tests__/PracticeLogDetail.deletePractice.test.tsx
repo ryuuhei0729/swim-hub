@@ -104,7 +104,6 @@ function renderItem(
       color="#10B981"
       typeLabel="練習"
       isPractice={isPractice}
-      isPracticeLog={false}
       practiceId={item.id}
       onClose={vi.fn()}
       {...handlers}

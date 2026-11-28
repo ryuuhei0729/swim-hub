@@ -10,7 +10,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import { useRouter } from "@/i18n/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLeaveTeamMutation } from "@apps/shared/hooks/queries/teams";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { getLeaveBlockReason, type LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -57,6 +59,7 @@ export default function TeamSettingsTab({
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { supabase, user } = useAuth();
+  const queryClient = useQueryClient();
 
   const leaveTeamMutation = useLeaveTeamMutation(supabase);
 
@@ -85,10 +88,14 @@ export default function TeamSettingsTab({
    * teamName / teamDescription は Server Component 由来なので、保存後に
    * refresh しないと表示モードへ戻った瞬間に古い名前が出る。キャンセル時も
    * 同じ経路を通るが、その場合は単に再取得するだけで副作用は無い。
+   * refresh でヘッダーのチーム名 (TeamPageClient の initialTeam) も新しくなる。
+   * ヘッダーのチーム切替メニューは所属チーム一覧 (React Query) から名前を出すので、そちらも取り直す
+   * (swimhub-tasks #110)。
    */
   const handleEditingEnd = () => {
     setIsEditingInfo(false);
     router.refresh();
+    void queryClient.invalidateQueries({ queryKey: teamKeys.lists() });
   };
 
   /**

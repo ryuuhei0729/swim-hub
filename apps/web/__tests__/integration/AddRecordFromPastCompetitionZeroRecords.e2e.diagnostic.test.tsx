@@ -53,6 +53,10 @@ function render(ui: React.ReactElement) {
 vi.mock("@/hooks/useBestTimes", () => ({
   useBestTimes: () => ({ bestTimes: [], loadBestTimes: vi.fn() }),
 }));
+// DayDetailModal の「チームの記録を見る」の遷移用 (本テストの関心事外)
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock("@/components/forms/record-log/components/RecordLogEntry", () => ({
   default: () => <div data-testid="record-log-entry-stub" />,
 }));

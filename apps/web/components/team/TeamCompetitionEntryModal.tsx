@@ -24,6 +24,8 @@ import { useTranslations } from "next-intl";
 import { useStyleLabel } from "@/hooks/useStyleLabel";
 import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import type { EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -34,13 +36,12 @@ interface TeamCompetitionEntryModalProps {
   competitionTitle: string;
   teamId: string;
   /**
-   * このモーダルを開いた往路のルート ("/teams/[teamId]" なら false、
-   * "/teams-admin/[teamId]" なら true)。`TeamCompetitions.tsx` 自身のルート固定 `isAdmin` prop
-   * をそのまま渡してもらう。**下の `data.isAdmin` (実ロール) とは別物** —
-   * 実ロール admin が利用者ビュー `/teams/[teamId]` を開いている場合、
-   * `routeIsAdmin` は false でも `data.isAdmin` は true になる。
-   * `handleAdminBulkEntryClick` の遷移先 origin クエリ (追加スプリント D12) の
-   * 決定にのみ使う。
+   * いま表示しているのが管理者ビューか (`TeamCompetitions.tsx` の `isAdmin` prop をそのまま渡す)。
+   * 受付状況の変更・代理入力ボタンはこの値で出し分ける (表示中のビューで判定する。
+   * mobile と同じ。swimhub-tasks #67)。実ロール admin でも利用者ビューなら
+   * 一般メンバーと同じ「エントリーを追加」を出す。
+   * 実際に出すのは、念のため DB から取ったロール (`data.isAdmin`) も admin のときだけ。
+   * `handleAdminBulkEntryClick` の遷移先 origin クエリ (追加スプリント D12) にも使う。
    */
   routeIsAdmin: boolean;
   /**
@@ -173,6 +174,8 @@ export default function TeamCompetitionEntryModal({
     totalEntries: number;
   };
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  // 受付状況の変更の確認待ち (確認してから保存する。mobile と同じ。swimhub-tasks #68)
+  const [pendingStatus, setPendingStatus] = useState<"before" | "open" | "closed" | null>(null);
   const [pendingDeleteEntry, setPendingDeleteEntry] = useState<EntryRow | null>(null);
   const [deletingEntry, setDeletingEntry] = useState(false);
 
@@ -257,6 +260,13 @@ export default function TeamCompetitionEntryModal({
     ...TEAM_VIEW_QUERY_OPTIONS,
   });
   const data = entriesQuery.data ?? null;
+  // 管理者向けの操作は「管理者ビューで開いている」かつ「実際に管理者」のときだけ出す
+  const showAdminControls = routeIsAdmin && (data?.isAdmin ?? false);
+  // 大会日が過去なら DB の値に関わらず締切として扱う (表示だけ。DB は書き換えない)
+  const effectiveEntryStatus = data
+    ? resolveEntryStatus(data.competition.date, data.competition.entry_status)
+    : "before";
+  const isPastCompetition = data ? isCompetitionDateInPast(data.competition.date) : false;
   // 読み込み表示 / 取得エラーは表示できる内容が無いときだけ出す
   const loading = !data && entriesQuery.isPending;
   const fetchError = entriesQuery.error;
@@ -275,11 +285,25 @@ export default function TeamCompetitionEntryModal({
     await invalidateTeamCompetitionQueries(queryClient, teamId, competitionId);
   }, [queryClient, teamId, competitionId]);
 
+  // セレクトで選んだら確認ダイアログを出す (同じ値なら何もしない)
+  const handleStatusSelect = (newStatus: "before" | "open" | "closed") => {
+    if (data && data.competition.entry_status === newStatus) return;
+    setPendingStatus(newStatus);
+  };
+
+  const handleConfirmStatusChange = () => {
+    const next = pendingStatus;
+    setPendingStatus(null);
+    if (next) void handleStatusChange(next);
+  };
+
   const handleStatusChange = async (newStatus: "before" | "open" | "closed") => {
     // 現在のステータスと同じ場合は何もしない
     if (data && data.competition.entry_status === newStatus) {
       return;
     }
+    // 過去の大会は変更できない (mobile と同じ)
+    if (isPastCompetition) return;
 
     try {
       setUpdatingStatus(true);
@@ -434,12 +458,13 @@ export default function TeamCompetitionEntryModal({
                       >
                         {t("competitionEntryModal.entryStatusLabel")}
                       </label>
-                      {data.isAdmin ? (
+                      {/* 過去の大会は締切として表示するだけで変更できない (mobile と同じ) */}
+                      {showAdminControls && !isPastCompetition ? (
                         <select
                           id="entry-status"
                           value={data.competition.entry_status}
                           onChange={(e) =>
-                            handleStatusChange(e.target.value as "before" | "open" | "closed")
+                            handleStatusSelect(e.target.value as "before" | "open" | "closed")
                           }
                           disabled={updatingStatus}
                           className="block w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -451,16 +476,17 @@ export default function TeamCompetitionEntryModal({
                         </select>
                       ) : (
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(data.competition.entry_status)}`}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(effectiveEntryStatus)}`}
+                          data-testid="team-competition-entry-status-badge"
                         >
-                          {getStatusLabel(data.competition.entry_status)}
+                          {getStatusLabel(effectiveEntryStatus)}
                         </span>
                       )}
                     </div>
 
                     {/* admin向けの現在値バッジ（select は選択肢一覧を表示するだけで色分けされないため併記する。
                         非adminは左側の span で既にステータスを表示済みのため、ここでは出さない） */}
-                    {data.isAdmin && (
+                    {showAdminControls && !isPastCompetition && (
                       <div className="ml-4">
                         <span
                           className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(data.competition.entry_status)}`}
@@ -472,18 +498,16 @@ export default function TeamCompetitionEntryModal({
                   </div>
                 </div>
 
-                {/* セルフエントリー導線 (要件B後半 / D6): 非admin「エントリーを追加」(D10改訂) /
-                    admin「エントリーを代理入力」。admin 判定はこのモーダルが実測する
-                    data.isAdmin (実際のロール) を使う。TeamCompetitions.tsx の isAdmin prop は
-                    ルート (/teams vs /teams-admin) 固定値のため、実ロールと食い違う場合がある
-                    (実ロール admin のユーザーが /teams/[teamId] を開いた場合等)。
-                    admin 用ボタンは mobile (TeamCompetitionEntryModal.tsx) と同じく受付中 (open)
+                {/* セルフエントリー導線 (要件B後半 / D6): 利用者ビュー「エントリーを追加」(D10改訂) /
+                    管理者ビュー「エントリーを代理入力」。表示中のビューで出し分ける
+                    (実ロール admin でも利用者ビューなら「エントリーを追加」。mobile と同じ。swimhub-tasks #67)。
+                    代理入力ボタンは mobile (TeamCompetitionEntryModal.tsx) と同じく受付中 (open)
                     のときだけ表示する (swimhub-tasks #60)。
-                    非admin 用ボタンは着地先 (CompetitionTabModal のエントリータブ) が
+                    利用者ビューのボタンは着地先 (CompetitionTabModal のエントリータブ) が
                     実際に編集可能な状態のときだけ表示する (R1 と同じ canEditOrDeleteEntry)。 */}
                 <div className="mb-6">
-                  {data.isAdmin ? (
-                    data.competition.entry_status === "open" && (
+                  {showAdminControls ? (
+                    effectiveEntryStatus === "open" && (
                       <button
                         type="button"
                         onClick={handleAdminBulkEntryClick}
@@ -495,7 +519,7 @@ export default function TeamCompetitionEntryModal({
                       </button>
                     )
                   ) : (
-                    canEditOrDeleteEntry(data.competition.entry_status, data.competition.date) && (
+                    canEditOrDeleteEntry(effectiveEntryStatus, data.competition.date) && (
                       <button
                         type="button"
                         onClick={() => onOpenSelfEntry()}
@@ -514,7 +538,7 @@ export default function TeamCompetitionEntryModal({
                   {Object.keys(data.entriesByStyle).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <p>{t("competitionEntryModal.emptyNoEntry")}</p>
-                      {data.competition.entry_status === "open" && (
+                      {effectiveEntryStatus === "open" && (
                         <p className="mt-2 text-sm">
                           {t("competitionEntryModal.emptyOpenHint")}
                         </p>
@@ -546,7 +570,7 @@ export default function TeamCompetitionEntryModal({
                           // 要件A / SC3・SC8: 自分の行のみ（管理者自身の行も含む）に編集/削除を出す
                           const canModify =
                             isOwnEntryRow(entry.user_id, user?.id) &&
-                            canEditOrDeleteEntry(data.competition.entry_status, data.competition.date);
+                            canEditOrDeleteEntry(effectiveEntryStatus, data.competition.date);
                           return (
                             <div key={entry.id} className="px-4 py-3 hover:bg-gray-50">
                               <div className="flex items-center justify-between">
@@ -619,6 +643,27 @@ export default function TeamCompetitionEntryModal({
           </div>
         </div>
       </div>
+
+      {/* 受付状況の変更の確認 (mobile のカード上プルダウンと同じ文言) */}
+      <ConfirmDialog
+        isOpen={pendingStatus !== null}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setPendingStatus(null)}
+        title={t("mobile.teamCompetitionEntryModal.confirmTitle")}
+        message={
+          pendingStatus
+            ? t(
+                pendingStatus === "open"
+                  ? "mobile.teamCompetitionEntryModal.confirmOpen"
+                  : pendingStatus === "closed"
+                    ? "mobile.teamCompetitionEntryModal.confirmClosed"
+                    : "mobile.teamCompetitionEntryModal.confirmBefore",
+              )
+            : ""
+        }
+        confirmLabel={tCommon("ok")}
+        variant="warning"
+      />
 
       {/* 削除確認ダイアログ (要件A) */}
       <ConfirmDialog

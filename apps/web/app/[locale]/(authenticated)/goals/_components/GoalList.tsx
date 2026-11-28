@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
-import { GoalAPI } from "@apps/shared/api/goals";
 import { useGoalCurrentBestTimeQuery } from "@apps/shared/hooks/queries/goals";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatSignedSeconds } from "@apps/shared/utils/time";
@@ -24,41 +22,14 @@ interface GoalListProps {
   goals: GoalListItem[];
   selectedGoalId: string | null;
   onSelectGoal: (goalId: string) => void;
-  onDeleteGoal: () => Promise<void>;
-  onEditGoal: (goalId: string) => void;
 }
 
 /**
  * 大会目標リストコンポーネント
+ * 編集・削除は詳細 (GoalDetail) の右上だけに置く (mobile の GoalCard / GoalDetailScreen と同じ)
  */
-export default function GoalList({
-  goals,
-  selectedGoalId,
-  onSelectGoal,
-  onDeleteGoal,
-  onEditGoal,
-}: GoalListProps) {
+export default function GoalList({ goals, selectedGoalId, onSelectGoal }: GoalListProps) {
   const t = useTranslations("goals");
-  const { supabase } = useAuth();
-  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
-
-  const handleDelete = async (e: React.MouseEvent, goalId: string) => {
-    e.stopPropagation();
-    if (confirm(t("list.deleteConfirm"))) {
-      try {
-        await goalAPI.deleteGoal(goalId);
-        await onDeleteGoal();
-      } catch (error) {
-        console.error("目標削除エラー:", error);
-        alert(t("list.deleteFailed"));
-      }
-    }
-  };
-
-  const handleEdit = (e: React.MouseEvent, goalId: string) => {
-    e.stopPropagation();
-    onEditGoal(goalId);
-  };
 
   if (goals.length === 0) {
     return (
@@ -80,8 +51,6 @@ export default function GoalList({
           goal={goal}
           isSelected={selectedGoalId === goal.id}
           onSelect={() => onSelectGoal(goal.id)}
-          onEdit={(e) => handleEdit(e, goal.id)}
-          onDelete={(e) => handleDelete(e, goal.id)}
         />
       ))}
     </div>
@@ -92,14 +61,10 @@ function GoalListCard({
   goal,
   isSelected,
   onSelect,
-  onEdit,
-  onDelete,
 }: {
   goal: GoalListItem;
   isSelected: boolean;
   onSelect: () => void;
-  onEdit: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations("goals");
   const locale = useLocale() as SupportedLocale;
@@ -107,7 +72,7 @@ function GoalListCard({
   const { supabase } = useAuth();
   const { data: currentBestTime } = useGoalCurrentBestTimeQuery(supabase, goal.id);
   const isAchieved = goal.status === "achieved";
-  // 大会情報が無い目標 (大会削除後・チーム退会後) は閲覧・削除のみ。編集導線を出さない
+  // 大会情報が無い目標 (大会削除後・チーム退会後) は閲覧・削除のみ (詳細で編集ボタンを出さない)
   const competitionUnavailable = goal.competition === null;
   // competitionFallback は competition はあるが title が空のときだけ使う
   const competitionName = competitionUnavailable
@@ -125,6 +90,16 @@ function GoalListCard({
   return (
     <div
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${competitionName} ${styleName}`}
+      aria-pressed={isSelected}
       className={`
         rounded-lg shadow p-4 cursor-pointer transition-all
         ${isSelected ? "ring-2 ring-blue-500" : "hover:shadow-md"}
@@ -145,26 +120,6 @@ function GoalListCard({
           {competitionUnavailable && (
             <p className="text-[10px] text-amber-600 mt-0.5">{t("list.editUnavailableReason")}</p>
           )}
-        </div>
-        <div className="flex items-center gap-1">
-          {!competitionUnavailable && (
-            <button
-              onClick={onEdit}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-              title={t("list.edit")}
-              aria-label={t("list.edit")}
-            >
-              <PencilIcon className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={onDelete}
-            className="text-gray-400 hover:text-red-600 transition-colors p-1"
-            title={t("list.delete")}
-            aria-label={t("list.delete")}
-          >
-            <TrashIcon className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

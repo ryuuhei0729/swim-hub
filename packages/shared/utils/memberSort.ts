@@ -3,7 +3,10 @@
 //
 // メンバーが並ぶ全画面（メンバータブ/グループ/大会・練習の代理入力の候補一覧 等）
 // で共用する唯一の比較関数。画面ごとに `.sort(` を再実装しないこと。
+// グループ表示のグループ内の並び (年齢の降順・同じ年齢は名前順) は sortMembersByAgeForGroup。
 // =============================================================================
+
+import { differenceInYears, isValid, parseISO } from "date-fns";
 
 export interface BirthdaySortableUser {
   name?: string | null;
@@ -50,4 +53,47 @@ export function compareMembersByBirthday(
 
   if (a.user_id !== b.user_id) return a.user_id < b.user_id ? -1 : 1;
   return 0;
+}
+
+/**
+ * 生年月日から referenceDate 時点の満年齢を出す。未設定・読めない値は null。
+ */
+function ageAt(birthday: string | null | undefined, referenceDate: Date): number | null {
+  if (!birthday) return null;
+  const birthDate = parseISO(birthday.slice(0, 10));
+  if (!isValid(birthDate)) return null;
+  return differenceInYears(referenceDate, birthDate);
+}
+
+/**
+ * メンバー一覧のグループ表示で、各グループ内のメンバーを並べる順に並べ替えた新しい配列を返す。
+ * (ryuuhei0729/swimhub-tasks#106。mobile・web のグループ表示で共用する)
+ *
+ * - 年齢 (referenceDate 時点の満年齢) の降順 = 年上が先
+ * - 同じ年齢は名前順 (生年月日が違っても同じ年齢なら名前で並べる)
+ * - 生年月日が未設定 (または読めない値) の人は最後にまとめて名前順
+ * - 同名は user_id で比べ、毎回同じ順になるようにする
+ *
+ * 名前の比較は compareMembersByBirthday と同じ文字コード順。元の配列は変更しない。
+ */
+export function sortMembersByAgeForGroup<T extends BirthdaySortableMember>(
+  members: readonly T[],
+  referenceDate: Date = new Date(),
+): T[] {
+  const ages = new Map<T, number | null>();
+  for (const m of members) ages.set(m, ageAt(m.users?.birthday, referenceDate));
+
+  return [...members].sort((a, b) => {
+    const aAge = ages.get(a) ?? null;
+    const bAge = ages.get(b) ?? null;
+    if ((aAge === null) !== (bAge === null)) return aAge === null ? 1 : -1;
+    if (aAge !== null && bAge !== null && aAge !== bAge) return bAge - aAge;
+
+    const aName = a.users?.name ?? "";
+    const bName = b.users?.name ?? "";
+    if (aName !== bName) return aName < bName ? -1 : 1;
+
+    if (a.user_id !== b.user_id) return a.user_id < b.user_id ? -1 : 1;
+    return 0;
+  });
 }

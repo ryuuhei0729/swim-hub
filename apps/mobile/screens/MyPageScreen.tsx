@@ -32,6 +32,8 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 const TERMS_URL = "https://swim-hub.app/terms";
 const PRIVACY_URL = "https://swim-hub.app/privacy";
+const CONTACT_URL = "https://swim-hub.app/contact";
+const TIME_LEVEL_URL = "https://swim-hub.app/time-level";
 
 /**
  * アカウントタブ (旧マイページ + 設定)
@@ -131,6 +133,8 @@ export const MyPageScreen: React.FC = () => {
   // 「プラン」行の右に出す値
   const planValue = useMemo(() => {
     if (subscription?.status === "trialing") return t("account.mobile.planValue.trialing");
+    // 支払い失敗 (past_due) は Free ではないので、プラン画面と同じく支払い未完了と出す
+    if (subscription?.status === "past_due") return t("settings.subscription.badge.pastDue");
     return checkIsPremium(subscription)
       ? t("account.mobile.planValue.premium")
       : t("account.mobile.planValue.free");
@@ -329,6 +333,20 @@ export const MyPageScreen: React.FC = () => {
             accessory="external"
             onPress={() => Linking.openURL(PRIVACY_URL)}
             accessibilityHint={PRIVACY_URL}
+          />
+          <ListRow
+            label={t("footer.links.contact")}
+            accessory="external"
+            onPress={() => Linking.openURL(CONTACT_URL)}
+            accessibilityHint={CONTACT_URL}
+            testID="account-row-contact"
+          />
+          <ListRow
+            label={t("timeLevel.title")}
+            accessory="external"
+            onPress={() => Linking.openURL(TIME_LEVEL_URL)}
+            accessibilityHint={TIME_LEVEL_URL}
+            testID="account-row-time-level"
           />
         </ListGroup>
 

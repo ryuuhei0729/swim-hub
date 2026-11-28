@@ -16,7 +16,7 @@ import React, {
 import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CalendarDaysIcon,
   MapPinIcon,
@@ -24,8 +24,8 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format, isValid, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid, parseISO } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
@@ -58,6 +58,12 @@ const PracticeTabModal = dynamic(
 
 export type { TeamPractice } from "@/hooks/queries/teamPracticeQueries";
 
+/** カード・タイム一覧の見出しに出す練習日 (例: 3月1日(土)) */
+function formatPracticeCardDate(date: string, locale: SupportedLocale): string {
+  const parsed = parseISO(date);
+  return isValid(parsed) ? formatDate(parsed, "shortWithWeekday", locale) : "-";
+}
+
 export interface TeamPracticeActionsOptions {
   teamId: string;
   isAdmin?: boolean;
@@ -70,6 +76,8 @@ export interface TeamPracticeActions {
   modals: React.ReactNode;
   /** 管理者ビュー: 練習を追加 */
   openAddForm: () => void;
+  /** メンバー全員のタイム一覧を開く (カードを押したときと同じ。外からのリンク用) */
+  openTimes: (practice: TeamPractice) => void;
   /** 保存・削除の失敗 (一覧の代わりに表示する) */
   error: string | null;
   clearError: () => void;
@@ -82,6 +90,7 @@ export function useTeamPracticeActions({
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
+  const locale = useLocale() as SupportedLocale;
   const queryClient = useQueryClient();
   // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
@@ -367,22 +376,20 @@ export function useTeamPracticeActions({
   };
 
   // メンバー全員のタイム一覧モーダルを開く (admin/非admin 共通)
-  const handleOpenTimes = (practice: TeamPractice, practiceDate: string) => {
+  const handleOpenTimes = useCallback((practice: TeamPractice) => {
+    const practiceDate = formatPracticeCardDate(practice.date, locale);
     setSelectedPractice({
       id: practice.id,
       heading: practice.title ? `${practiceDate} ${practice.title}` : practiceDate,
     });
-  };
+  }, [locale]);
 
   const renderCard = (practice: TeamPractice): React.ReactNode => {
-    const parsedPracticeDate = parseISO(practice.date);
-    const practiceDate = isValid(parsedPracticeDate)
-      ? format(parsedPracticeDate, "M月d日(E)", { locale: ja })
-      : "-";
+    const practiceDate = formatPracticeCardDate(practice.date, locale);
     // 記録が無くてもカード全体を押してメンバー全員のタイム一覧を開く (admin/非admin 共通。
     // 0件なら一覧側で空表示。mobile と同じ。swimhub-tasks#103)。
     // 中のボタンは stopPropagation してカードのクリックと分ける
-    const openTimes = () => handleOpenTimes(practice, practiceDate);
+    const openTimes = () => handleOpenTimes(practice);
 
     return (
       <div
@@ -563,6 +570,7 @@ export function useTeamPracticeActions({
     renderCard,
     modals,
     openAddForm: handleAddPractice,
+    openTimes: handleOpenTimes,
     error,
     clearError: () => setError(null),
   };

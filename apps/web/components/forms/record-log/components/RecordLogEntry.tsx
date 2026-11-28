@@ -12,6 +12,7 @@ import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swim
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
+import { getReactionTimeError } from "../utils/reactionTimeValidation";
 import type { BestTime } from "@/types/member-detail";
 import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
@@ -108,6 +109,8 @@ export default function RecordLogEntry({
 
   // 不正形式（"1.23.45" 等）は time=0 のまま確定されないため、入力欄でエラー表示する
   const timeFormatInvalid = isInvalidTimeInput(formData.timeDisplayValue);
+  // リアクションタイムの形式不正・範囲外 (-1〜2秒) は保存を止めるため、入力欄の下にも理由を出す
+  const reactionTimeError = getReactionTimeError(formData.reactionTime);
 
   const currentStyleId = formData.styleId;
   const currentStyle = styles.find((s) => s.id.toString() === currentStyleId);
@@ -395,9 +398,18 @@ export default function RecordLogEntry({
             onChange={(e) => onReactionTimeChange(e.target.value)}
             placeholder={t("reactionTime_placeholder")}
             className="w-full"
+            aria-invalid={reactionTimeError ? true : undefined}
             data-testid={`record-reaction-time-${sectionIndex}`}
           />
         </div>
+        {reactionTimeError && (
+          <p
+            className="col-span-2 -mt-1 text-xs text-red-600"
+            data-testid={`record-reaction-time-error-${sectionIndex}`}
+          >
+            {reactionTimeError === "range" ? t("reactionTimeRange") : t("reactionTimeFormatInvalid")}
+          </p>
+        )}
       </div>
 
       {/* スプリットタイム */}

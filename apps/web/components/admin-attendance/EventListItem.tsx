@@ -3,8 +3,8 @@
 import React, { memo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { parseISO, isValid } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
-import { formatInTimeZone } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { effectiveAttendanceStatus } from "@/utils/teamAttendance";
 
@@ -28,14 +28,12 @@ export const EventListItem = memo(function EventListItem({
 }: EventListItemProps) {
   const t = useTranslations("teamsAdmin");
   const locale = useLocale();
-  const dateLocale = locale === "ja" ? ja : enUS;
-  const datePattern = locale === "ja" ? "MMMM d日 (EEE)" : "MMMM d (EEE)";
   const formatEventDate = (dateStr: string) => {
     const parsed = parseISO(dateStr);
     if (!isValid(parsed)) {
       return "-";
     }
-    return formatInTimeZone(parsed, "Asia/Tokyo", datePattern, { locale: dateLocale });
+    return formatDate(toZonedTime(parsed, "Asia/Tokyo"), "shortWithWeekday", locale as SupportedLocale);
   };
 
   const currentStatus = effectiveAttendanceStatus(event);

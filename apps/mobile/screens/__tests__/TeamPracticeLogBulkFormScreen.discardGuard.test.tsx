@@ -137,6 +137,8 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
 
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/ImageUploader", () => ({ ImageUploader: () => null }));
+// 写真からの読み取り (expo-image-picker 等を読み込む) も同じ理由で差し替える
+vi.mock("@/components/teams/TimesheetScanModal", () => ({ TimesheetScanModal: () => null }));
 
 // PracticeLogTemplateSelectModal (実物) が内部で呼ぶクエリ/ミューテーションフックのみモックする。
 // モーダル自体・handleTemplateSelect (画面本体) はどちらも実物のまま render する

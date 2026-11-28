@@ -2,9 +2,9 @@
 
 import React from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
-import { useTranslations } from "next-intl";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatTimeBest } from "@/utils/formatters";
 import type { Record, Competition, Style } from "@apps/shared/types";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
@@ -33,6 +33,7 @@ export default function CompetitionRecordCard({
 }: CompetitionRecordCardProps) {
   const t = useTranslations("competition");
   const tCommon = useTranslations("common");
+  const locale = useLocale() as SupportedLocale;
 
   const competition = record.competition as Competition | null;
   const style = record.style as Style | undefined;
@@ -44,7 +45,7 @@ export default function CompetitionRecordCard({
   const dateSource = competition?.date ?? record.created_at;
   const parsedDate = dateSource ? new Date(dateSource) : null;
   const formattedDate =
-    parsedDate && isValid(parsedDate) ? format(parsedDate, "yyyy/MM/dd", { locale: ja }) : "-";
+    parsedDate && isValid(parsedDate) ? formatDate(parsedDate, "numeric", locale) : "-";
   const competitionLabel = isBulkRecord ? `(${t("client.bulkInputLabel")})` : competition?.title || "-";
   const cardAriaLabel = t("client.viewDetailAriaLabelWithInfo", {
     date: formattedDate,

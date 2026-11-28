@@ -90,6 +90,8 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
 
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/ImageUploader", () => ({ ImageUploader: () => null }));
+// 写真からの読み取り (expo-image-picker 等を読み込む) も同じ理由で差し替える
+vi.mock("@/components/teams/TimesheetScanModal", () => ({ TimesheetScanModal: () => null }));
 
 const capturedMemberSelectProps: Array<{ members: Array<{ user_id: string }> }> = [];
 vi.mock("@/components/teams/MemberSelectModal", () => ({
@@ -136,15 +138,15 @@ describe("TeamPracticeLogBulkFormScreen - 非泳者管理者の締め出し回�
     render(<TeamPracticeLogBulkFormScreen />, { wrapper: createWrapper(queryClient) });
 
     // ローディング中は権限ゲートも本体もまだ描画されないため、
-    // 「webGuide が無い」だけを待つと初期ローディング画面で誤って合格してしまう
+    // 「管理者のみの案内が無い」だけを待つと初期ローディング画面で誤って合格してしまう
     // (waitFor は否定アサーションを最初の試行で満たすと即座に成功してしまうため)。
     // MemberSelectModal が最低1回マウントされる = 権限ゲートを通過して本体まで
-    // 描画が進んだことの確実な証拠として先に待ってから、webGuide の不在を確認する。
+    // 描画が進んだことの確実な証拠として先に待ってから、管理者のみの案内の不在を確認する。
     await waitFor(() => {
       expect(capturedMemberSelectProps.length).toBeGreaterThan(0);
     });
 
-    expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
+    expect(screen.queryByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeNull();
   });
 
   it("[V-16-02] MemberSelectModal に渡る候補一覧には非泳者が含まれない", async () => {

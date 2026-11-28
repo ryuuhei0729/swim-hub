@@ -88,19 +88,44 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
 
             try {
               // RPC関数でトークンを削除（NULLを設定）
-              await supabase.rpc("set_google_refresh_token", {
+              const { error: tokenError } = await supabase.rpc("set_google_refresh_token", {
                 p_user_id: user.id,
                 p_token: null,
               });
 
               // フラグを更新
-              await supabase
+              const { error: updateError } = await supabase
                 .from("users")
                 .update({ google_calendar_enabled: false })
                 .eq("id", user.id);
 
+              if (tokenError || updateError) {
+                throw tokenError || updateError;
+              }
+
+              // practices の google_event_id を null にリセット（再連携時に再同期できるように）
+              const { error: practicesResetError } = await supabase
+                .from("practices")
+                .update({ google_event_id: null })
+                .eq("user_id", user.id);
+
+              if (practicesResetError) {
+                throw practicesResetError;
+              }
+
+              // competitions の google_event_id を null にリセット
+              const { error: competitionsResetError } = await supabase
+                .from("competitions")
+                .update({ google_event_id: null })
+                .eq("user_id", user.id);
+
+              if (competitionsResetError) {
+                throw competitionsResetError;
+              }
+
               onUpdate();
-            } catch {
+            } catch (err) {
+              console.error("連携解除エラー:", err);
               Alert.alert(t("common.alertErrorTitle"), t("settings.googleCalendar.errors.disconnectFailed"));
             }
           },

@@ -92,7 +92,7 @@ export const LoginMethodScreen: React.FC = () => {
         )}
 
         <View style={styles.buttonGroup}>
-          {/* Appleでログイン（iOSのみ） */}
+          {/* Appleでログイン（iOS はネイティブ、Android はブラウザ） */}
           {isAppleAvailable && (
             <View>
               <AppleLoginButton

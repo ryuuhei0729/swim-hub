@@ -123,6 +123,9 @@ describe("NextCompetitionCard", () => {
     expect(getByText("区立総合体育館（長水路）")).toBeTruthy();
     expect(getByText("12")).toBeTruthy();
     expect(getByText("ベスト 56.12")).toBeTruthy();
+    // エントリータイムは種目名の下に添え、未入力の種目 (e2) には出さない
+    expect(getByText("エントリー 56.20")).toBeTruthy();
+    expect(queryByText(/^エントリー —/)).toBeNull();
     // 目標は差 (-0.62) ではなく目標タイムのラベルで出し、押すとその目標の詳細を開く
     fireEvent.click(getByText("目標 55.50"));
     expect(mocks.navigate).toHaveBeenCalledWith("GoalDetail", { goalId: "g1" });

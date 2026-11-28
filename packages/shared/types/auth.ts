@@ -30,6 +30,8 @@ export type BaseAuthContextValue = BaseAuthState & BaseAuthActions;
 
 export type UserPlan = "guest" | "free" | "premium";
 export type SubscriptionStatus = "trialing" | "active" | "canceled" | "expired" | "past_due";
+/** 契約元 (user_subscriptions.provider)。stripe = Web、revenucat = App Store / Google Play */
+export type SubscriptionProvider = "stripe" | "revenucat";
 
 export interface SubscriptionInfo {
   plan: UserPlan;
@@ -37,6 +39,8 @@ export interface SubscriptionInfo {
   cancelAtPeriodEnd: boolean;
   premiumExpiresAt: string | null;
   trialEnd: string | null;
+  /** 契約元。未契約・不明は null (古いキャッシュ等で欠けることがあるので省略可) */
+  provider?: SubscriptionProvider | null;
 }
 
 // =============================================================================

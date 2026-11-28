@@ -46,10 +46,14 @@ export const RecordFeedbackArrivalHost: React.FC<RecordFeedbackArrivalHostProps>
   const unreadQuery = useUnreadRecordFeedbacksQuery(supabase, user?.id);
   const [popupItems, setPopupItems] = useState<UnreadRecordFeedback[] | null>(null);
   const focusedRef = useRef(false);
+  // 「記録画面へ」で離れた直後 (まだフォーカスが外れる前) に同じ未読を出し直さないための印。
+  // 次にダッシュボードが表示されたら外し、開かなかった未読をもう一度出す
+  const [suppressedUntilRefocus, setSuppressedUntilRefocus] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       focusedRef.current = true;
+      setSuppressedUntilRefocus(false);
       return () => {
         focusedRef.current = false;
       };
@@ -70,10 +74,10 @@ export const RecordFeedbackArrivalHost: React.FC<RecordFeedbackArrivalHostProps>
 
   // 取り直した未読から、まだ閉じていないものがあれば出す (表示中は内容を固定する)
   useEffect(() => {
-    if (!enabled || popupItems !== null || !focusedRef.current) return;
+    if (!enabled || popupItems !== null || !focusedRef.current || suppressedUntilRefocus) return;
     const pending = filterUndismissedFeedbacks(unreadQuery.data ?? []);
     if (pending.length > 0) setPopupItems(pending);
-  }, [enabled, popupItems, unreadQuery.data]);
+  }, [enabled, popupItems, unreadQuery.data, suppressedUntilRefocus]);
 
   const handleClose = useCallback(() => {
     if (popupItems) dismissFeedbacks(popupItems);
@@ -82,16 +86,17 @@ export const RecordFeedbackArrivalHost: React.FC<RecordFeedbackArrivalHostProps>
 
   const handleOpenRecord = useCallback(
     (feedback: UnreadRecordFeedback) => {
-      // 開いた FB は記録画面で表示した時点で既読になる。同時に出ていた他の FB も
-      // このセッションでは出し直さない (閉じるのと同じ扱い)
-      if (popupItems) dismissFeedbacks(popupItems);
+      // 開いた FB は記録画面で表示した時点で既読になる。同時に出ていた他の FB は
+      // 閉じた扱いにせず、次にダッシュボードを開いたときにまた出す (web と同じ。
+      // docs/specs/record-feedback.md)
+      setSuppressedUntilRefocus(true);
       setPopupItems(null);
       navigation.navigate("MainTabs", {
         screen: "Records",
         params: buildOpenRecordParams(feedback, `${feedback.id}:${Date.now()}`),
       });
     },
-    [navigation, popupItems],
+    [navigation],
   );
 
   if (!popupItems || popupItems.length === 0) return null;

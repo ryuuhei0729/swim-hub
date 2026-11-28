@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/contexts";
+import { GoalAPI } from "@apps/shared/api/goals";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import type { GoalWithMilestones, Style } from "@apps/shared/types";
 import { computeMilestoneRatio } from "@apps/shared/utils/milestoneRatio";
@@ -16,7 +19,10 @@ interface GoalDetailProps {
   goal: GoalWithMilestones;
   styles: Style[];
   onUpdate: () => Promise<void>;
+  /** 目標を削除した後に呼ぶ (一覧の取り直し) */
   onDelete: () => Promise<void>;
+  /** 目標の編集を開く。大会情報が無い目標では編集ボタンを出さない */
+  onEdit: (goalId: string) => void;
 }
 
 /**
@@ -26,13 +32,35 @@ export default function GoalDetail({
   goal,
   styles,
   onUpdate,
-  onDelete: _onDelete,
+  onDelete,
+  onEdit,
 }: GoalDetailProps) {
   const t = useTranslations("goals");
   const tCommon = useTranslations("common");
   const locale = useLocale() as SupportedLocale;
   const styleLabel = useStyleLabel();
+  const { supabase } = useAuth();
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 目標の編集・削除は詳細の右上だけに置く (mobile の GoalDetailScreen と同じ)
+  const handleDeleteConfirm = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await goalAPI.deleteGoal(goal.id);
+      setShowDeleteConfirm(false);
+      await onDelete();
+    } catch (error) {
+      console.error("目標削除エラー:", error);
+      setShowDeleteConfirm(false);
+      alert(t("list.deleteFailed"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const milestoneProgress = computeMilestoneRatio(goal.milestones);
 
@@ -51,20 +79,45 @@ export default function GoalDetail({
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
       {/* ヘッダー */}
       <div>
-        <p className="flex items-center gap-2 text-sm">
-          {competitionDate && (
-            <span className="shrink-0 font-semibold text-gray-700 tabular-nums">
-              {formatDate(competitionDate, "numeric", locale)}
-            </span>
-          )}
-          {/* 1行に収める。大会名が長いときは … で省略する (日付・水路は縮めない) */}
-          <span className="min-w-0 truncate text-gray-500">{competitionTitle}</span>
-          {competition && (
-            <span className="shrink-0 text-gray-500">
-              ({competition.pool_type === 1 ? tCommon("poolTypeLong") : tCommon("poolTypeShort")})
-            </span>
-          )}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-2 text-sm">
+            {competitionDate && (
+              <span className="shrink-0 font-semibold text-gray-700 tabular-nums">
+                {formatDate(competitionDate, "numeric", locale)}
+              </span>
+            )}
+            {/* 1行に収める。大会名が長いときは … で省略する (日付・水路は縮めない) */}
+            <span className="min-w-0 truncate text-gray-500">{competitionTitle}</span>
+            {competition && (
+              <span className="shrink-0 text-gray-500">
+                ({competition.pool_type === 1 ? tCommon("poolTypeLong") : tCommon("poolTypeShort")})
+              </span>
+            )}
+          </p>
+          <div className="flex shrink-0 items-center gap-1">
+            {!competitionUnavailable && (
+              <button
+                type="button"
+                onClick={() => onEdit(goal.id)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                title={t("list.edit")}
+                aria-label={t("list.edit")}
+              >
+                <PencilIcon className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isDeleting}
+              className="text-gray-400 hover:text-red-600 transition-colors p-1 disabled:opacity-50"
+              title={t("list.delete")}
+              aria-label={t("list.delete")}
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
         {/* 種目名 → 目標タイム ← 現在のベスト を横並び。狭いときはタイムの並びが種目名の下に回る */}
         <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2">
@@ -129,6 +182,18 @@ export default function GoalDetail({
         goal={goal}
         styles={styles}
         goalCompetitionDate={goalCompetitionDate}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title={t("list.delete")}
+        message={t("list.deleteConfirm")}
+        confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
+        variant="danger"
+        initialFocus="cancel"
       />
     </div>
   );

@@ -173,6 +173,9 @@
       "imageRemoveConfirm": "Delete this image?",
       "avatarRemoveConfirm": "Delete profile picture?",
       "removeChoice": "Delete",
+      "adjustPositionTitle": "Adjust position",
+      "adjustPositionHint": "Drag the image to fit the part you want inside the frame",
+      "adjustPositionConfirm": "Done",
       "uploadFailed": "Upload failed",
       "imageUploadFailedDetail": "Image upload failed: {detail}",
       "imageUploadFailedSimple": "Image upload failed",
@@ -907,6 +910,8 @@
       "deletePracticeConfirmMessage": "Delete this practice record?\nThis cannot be undone.",
       "deleteMenuConfirmMessage": "Delete this practice menu?\nThis cannot be undone.",
       "deleteRecordConfirmMessage": "Delete this race record?\nThis cannot be undone.",
+      "deleteEntryConfirmMessage": "Delete this entry?\nThis cannot be undone.",
+      "entryNotOpenMessage": "Entries are {status}, so you can't register an entry.",
       "deleteCompetitionConfirmMessage": "Delete this competition?\nThis cannot be undone.",
       "deleteButton": "Delete"
     },
@@ -971,7 +976,8 @@
       "recordMemoLabel": "Note",
       "recordsLoading": "Loading records...",
       "recordsEmpty": "No records yet",
-      "entryTypeCompetition": "Competition"
+      "entryTypeCompetition": "Competition",
+      "viewTeamRecords": "View team records"
     },
     "deleteConfirm": {
       "title": "Delete Record",
@@ -1113,6 +1119,7 @@
       "columnTarget": "Goal",
       "columnGap": "To goal",
       "best": "Best {time}",
+      "entryTime": "Entry {time}",
       "target": "Goal",
       "setGoal": "+ Set goal",
       "setGoalShort": "+ Goal",
@@ -1917,6 +1924,8 @@
       "upgradeButton": "Upgrade to Premium",
       "restoreButton": "Restore purchases",
       "manageSubButton": "Manage subscription",
+      "managedByWebTitle": "Subscribed on the web",
+      "managedByWebMessage": "This plan was purchased on the web (swim-hub.app). To change or cancel it, go to Settings on the web.",
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy"
     },
@@ -1962,6 +1971,7 @@
         "processingButton": "Processing..."
       },
       "managePlanButton": "Manage plan",
+      "managedByStore": "You subscribed through the app (App Store / Google Play). To change or cancel your plan, use the subscription settings in your phone's app store.",
       "managePlanProcessing": "Processing..."
     },
     "googleCalendar": {
@@ -2615,7 +2625,6 @@
       "noTeamsSubtext": "Create a team or join with an invite code.",
       "pendingRetry": "Refresh status",
       "teamNotFound": "Team not found",
-      "webGuide": "For team management features, please use the web version.",
       "bulkRegisterAdminRequired": "Admin privileges are required to use this feature.",
       "webGuideButton": "Open web version",
       "pendingMessage": "Your team join request is awaiting admin approval.\nPlease wait until it is approved.",
@@ -3891,6 +3900,7 @@
       "upload": {
         "dropzoneText": "Drag & drop an image, or click to select",
         "dropzoneHint": "JPEG / PNG, up to 5MB",
+        "mobileHint": "Take a photo of the time sheet or choose one from your library",
         "invalidTypeError": "Only JPEG or PNG images are supported",
         "fileSizeError": "Image size must be 5MB or less",
         "analyzeButton": "Analyze",
@@ -3929,7 +3939,8 @@
       "errors": {
         "serverError": "A server error occurred",
         "invalidFormat": "Invalid analysis result format. Please try again.",
-        "analyzeError": "An error occurred during analysis"
+        "analyzeError": "An error occurred during analysis",
+        "dailyLimitReached": "You have reached today's limit. Upgrade to Premium for unlimited use."
       }
     },
     "adminAttendance": {
@@ -4208,6 +4219,7 @@
         "placePlaceholder": "Venue",
         "notePlaceholder": "Note"
       },
+      "modeTabCalendar": "Calendar",
       "modeTabFile": "File Import",
       "modeTabManual": "Manual Entry"
     },
@@ -4241,6 +4253,7 @@
     "premiumStart": "Start Premium",
     "trialNote": "After the 7-day free trial, your selected plan will auto-renew. Cancel anytime.",
     "cancelNote": "You can cancel your subscription at any time.\nManage it from App Store settings.",
+    "cancelNoteAndroid": "You can cancel your subscription at any time.\nManage it from Subscriptions in Google Play.",
     "alreadyPremium": "You are already on the Premium plan",
     "title": "Upgrade to Premium",
     "subtitle": "Unlock every feature without limits.",
@@ -4346,6 +4359,7 @@
       "noStyle": "Please select an event",
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
+      "segmentHeader": "Segment",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {
@@ -4496,6 +4510,7 @@
       "average": "Avg:",
       "notEntered": "Not entered",
       "overallAvg": "Overall avg:",
+      "fastest": "Fastest:",
       "save": "Save",
       "cancel": "Cancel",
       "helpTitle": "Time Entry Tips",
@@ -4581,6 +4596,8 @@
       "distance_placeholder": "Distance (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "Reaction Time",
+      "reactionTimeFormatInvalid": "Invalid reaction time format",
+      "reactionTimeRange": "Reaction time must be between -1.00 and 2.00 seconds",
       "splitTimeLabel": "Split Times",
       "splitAdd25m": "Add (every 25m)",
       "splitAdd50m": "Add (every 50m)",
@@ -4867,6 +4884,7 @@
     "listModalTitle": "Feedback",
     "unknownAuthor": "Deleted user",
     "edited": "Edited",
+    "newLabel": "NEW",
     "editAria": "Edit feedback",
     "deleteAria": "Delete feedback",
     "loading": "Loading...",

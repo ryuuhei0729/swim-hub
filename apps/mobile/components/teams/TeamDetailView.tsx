@@ -271,7 +271,9 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
             isError={isError}
             error={error || null}
             currentUserId={user?.id || ""}
-            isCurrentUserAdmin={isCurrentUserAdmin}
+            // メンバー詳細の権限変更・泳者区分・削除は表示中のビューで出し分ける
+            // (利用者ビューでは管理操作を出さない。web と同じ。swimhub-tasks #67)
+            isCurrentUserAdmin={effectiveIsAdminView}
             onRetry={() => refetch()}
             onMemberChange={() => refetch()}
           />

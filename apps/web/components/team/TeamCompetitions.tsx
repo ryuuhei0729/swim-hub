@@ -17,7 +17,7 @@ import React, {
 import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
@@ -27,9 +27,11 @@ import {
   ClipboardDocumentListIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
@@ -103,6 +105,8 @@ export interface TeamCompetitionActions {
   modals: React.ReactNode;
   /** 管理者ビュー: 大会を追加 */
   openAddForm: () => void;
+  /** 記録一覧を開く (カードを押したときと同じ。外からのリンク用) */
+  openRecords: (competition: TeamCompetition) => void;
   /** 保存・削除の失敗 (一覧の代わりに表示する) */
   error: string | null;
   clearError: () => void;
@@ -116,6 +120,7 @@ export function useTeamCompetitionActions({
   const invalidateRankings = useInvalidateTeamRankings();
   const router = useRouter();
   const t = useTranslations("teams");
+  const locale = useLocale() as SupportedLocale;
   const queryClient = useQueryClient();
   // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
@@ -369,10 +374,10 @@ export function useTeamCompetitionActions({
   };
 
   // 記録一覧モーダルを開く
-  const handleOpenRecords = (competition: TeamCompetition) => {
+  const handleOpenRecords = useCallback((competition: TeamCompetition) => {
     setSelectedCompetitionForRecords(competition);
     setShowRecordsModal(true);
-  };
+  }, []);
 
   // 利用者ビュー向け: 自分の記録を追加(RecordLogForm を competitionId 付きで開く)。
   // 管理者ビューには出さない (mobile と同じく代理入力ボタンだけ。swimhub-tasks #112)
@@ -775,6 +780,7 @@ export function useTeamCompetitionActions({
     // 明日以降の大会は「エントリー」、今日・過去の大会は「記録」だけを出す
     // (mobile と同じ出し分け。管理者も同じ。swimhub-tasks #60)
     const isEntryPhase = isEntryTabVisible(competition.date);
+    const entryStatus = resolveEntryStatus(competition.date, competition.entry_status);
     return (
       // 記録の有無に関わらず、カードを押したら記録一覧を開く (0件なら一覧側で空表示。
       // mobile と同じ。swimhub-tasks #103)
@@ -801,22 +807,21 @@ export function useTeamCompetitionActions({
               <span className="text-lg font-medium text-gray-900">
                 {competitionTitle}
               </span>
-              {/* エントリーステータスバッジ */}
-              {competition.entry_status && (
+              {/* エントリーステータスバッジ。過去の大会 (昨日以前) には出さない。
+                  今日以降は大会日を織り込んだ実効ステータス (未設定は「受付前」) を出す
+                  (mobile の TeamCompetitionList と同じ。swimhub-tasks #68) */}
+              {!isCompetitionDateInPast(competition.date) && (
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                    competition.entry_status === "open"
+                    entryStatus === "open"
                       ? "bg-green-100 text-green-800"
-                      : competition.entry_status === "closed"
+                      : entryStatus === "closed"
                         ? "bg-red-100 text-red-800"
                         : "bg-gray-100 text-gray-800"
                   }`}
+                  data-testid="team-competition-entry-status-badge"
                 >
-                  {competition.entry_status === "open"
-                    ? t("competitions.entryStatus.open")
-                    : competition.entry_status === "closed"
-                      ? t("competitions.entryStatus.closed")
-                      : t("competitions.entryStatus.before")}
+                  {t(`competitions.entryStatus.${entryStatus}`)}
                 </span>
               )}
             </div>
@@ -829,9 +834,7 @@ export function useTeamCompetitionActions({
                     competition.date + "T00:00:00",
                   );
                   return isValid(competitionDate)
-                    ? format(competitionDate, "yyyy年M月d日(EEE)", {
-                        locale: ja,
-                      })
+                    ? formatDate(competitionDate, "longWithWeekday", locale)
                     : "-";
                 })()}
               </span>
@@ -972,8 +975,8 @@ export function useTeamCompetitionActions({
             selectedCompetition.title || t("competitions.fallbackTitle")
           }
           teamId={teamId}
-          // 追加スプリント D11: 自身のルート固定 isAdmin prop をそのまま渡す。
-          // モーダル内部の data.isAdmin (実ロール) とは別物 (往路の判定用)
+          // 表示中のビュー (管理者ビューか) をそのまま渡す。モーダル内の管理操作
+          // (受付状況の変更・代理入力) はこの値で出し分ける (swimhub-tasks #67)
           routeIsAdmin={isAdmin}
           onOpenSelfEntry={handleOpenEntryEditor}
         />
@@ -1048,6 +1051,7 @@ export function useTeamCompetitionActions({
     renderCard,
     modals,
     openAddForm: handleAddCompetition,
+    openRecords: handleOpenRecords,
     error,
     clearError: () => setError(null),
   };

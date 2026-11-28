@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   PencilIcon,
   TrashIcon,
@@ -11,8 +11,8 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { BoltIcon } from "@heroicons/react/24/solid";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 
 const ShareCardModal = dynamic(
   () =>
@@ -31,6 +31,7 @@ import type { PracticeLogWithTimes, PracticeTag, TimeEntry } from "@apps/shared/
 import { usePracticeDetailQuery } from "@/hooks/queries/dayDetailQueries";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { AttendanceButton } from "../AttendanceSection";
+import { TeamRecordsButton } from "../TeamRecordsSection";
 import type { PracticeDetailsProps } from "../../types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
@@ -57,6 +58,7 @@ export function PracticeDetails({
   teamId,
   teamName,
   onShowAttendance,
+  onShowTeamRecords,
   color,
   targetLogId,
 }: PracticeDetailsProps) {
@@ -66,6 +68,7 @@ export function PracticeDetails({
   // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
   const isDefaultColor = wrapperColor === DEFAULT_PRACTICE_COLOR;
   const t = useTranslations("practice");
+  const locale = useLocale() as SupportedLocale;
   const tDash = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const userId = user?.id;
@@ -154,7 +157,7 @@ export function PracticeDetails({
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2" data-testid="practice-log-summary">
+            <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="practice-log-summary">
               <span
                 className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
                   isDefaultColor
@@ -181,6 +184,9 @@ export function PracticeDetails({
               </span>
               {isTeamPractice && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
+              )}
+              {isTeamPractice && teamId && onShowTeamRecords && (
+                <TeamRecordsButton onClick={onShowTeamRecords} />
               )}
             </div>
             <div className="flex items-center gap-4 mb-2 flex-wrap">
@@ -326,7 +332,7 @@ export function PracticeDetails({
                         const parsedDate = practice.date ? parseISO(practice.date) : null;
                         const formattedDate =
                           parsedDate && isValid(parsedDate)
-                            ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja })
+                            ? formatDate(parsedDate, "longWithWeekday", locale)
                             : "";
 
                         setSharePracticeData({

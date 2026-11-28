@@ -21,6 +21,36 @@ export function teamViewHref(teamId: string, adminView: boolean, tab?: string | 
   return `/teams/${teamId}${teamViewSearch(adminView, tab)}`;
 }
 
+/** 予定タブで詳細を開く練習・大会。URL では `?practice=<id>` / `?competition=<id>` */
+export interface TeamScheduleLink {
+  kind: "practice" | "competition";
+  id: string;
+}
+
+/** 予定タブの詳細を開くクエリの名前 (TeamScheduleLink.kind と同じ) */
+export const TEAM_SCHEDULE_LINK_PARAMS = ["practice", "competition"] as const;
+
+/**
+ * チームの予定タブを開き、その練習・大会の詳細 (メンバー全員の記録) を開く URL
+ * (ロケール接頭辞なし。利用者ビュー)。例: `/teams/t1?tab=schedule&practice=p1`。
+ * ダッシュボードの日付詳細の「チームの記録を見る」から使う。
+ */
+export function teamScheduleItemHref(teamId: string, link: TeamScheduleLink): string {
+  const params = new URLSearchParams({ tab: "schedule", [link.kind]: link.id });
+  return `/teams/${teamId}?${params.toString()}`;
+}
+
+/** URL のクエリから、予定タブで開く練習・大会を読む (両方あれば練習を優先。無ければ null) */
+export function readTeamScheduleLink(
+  searchParams: Pick<URLSearchParams, "get"> | null | undefined,
+): TeamScheduleLink | null {
+  for (const kind of TEAM_SCHEDULE_LINK_PARAMS) {
+    const id = searchParams?.get(kind);
+    if (id) return { kind, id };
+  }
+  return null;
+}
+
 /**
  * チームを開くときに管理者ビューで開くか。
  * 保存された好み (adminView) は権限ではないので、必ず実際の role と AND を取る。

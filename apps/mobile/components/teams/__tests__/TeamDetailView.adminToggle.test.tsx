@@ -7,6 +7,7 @@
 //   [V-04] ヘッダーのスイッチを1回タップすると、スイッチの値・ラベル・管理者要素
 //          (メンバータブの「メンバー / グループ」切替・PendingMembersSection) が同時に切り替わり、
 //          「〜ビューに切り替えました」のトーストが出る。タブ (4 つ) の数・並びは変わらない
+//          メンバー詳細の管理操作 (権限変更・泳者区分・削除) も表示中のビューで出し分ける (#67)
 //   [V-08] 管理者ビューの保存値は「表示の好み」で、権限ではない。非管理者のチームで
 //          保存値が true のままでも、管理者専用要素は render 結果として一切出ない
 //   [RS-1] 管理者ビューの ON/OFF はチームごとに覚え、開き直すと復元する
@@ -70,6 +71,17 @@ describe("TeamDetailView — 管理者ビュー切替とチームごとの復元
     expectFourTabs();
     expect(screen.queryByText("グループ")).toBeNull();
     expect(screen.queryByText("PENDING_MEMBERS_MARKER")).toBeNull();
+  });
+
+  it("[V-04] メンバー詳細の管理操作は表示中のビューで出し分ける (利用者ビューでは管理者にも出さない)", () => {
+    renderView();
+    expect(screen.queryByText("MEMBER_ADMIN_CONTROLS_MARKER")).toBeNull();
+
+    fireEvent.click(screen.getByRole("switch"));
+    expect(screen.getByText("MEMBER_ADMIN_CONTROLS_MARKER")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("switch"));
+    expect(screen.queryByText("MEMBER_ADMIN_CONTROLS_MARKER")).toBeNull();
   });
 
   it("[V-04] スイッチを1回タップすると、値・ラベル・管理者要素・トーストが同時に切り替わり、もう1回で戻る", () => {

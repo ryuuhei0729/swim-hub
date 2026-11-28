@@ -85,7 +85,8 @@ function buildAllTypeEntries(): CalendarItem[] {
   return [
     makeItem("practice", "p1"),
     makeItem("team_practice", "tp1"),
-    makeItem("practice_log", "pl1"),
+    // メニュー (practice_log) の行は、それが属する練習1件のカードにまとめて描く (#59)
+    makeItem("practice_log", "pl1", { metadata: { practice: { id: "practice-of-pl1", place: "" } } }),
     makeItem("competition", "c1"),
     makeItem("team_competition", "tc1"),
     makeItem("entry", "en1", {
@@ -128,7 +129,7 @@ describe("DayDetailModal — scope による表示種別の絞り込み", () => 
 
     expect(screen.getByTestId("other-item-practice-p1")).toBeDefined();
     expect(screen.getByTestId("other-item-team_practice-tp1")).toBeDefined();
-    expect(screen.getByTestId("other-item-practice_log-pl1")).toBeDefined();
+    expect(screen.getByTestId("other-item-practice-practice-of-pl1")).toBeDefined();
     expect(screen.getByTestId("other-item-competition-c1")).toBeDefined();
     expect(screen.getByTestId("other-item-team_competition-tc1")).toBeDefined();
     expect(screen.getByTestId("entry-detail-comp-en1")).toBeDefined();
@@ -148,7 +149,7 @@ describe("DayDetailModal — scope による表示種別の絞り込み", () => 
 
     expect(screen.getByTestId("other-item-practice-p1")).toBeDefined();
     expect(screen.getByTestId("other-item-team_practice-tp1")).toBeDefined();
-    expect(screen.getByTestId("other-item-practice_log-pl1")).toBeDefined();
+    expect(screen.getByTestId("other-item-practice-practice-of-pl1")).toBeDefined();
 
     expect(screen.queryByTestId("other-item-competition-c1")).toBeNull();
     expect(screen.queryByTestId("other-item-team_competition-tc1")).toBeNull();
@@ -174,7 +175,7 @@ describe("DayDetailModal — scope による表示種別の絞り込み", () => 
 
     expect(screen.queryByTestId("other-item-practice-p1")).toBeNull();
     expect(screen.queryByTestId("other-item-team_practice-tp1")).toBeNull();
-    expect(screen.queryByTestId("other-item-practice_log-pl1")).toBeNull();
+    expect(screen.queryByTestId("other-item-practice-practice-of-pl1")).toBeNull();
   });
 });
 

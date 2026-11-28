@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 // 含めずに済ませる (二重リダイレクト解消)。
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
+import { formatBadgeCount, useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import {
   HomeIcon,
   ChartBarIcon,
@@ -27,7 +28,6 @@ interface SidebarProps {
 interface NavigationItem {
   href: string;
   icon: React.ElementType;
-  badge?: number;
 }
 
 const baseNavigation: NavigationItem[] = [
@@ -68,9 +68,13 @@ const NAV_DESC_KEYS: Record<
 };
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
+  // チームの未対応件数 (出欠の未回答 + 管理者のチームの承認待ち)。mobile の下のタブバーの
+  // 「チーム」バッジと同じ数え方 (swimhub-tasks #73)
+  const { total: teamsBadgeTotal } = useTeamBadgeCounts();
+  const t = useTranslations("sidebar");
+  const tTeams = useTranslations("teams");
 
   return (
     <>
@@ -95,6 +99,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="space-y-2">
             {baseNavigation.map((item) => {
               const href = item.href;
+              const badge = item.href === "/teams" ? teamsBadgeTotal : 0;
+              const name = t(NAV_NAME_KEYS[item.href as NavHref]);
 
               // チームは /teams (入口) から最後に開いたチームの利用者ビュー (/teams/[teamId]) か
               // 管理者ビュー (/teams-admin/[teamId]) へ移るので、その配下すべてでアクティブにする
@@ -117,6 +123,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm"
                       }
                     `}
+                    aria-label={
+                      badge > 0 ? tTeams("mobile.tabBadgeAria", { name, count: badge }) : undefined
+                    }
                     onClick={onClose}
                     onMouseEnter={() => router.prefetch(href)}
                   >
@@ -129,11 +138,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="truncate">{t(NAV_NAME_KEYS[item.href as NavHref])}</span>
+                        <span className="truncate">{name}</span>
                         <div className="flex items-center space-x-2">
-                          {item.badge && (
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                              {item.badge > 9 ? "9+" : item.badge}
+                          {badge > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full"
+                              aria-hidden="true"
+                              data-testid="sidebar-teams-badge"
+                            >
+                              {formatBadgeCount(badge)}
                             </span>
                           )}
                           {!isActive && (

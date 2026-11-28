@@ -65,16 +65,8 @@ export function mapPracticeRecordToTeamPractice(record: PracticeRecord): TeamPra
   };
 }
 
-/** チームの練習を、予定タブの範囲 (今日以降 / 過去の 1 ページ) で取得する */
-export async function fetchTeamPractices(
-  supabase: SupabaseClient,
-  teamId: string,
-  range: TeamScheduleRange,
-): Promise<TeamPractice[]> {
-  const base = supabase
-    .from("practices")
-    .select(
-      `
+/** 予定タブの練習カードに使う列 (一覧と 1 件取得で共通) */
+const TEAM_PRACTICE_LIST_SELECT = `
             id,
             user_id,
             date,
@@ -84,8 +76,17 @@ export async function fetchTeamPractices(
             created_at,
             created_by,
             practice_logs ( id )
-          `,
-    )
+          `;
+
+/** チームの練習を、予定タブの範囲 (今日以降 / 過去の 1 ページ) で取得する */
+export async function fetchTeamPractices(
+  supabase: SupabaseClient,
+  teamId: string,
+  range: TeamScheduleRange,
+): Promise<TeamPractice[]> {
+  const base = supabase
+    .from("practices")
+    .select(TEAM_PRACTICE_LIST_SELECT)
     .eq("team_id", teamId);
 
   const { data, error } =
@@ -98,6 +99,26 @@ export async function fetchTeamPractices(
 
   if (error) throw error;
   return (data || []).map((record) => mapPracticeRecordToTeamPractice(record as PracticeRecord));
+}
+
+/**
+ * チームの練習 1 件 (予定タブのカードと同じ形)。他のチームの練習・見つからないときは null。
+ * 外から予定タブの詳細を開くとき (`?practice=<id>`) に使う。過去の練習でも一覧の読み込み範囲に関係なく取れる
+ */
+export async function fetchTeamPracticeById(
+  supabase: SupabaseClient,
+  teamId: string,
+  practiceId: string,
+): Promise<TeamPractice | null> {
+  const { data, error } = await supabase
+    .from("practices")
+    .select(TEAM_PRACTICE_LIST_SELECT)
+    .eq("team_id", teamId)
+    .eq("id", practiceId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapPracticeRecordToTeamPractice(data as PracticeRecord) : null;
 }
 
 /** 今日以降の練習 (日付の近い順・全件) */

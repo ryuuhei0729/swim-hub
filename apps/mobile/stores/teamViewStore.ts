@@ -23,6 +23,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { resolveTeamTabId, type TeamTabType } from "@/components/teams/teamTabDefs";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 
+/** 予定タブで開くよう頼まれた詳細 (端末には保存しない) */
+export interface PendingTeamOpenEvent {
+  teamId: string;
+  kind: "practice" | "competition";
+  id: string;
+}
+
 export interface TeamViewPrefs {
   tab?: TeamTabType;
   adminView?: boolean;
@@ -35,6 +42,13 @@ interface TeamViewState {
   setTab: (teamId: string, tab: TeamTabType) => void;
   /** 利用者ビューへ切り替えるとき、管理者専用タブにいたら members へ戻す */
   setAdminView: (teamId: string, value: boolean) => void;
+  /**
+   * 他画面 (ダッシュボードの日付詳細) から、予定タブでその練習・大会の詳細を開くよう頼む。
+   * 予定タブ (TeamScheduleList) が一覧を読み込んだあとに開いて消す
+   */
+  pendingOpenEvent: PendingTeamOpenEvent | null;
+  requestOpenEvent: (request: PendingTeamOpenEvent) => void;
+  clearOpenEvent: () => void;
 }
 
 const STORAGE_KEY = "team-view";
@@ -45,6 +59,9 @@ export const useTeamViewStore = create<TeamViewState>()(
       lastTeamId: null,
       byTeam: {},
       selectTeam: (teamId) => set({ lastTeamId: teamId }),
+      pendingOpenEvent: null,
+      requestOpenEvent: (request) => set({ pendingOpenEvent: request }),
+      clearOpenEvent: () => set({ pendingOpenEvent: null }),
       setTab: (teamId, tab) =>
         set((state) => ({
           byTeam: { ...state.byTeam, [teamId]: { ...state.byTeam[teamId], tab } },

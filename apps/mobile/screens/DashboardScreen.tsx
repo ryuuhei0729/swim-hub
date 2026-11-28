@@ -550,6 +550,10 @@ export const DashboardScreen: React.FC = () => {
             goal={expiredGoal}
             onSkip={skipGoal}
             onSaved={handleGoalSaved}
+            onGoToGoals={() => {
+              skipGoal();
+              navigation.navigate("MainTabs", { screen: "Goals" });
+            }}
           />
         )}
 

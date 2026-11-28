@@ -18,6 +18,7 @@ import { useRouter } from "@/i18n/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
 import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";
+import { TeamRecordsButton } from "../TeamRecordsSection";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 
@@ -48,6 +49,7 @@ export function CompetitionWithEntry({
   onEditEntry,
   onDeleteEntry,
   onClose,
+  onShowTeamRecords,
   color,
 }: CompetitionWithEntryProps) {
   const router = useRouter();
@@ -223,7 +225,7 @@ export function CompetitionWithEntry({
         }
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">
               {competitionName || t("competition.defaultName")}
             </h5>
@@ -231,6 +233,9 @@ export function CompetitionWithEntry({
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                 {t("calendarGrid.teamDefault")}
               </span>
+            )}
+            {isTeamCompetition && onShowTeamRecords && (
+              <TeamRecordsButton onClick={onShowTeamRecords} />
             )}
           </div>
           <div className="flex items-center gap-2">

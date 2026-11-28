@@ -13,16 +13,42 @@
  *          確認/キャンセルで正しいコールバックのみが発火する (window.confirm は使わない)
  */
 
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { Record as RecordType } from "@apps/shared/types";
 
+const mocks = vi.hoisted(() => ({
+  bestBadgeProps: [] as Array<{ recordDate?: string | null }>,
+  getPreviousBestTime: vi.fn(),
+  shareCardData: [] as unknown[],
+}));
+
 vi.mock("@/components/ui/RecordBestBadge", () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: { recordDate?: string | null }) => {
+    mocks.bestBadgeProps.push(props);
+    return null;
+  },
+}));
+
+vi.mock("@/contexts", () => ({
+  useAuth: () => ({ supabase: {} }),
+}));
+
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return { getPreviousBestTime: mocks.getPreviousBestTime };
+  }),
+}));
+
+vi.mock("@/components/share/ShareCardModal", () => ({
+  ShareCardModal: ({ data }: { data: unknown }) => {
+    mocks.shareCardData.push(data);
+    return <div data-testid="share-card-modal" />;
+  },
 }));
 
 import RecordDetailModal from "../RecordDetailModal";
@@ -136,6 +162,38 @@ describe("RecordDetailModal", () => {
 
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(screen.queryByTestId("confirm-dialog")).not.toBeInTheDocument();
+  });
+
+  it("[ベストバッジ] 大会日が無いので登録日時 (created_at) を記録日としてバッジに渡す", () => {
+    mocks.bestBadgeProps.length = 0;
+    renderModal();
+    expect(mocks.bestBadgeProps.at(-1)?.recordDate).toBe("2026-07-01T00:00:00Z");
+  });
+
+  it("[共有] 共有ボタンで前回ベストを取り、記録シェアカードを開く", async () => {
+    const user = userEvent.setup();
+    mocks.shareCardData.length = 0;
+    mocks.getPreviousBestTime.mockResolvedValueOnce(31.2);
+    renderModal();
+
+    await user.click(screen.getByTestId("share-standalone-record-button"));
+
+    expect(await screen.findByTestId("share-card-modal")).toBeInTheDocument();
+    expect(mocks.getPreviousBestTime).toHaveBeenCalledWith(
+      2,
+      0,
+      "record-1",
+      false,
+      "2026-07-01T00:00:00Z",
+    );
+    await waitFor(() =>
+      expect(mocks.shareCardData.at(-1)).toMatchObject({
+        eventName: "50m自由形",
+        time: 30.5,
+        previousBest: 31.2,
+        isFirstRecord: false,
+      }),
+    );
   });
 
   it("閉じるボタン (X) で onClose が呼ばれる", async () => {

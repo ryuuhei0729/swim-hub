@@ -8,6 +8,7 @@ import { TemplateDownload } from "@/components/bulk-register/TemplateDownload";
 import { FileUpload } from "@/components/bulk-register/FileUpload";
 import { DataPreview } from "@/components/bulk-register/DataPreview";
 import ManualEntryForm from "@/components/bulk-register/ManualEntryForm";
+import CalendarBulkRegisterForm from "@/components/bulk-register/calendar/CalendarBulkRegisterForm";
 import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
 import {
@@ -20,12 +21,22 @@ export interface TeamBulkRegisterProps {
   isAdmin?: boolean;
 }
 
-type EntryMode = "file" | "manual";
+/**
+ * 入力方式。calendar は mobile と同じカレンダー型 (日付を選ぶ・登録済みの印・大会と重なる注意)。
+ * web ではファイル取込 (CSV・Excel) と1行ずつの手動入力も残す
+ */
+type EntryMode = "calendar" | "file" | "manual";
+
+const ENTRY_MODES: { mode: EntryMode; labelKey: "modeTabCalendar" | "modeTabFile" | "modeTabManual" }[] = [
+  { mode: "calendar", labelKey: "modeTabCalendar" },
+  { mode: "file", labelKey: "modeTabFile" },
+  { mode: "manual", labelKey: "modeTabManual" },
+];
 
 export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRegisterProps) {
   const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
-  const [entryMode, setEntryMode] = useState<EntryMode>("file");
+  const [entryMode, setEntryMode] = useState<EntryMode>("calendar");
   const {
     selectedFile,
     parsedData,
@@ -71,39 +82,32 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("bulkRegister.wrapperTitle")}</h2>
 
-      {/* モード切替: ファイル取込 / 手動入力 */}
+      {/* モード切替: カレンダー / ファイル取込 / 手動入力 */}
       <div
         role="tablist"
         aria-label={t("bulkRegister.wrapperTitle")}
         className="mb-6 flex overflow-hidden rounded-md border border-gray-200"
       >
-        <button
-          role="tab"
-          aria-selected={entryMode === "file"}
-          onClick={() => setEntryMode("file")}
-          className={`flex-1 py-2 text-sm font-medium transition-colors ${
-            entryMode === "file"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-          }`}
-        >
-          {t("bulkRegister.modeTabFile")}
-        </button>
-        <button
-          role="tab"
-          aria-selected={entryMode === "manual"}
-          onClick={() => setEntryMode("manual")}
-          className={`flex-1 py-2 text-sm font-medium transition-colors ${
-            entryMode === "manual"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-          }`}
-        >
-          {t("bulkRegister.modeTabManual")}
-        </button>
+        {ENTRY_MODES.map(({ mode, labelKey }) => (
+          <button
+            key={mode}
+            role="tab"
+            aria-selected={entryMode === mode}
+            onClick={() => setEntryMode(mode)}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              entryMode === mode
+                ? "bg-blue-600 text-white"
+                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            {t(`bulkRegister.${labelKey}`)}
+          </button>
+        ))}
       </div>
 
-      {entryMode === "manual" ? (
+      {entryMode === "calendar" ? (
+        <CalendarBulkRegisterForm teamId={teamId} />
+      ) : entryMode === "manual" ? (
         <ManualEntryForm teamId={teamId} />
       ) : (
         <>

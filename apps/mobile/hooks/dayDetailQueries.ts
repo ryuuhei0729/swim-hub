@@ -36,6 +36,9 @@ export const dayDetailKeys = {
   /** 大会に対する自分の最新の記録1件 (record 表示用) */
   latestRecord: (competitionId: string, userId: string) =>
     [...dayDetailKeys.competitionScope(competitionId), "latestRecord", userId] as const,
+  /** 大会の添付画像のパス (エントリー済みの大会の詳細用) */
+  competitionImages: (competitionId: string) =>
+    [...dayDetailKeys.competitionScope(competitionId), "images"] as const,
   /** 大会に対する自分のエントリー */
   entries: (competitionId: string, userId: string) =>
     [...dayDetailKeys.competitionScope(competitionId), "entries", userId] as const,

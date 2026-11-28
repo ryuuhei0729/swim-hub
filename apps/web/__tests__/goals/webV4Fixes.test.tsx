@@ -190,6 +190,8 @@ describe("M1 (web) マイルストーン保存前検証", () => {
     await submitSkippingNativeValidation(user);
     expect(screen.getByRole("alert").textContent).toBe("goals.paramsForm.paramsInvalid");
     await user.click(screen.getByRole("button", { name: "goals.milestoneCreate.cancelButton" }));
+    // 入力途中なので破棄の確認が出る (swimhub-tasks#90)。閉じるを選ぶ
+    await user.click(screen.getByRole("button", { name: "forms.unsavedChanges.confirmClose" }));
     await user.click(screen.getByText("reopen"));
     expect(screen.queryByText("goals.paramsForm.paramsInvalid")).toBeNull();
   });

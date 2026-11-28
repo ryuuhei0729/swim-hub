@@ -10,6 +10,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import type { Style, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
 import GoalForm, { type NewCompetitionInput } from "./forms/GoalForm";
+import { useDiscardConfirm } from "./shared/useDiscardConfirm";
 
 interface GoalCreateModalProps {
   isOpen: boolean;
@@ -58,6 +59,17 @@ export default function GoalCreateModal({
     [teams],
   );
 
+  // 入力途中で閉じるときの破棄確認 (開いた時点の値と比べる)
+  const discard = useDiscardConfirm(() => handleClose());
+  const formValues = {
+    competitionMode,
+    selectedCompetitionId: competitionMode === "existing" ? selectedCompetitionId : "",
+    newCompetition: competitionMode === "new" ? newCompetition : null,
+    styleId,
+    targetTime: targetTime && targetTime > 0 ? targetTime : null,
+  };
+  const { markPristine } = discard;
+
   // 開いたときに、呼び出し元が指定した大会・種目を選んでおく
   useEffect(() => {
     if (!isOpen) return;
@@ -66,7 +78,14 @@ export default function GoalCreateModal({
       setSelectedCompetitionId(initialCompetitionId);
     }
     if (initialStyleId) setStyleId(String(initialStyleId));
-  }, [isOpen, initialCompetitionId, initialStyleId]);
+    markPristine({
+      competitionMode: "existing",
+      selectedCompetitionId: initialCompetitionId ?? "",
+      newCompetition: null,
+      styleId: initialStyleId ? String(initialStyleId) : "",
+      targetTime: null,
+    });
+  }, [isOpen, initialCompetitionId, initialStyleId, markPristine]);
 
   // 大会一覧を取得（未来の日付のみ、個人大会+所属チームの大会）
   useEffect(() => {
@@ -173,7 +192,10 @@ export default function GoalCreateModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
+          onClick={() => discard.requestClose(formValues)}
+        />
         <div
           role="dialog"
           aria-modal="true"
@@ -183,7 +205,7 @@ export default function GoalCreateModal({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("create.title")}</h3>
               <button
-                onClick={handleClose}
+                onClick={() => discard.requestClose(formValues)}
                 aria-label={t("create.closeAriaLabel")}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -210,7 +232,12 @@ export default function GoalCreateModal({
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => discard.requestClose(formValues)}
+                  disabled={isLoading}
+                >
                   {t("create.cancelButton")}
                 </Button>
                 <Button type="submit" loading={isLoading}>
@@ -221,6 +248,7 @@ export default function GoalCreateModal({
           </div>
         </div>
       </div>
+      {discard.confirmDialog}
     </div>
   );
 }

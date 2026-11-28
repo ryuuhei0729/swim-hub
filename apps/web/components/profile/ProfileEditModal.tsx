@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import BirthdayInput from "@/components/ui/BirthdayInput";
 import AvatarUpload from "./AvatarUpload";
 import type { UserProfile } from "@apps/shared/types";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 const BIO_MAX_LENGTH = 500;
 
@@ -16,7 +17,8 @@ interface ProfileEditModalProps {
   onClose: () => void;
   profile: Partial<UserProfile>;
   onUpdate: (updatedProfile: Partial<UserProfile>) => Promise<void>;
-  onAvatarChange: (newAvatarUrl: string | null) => void;
+  /** プロフィール画像の変更 (保存時のアップロード後・削除後) を DB に反映する */
+  onAvatarChange: (newAvatarUrl: string | null) => void | Promise<void>;
 }
 
 export default function ProfileEditModal({
@@ -35,7 +37,15 @@ export default function ProfileEditModal({
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // トリミング済みでまだアップロードしていない画像。「更新」を押したときにアップロードする
+  // (キャンセル・閉じたときは捨てるので、プロフィール画像は元のまま。mobile と同じ)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const bioTooLong = formData.bio.length > BIO_MAX_LENGTH;
+
+  // 閉じたら保存前の画像の選択は捨てる (開き直したときに前回の選択を持ち越さない)
+  useEffect(() => {
+    if (!isOpen) setPendingAvatarFile(null);
+  }, [isOpen]);
 
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
@@ -76,6 +86,27 @@ export default function ProfileEditModal({
         setError(t("updating"));
       }, TIMEOUT);
       try {
+        // 選んだ画像がある場合は先にアップロードして反映する
+        if (pendingAvatarFile) {
+          let path: string;
+          try {
+            const body = new FormData();
+            body.append("file", pendingAvatarFile);
+            const response = await fetch("/api/storage/profile", { method: "POST", body });
+            if (!response.ok) {
+              const data = (await response.json()) as { error?: string };
+              throw new Error(data.error || t("imageUploadFailed"));
+            }
+            ({ path } = (await response.json()) as { path: string });
+          } catch (uploadError) {
+            console.error("画像アップロードエラー:", uploadError);
+            setError(toUserFacingMessage(uploadError, t("imageUploadFailed")));
+            return;
+          }
+          await onAvatarChange(path);
+          setPendingAvatarFile(null);
+        }
+
         await onUpdate({
           name: formData.name.trim(),
           birthday,
@@ -155,6 +186,7 @@ export default function ProfileEditModal({
                   currentAvatarUrl={profile.profile_image_path ?? null}
                   userName={(formData.name || profile.name) ?? ""}
                   onAvatarChange={onAvatarChange}
+                  onPendingFileChange={setPendingAvatarFile}
                   disabled={isUpdating}
                 />
               </div>

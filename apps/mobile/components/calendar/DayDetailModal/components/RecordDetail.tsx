@@ -14,6 +14,12 @@ import {
 import { DAY_DETAIL_QUERY_OPTIONS, dayDetailKeys } from "@/hooks/dayDetailQueries";
 import { useGalleryImages } from "@/hooks/useGalleryImages";
 import { formatTime } from "@/utils/formatters";
+import {
+  calculateAllLapTimes,
+  calculateRaceLapTimesTable,
+  getLapIntervalsForRace,
+} from "@/utils/lapTimeCalculator";
+import BestTimeBadge from "@/components/records/BestTimeBadge";
 import { localizedStyleName } from "@/utils/styleName";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
@@ -31,6 +37,7 @@ import { RecordFeedbackSection } from "@/components/record-feedback/RecordFeedba
 import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
+import { TeamRecordsButton } from "./TeamRecordsButton";
 
 /** records テーブルから取得した行 (キャッシュにはこの形のまま持つ) */
 interface RecordFromDB {
@@ -186,83 +193,33 @@ export const RecordCard: React.FC<{
     return base;
   }, [splits, record.styleDistance, record.time]);
 
-  // 距離別Lap用: 25m刻みのみフィルタ
-  const raceSplitTimes = useMemo(() => {
-    return displaySplitTimes.filter((st) => st.distance % 25 === 0 && st.split_time > 0);
-  }, [displaySplitTimes]);
+  // ラップの計算は記録フォームのラップ表示 (components/records/LapTimeDisplay) と同じ
+  // utils/lapTimeCalculator を使う (web の LapTimeDisplay と同じ考え方。種目の距離に応じて
+  // 25/50/100/200/400m の列を出す。1500m は 100m まで)
+  const lapSplitPoints = useMemo(
+    () => displaySplitTimes.map((st) => ({ distance: st.distance, splitTime: st.split_time })),
+    [displaySplitTimes],
+  );
 
-  // 距離別Lapのカラム間隔を決定
-  const lapIntervals = useMemo(() => {
-    const raceDistance = record.styleDistance;
-    if (!raceDistance) return [];
-    const intervals: number[] = [];
-    if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25);
-    if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50);
-    return intervals;
-  }, [record.styleDistance]);
-
-  // データが1つもないintervalは列ごと非表示
-  const visibleLapIntervals = useMemo(() => {
-    return lapIntervals.filter((interval) =>
-      raceSplitTimes.some((st) => {
-        if (st.distance % interval !== 0) return false;
-        const prevDistance = st.distance - interval;
-        if (prevDistance === 0) return true;
-        const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance);
-        return prevSplit != null && prevSplit.split_time > 0;
-      }),
-    );
-  }, [lapIntervals, raceSplitTimes]);
-
-  // 距離別Lapの各行のラップタイム計算
+  // 距離別Lapの各行 (25m刻みの距離ごとの Split と各間隔の Lap)
   const raceLapData = useMemo(() => {
-    return raceSplitTimes.map((st) => {
-      const lapTimes: Record<number, number | null> = {};
-      for (const interval of lapIntervals) {
-        if (st.distance % interval === 0) {
-          const prevDistance = st.distance - interval;
-          if (prevDistance === 0) {
-            lapTimes[interval] = st.split_time;
-          } else {
-            const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance);
-            lapTimes[interval] =
-              prevSplit && prevSplit.split_time > 0 ? st.split_time - prevSplit.split_time : null;
-          }
-        } else {
-          lapTimes[interval] = null;
-        }
-      }
-      return { ...st, lapTimes };
-    });
-  }, [raceSplitTimes, lapIntervals]);
+    if (!record.styleDistance) return [];
+    return calculateRaceLapTimesTable(lapSplitPoints, record.styleDistance);
+  }, [lapSplitPoints, record.styleDistance]);
+
+  // データが1つもない間隔は列ごと非表示
+  const visibleLapIntervals = useMemo(() => {
+    if (!record.styleDistance) return [];
+    return getLapIntervalsForRace(record.styleDistance).filter((interval) =>
+      raceLapData.some((row) => row.lapTimes[interval] != null),
+    );
+  }, [record.styleDistance, raceLapData]);
 
   // All Lap計算（各区間のラップ）
-  const allLapTimes = useMemo(() => {
-    if (displaySplitTimes.length === 0) return [];
-    const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = [];
-    const firstSplit = displaySplitTimes[0];
-    if (firstSplit && firstSplit.distance > 0) {
-      laps.push({
-        fromDistance: 0,
-        toDistance: firstSplit.distance,
-        lapTime: firstSplit.split_time,
-      });
-    }
-    for (let i = 1; i < displaySplitTimes.length; i++) {
-      const prev = displaySplitTimes[i - 1];
-      const curr = displaySplitTimes[i];
-      if (!prev || !curr) continue; // i>=1 かつ i<length なので理論上 undefined にならないが、
-                                     // 配列が外部から渡される可変長データのため防御的に扱う
-      if (prev.split_time > 0 && curr.split_time > 0) {
-        laps.push({
-          fromDistance: prev.distance,
-          toDistance: curr.distance,
-          lapTime: curr.split_time - prev.split_time,
-        });
-      }
-    }
-    return laps;
-  }, [displaySplitTimes]);
+  const allLapTimes = useMemo(() => calculateAllLapTimes(lapSplitPoints), [lapSplitPoints]);
+
+  // ベスト判定バッジ用の大会日 (複数日の大会でもその大会の開始日で判定する。web と同じ)
+  const competitionDate = records[0]?.metadata?.competition?.date ?? records[0]?.date;
 
   return (
     <View
@@ -353,6 +310,15 @@ export const RecordCard: React.FC<{
             <Text style={styles.recordInfoLabel}>{t("dashboard.dayDetail.recordTimeLabel")}</Text>
             <View style={styles.recordTimeContainer}>
               <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
+              {/* ベスト判定バッジ (初・ベストとの差)。web の CompetitionDetails の RecordBestBadge と同じ判定 */}
+              <BestTimeBadge
+                recordId={record.id}
+                styleId={record.styleId}
+                currentTime={record.time}
+                recordDate={competitionDate}
+                poolType={poolType}
+                isRelaying={record.isRelaying}
+              />
               {record.reactionTime != null && typeof record.reactionTime === "number" && (
                 <Text style={styles.recordReactionTimeInline}>
                   (RT {record.reactionTime.toFixed(2)})
@@ -379,7 +345,7 @@ export const RecordCard: React.FC<{
               onPress={() => setSplitTab("race")}
             >
               <Text style={[splitStyles.tabText, splitTab === "race" && splitStyles.tabTextActive]}>
-                距離別 Lap
+                {t("recordMobile.lapTime.raceLapTab")}
               </Text>
             </Pressable>
             <Pressable
@@ -387,7 +353,7 @@ export const RecordCard: React.FC<{
               onPress={() => setSplitTab("all")}
             >
               <Text style={[splitStyles.tabText, splitTab === "all" && splitStyles.tabTextActive]}>
-                All Lap
+                {t("recordMobile.lapTime.allLapTab")}
               </Text>
             </Pressable>
           </View>
@@ -396,7 +362,7 @@ export const RecordCard: React.FC<{
             <>
               <View style={splitStyles.splitHeaderRow}>
                 <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>
-                  距離
+                  {t("recordMobile.lapTime.distanceHeader")}
                 </Text>
                 <Text style={[splitStyles.splitHeaderCell, splitStyles.splitTimeCol]}>Split</Text>
                 {visibleLapIntervals.map((interval) => (
@@ -410,7 +376,7 @@ export const RecordCard: React.FC<{
               </View>
               {raceLapData.map((st, index) => (
                 <View
-                  key={st.id || index}
+                  key={st.distance}
                   style={[splitStyles.splitRow, index % 2 === 0 && splitStyles.splitRowEven]}
                 >
                   <Text
@@ -429,7 +395,7 @@ export const RecordCard: React.FC<{
                       splitStyles.splitTimeText,
                     ]}
                   >
-                    {formatTime(st.split_time)}
+                    {st.splitTime != null ? formatTime(st.splitTime) : "-"}
                   </Text>
                   {visibleLapIntervals.map((interval) => (
                     <Text
@@ -450,7 +416,7 @@ export const RecordCard: React.FC<{
             <>
               <View style={splitStyles.splitHeaderRow}>
                 <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>
-                  区間
+                  {t("recordMobile.lapTime.segmentHeader")}
                 </Text>
                 <Text style={[splitStyles.splitHeaderCell, { flex: 2 }]}>Lap Time</Text>
               </View>
@@ -811,6 +777,16 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             <Feather name="plus" size={18} color="#2563EB" />
             <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
           </Pressable>
+        )}
+
+        {/* チーム大会: メンバー全員の記録はチーム画面の予定タブの詳細で見る */}
+        {isTeamCompetition && teamId && (
+          <TeamRecordsButton
+            teamId={teamId}
+            kind="competition"
+            eventId={_competitionId}
+            onClose={onClose}
+          />
         )}
       </View>
 

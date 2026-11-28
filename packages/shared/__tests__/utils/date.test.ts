@@ -32,6 +32,11 @@ describe("date utilities", () => {
         expect(formatDate("2024-01-29", "shortWithWeekday")).toBe("1月29日(月)");
       });
 
+      it("dayWithWeekdayスタイルでフォーマットする", () => {
+        expect(formatDate("2024-01-29", "dayWithWeekday")).toBe("29日(月)");
+        expect(formatDate("2024-01-29", "dayWithWeekday", "en")).toBe("Mon 29");
+      });
+
       it("numericスタイルでフォーマットする", () => {
         expect(formatDate("2024-01-29", "numeric")).toBe("2024/01/29");
       });

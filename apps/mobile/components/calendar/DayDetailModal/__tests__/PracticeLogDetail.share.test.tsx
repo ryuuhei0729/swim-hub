@@ -19,7 +19,7 @@
  *   [V-11] practiceLogs が1件のみのとき、data.menuItems にその1件のみが正しく含まれる
  *   [V-12] data.totalDistance が Σ(distance*repCount*setCount)、data.totalSets が
  *          Σ(setCount) として計算される
- *   [V-13] isPracticeLog=true（単独ログ表示ブランチ）のレンダリングでは共有ボタンが表示されない
+ *   [V-13] 練習タブでメニュー1件から開いたとき (targetLogId) もそのメニューに共有ボタンが出て、共有は練習全体になる
  *
  * トートロジー防止メモ:
  *   「全ログ集約」という期待値は web PracticeDetails.tsx の実装（menuItems は
@@ -128,7 +128,6 @@ function renderPracticeLogDetail(overrides: Record<string, unknown> = {}) {
       color="#10B981"
       typeLabel="練習"
       isPractice
-      isPracticeLog={false}
       practiceId="practice-1"
       onClose={vi.fn()}
       {...overrides}
@@ -237,23 +236,95 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
     });
   });
 
-  it("[V-13] isPracticeLog=true（単独ログ表示ブランチ）では共有ボタンが表示されない", async () => {
-    const supabase = createMockSupabaseClient({
-      queryData: makePracticeLogRow({ id: "log-solo", distance: 100 }),
-    });
-    vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }));
+  it("[V-13] 練習タブでメニュー1件から開いたとき (targetLogId) もそのメニューに共有ボタンを出し、共有は練習全体にする", async () => {
+    setupSupabase([
+      makePracticeLogRow({ id: "log-a", distance: 100 }),
+      makePracticeLogRow({ id: "log-b", distance: 50 }),
+    ]);
+    renderPracticeLogDetail({ targetLogId: "log-b" });
 
+    // 出すのは押したメニュー1件だけ
+    await waitFor(() => {
+      expect(screen.getAllByTestId("icon-share-2").length).toBe(1);
+    });
+    fireEvent.click(screen.getByTestId("icon-share-2").closest("button")!);
+
+    await waitFor(() => {
+      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の waitFor で共有ボタンを押し済み
+        data: { menuItems: unknown[] };
+      };
+      expect(lastCall.data.menuItems).toHaveLength(2);
+    });
+  });
+});
+
+describe("PracticeLogDetail 練習カード (メニューのある練習, #59 / #142)", () => {
+  beforeEach(() => {
+    mockShareCardModal.mockClear();
+  });
+
+  function setupSupabaseWithUser(practiceLogs: Record<string, unknown>[], note: string | null = null) {
+    const supabase = createMockSupabaseClient({
+      queryData: { id: "practice-1", image_paths: [], note, practice_logs: practiceLogs },
+    });
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({ user: { id: "user-1" }, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }),
+    );
+  }
+
+  it("Swim 以外の種別 (Kick/Pull) を練習内容に出す", async () => {
+    setupSupabaseWithUser([makePracticeLogRow({ id: "log-a", user_id: "user-1", swim_category: "Kick" })]);
+    renderPracticeLogDetail();
+
+    await waitFor(() => expect(screen.getByText("Kick")).toBeTruthy());
+  });
+
+  it("練習メモを見出しに出す", async () => {
+    setupSupabaseWithUser([makePracticeLogRow({ id: "log-a", user_id: "user-1" })]);
+    renderPracticeLogDetail({ item: makeItem({ note: "フォーム重視" }) });
+
+    expect(screen.getByText("フォーム重視")).toBeTruthy();
+  });
+
+  it("[#142] チーム練習に付いている他のメンバーのメニューは出さず、共有にも混ぜない", async () => {
+    setupSupabaseWithUser([
+      makePracticeLogRow({ id: "log-mine", user_id: "user-1", distance: 100 }),
+      makePracticeLogRow({ id: "log-other", user_id: "user-2", distance: 50 }),
+    ]);
     renderPracticeLogDetail({
-      isPractice: false,
-      isPracticeLog: true,
-      item: makeItem({ id: "log-solo" }),
+      item: makeItem({ type: "team_practice", metadata: { team_id: "team-1" } }),
     });
 
     await waitFor(() => {
-      // 単独ログ詳細のロードが完了したことを確認する材料として、
-      // 「練習内容」ラベルが表示されるのを待つ
-      expect(screen.getByText("練習内容")).toBeTruthy();
+      expect(screen.getAllByTestId("icon-share-2").length).toBe(1);
     });
-    expect(screen.queryByTestId("icon-share-2")).toBeNull();
+    fireEvent.click(screen.getByTestId("icon-share-2").closest("button")!);
+    await waitFor(() => {
+      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の waitFor で共有ボタンを押し済み
+        data: { menuItems: Array<{ distance: number }> };
+      };
+      expect(lastCall.data.menuItems).toEqual([expect.objectContaining({ distance: 100 })]);
+    });
+
+    // 自分のメニューがあるチーム練習にも出欠ボタン (#144) と「チームの記録を見る」(#141) を出す
+    expect(screen.getByTestId("icon-clipboard")).toBeTruthy();
+    expect(screen.getByText("チームの記録を見る")).toBeTruthy();
+  });
+
+  it("メニューごとに編集・削除ボタンを出し、押すとそのメニューで呼ぶ", async () => {
+    setupSupabaseWithUser([makePracticeLogRow({ id: "log-a", user_id: "user-1" })]);
+    const onEditPracticeLog = vi.fn();
+    const onDeletePracticeLog = vi.fn();
+    renderPracticeLogDetail({ onEditPracticeLog, onDeletePracticeLog });
+
+    await waitFor(() => expect(screen.getByTestId("icon-share-2")).toBeTruthy());
+    // 練習そのものの編集・削除 (onEditPractice / onDeletePractice) は渡していないので、
+    // 鉛筆・ゴミ箱はメニューの分だけ
+    fireEvent.click(screen.getByTestId("icon-trash-2").closest("button")!);
+    expect(onDeletePracticeLog).toHaveBeenCalledWith("log-a");
+    fireEvent.click(screen.getByTestId("icon-edit-2").closest("button")!);
+    expect(onEditPracticeLog).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "log-a", metadata: expect.objectContaining({ practice_id: "practice-1" }) }),
+    );
   });
 });

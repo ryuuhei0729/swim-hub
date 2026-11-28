@@ -176,6 +176,93 @@ const getEntryTypeLabelKey = (type: CalendarItem["type"]): string => {
   }
 };
 
+/** 「その他のアイテム」1枚分 (練習はメニューをまとめた練習1件) */
+interface OtherItemCard {
+  item: CalendarItem;
+  /** 練習タブで押したメニュー1件 (その1件だけを出す) */
+  targetLogId?: string;
+  /** まとめたメニューの更新を表す文字列 (変わったら練習の詳細を取り直す) */
+  practiceLogUpdateKey?: string;
+  /** メニュー (自分の practice_log) がある練習か */
+  hasPracticeLogs: boolean;
+}
+
+/** calendar_view の metadata (JSONB) の中の行を、型の付いていないオブジェクトとして読む */
+function readRow(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+/** practice_log 行から、それが属する練習の id を取り出す */
+function getPracticeIdOfLog(item: CalendarItem): string {
+  const metadata = readRow(item.metadata);
+  return (
+    readString(readRow(metadata?.practice)?.id) ??
+    readString(readRow(metadata?.practice_log)?.practice_id) ??
+    readString(metadata?.practice_id) ??
+    item.id
+  );
+}
+
+/**
+ * calendar_view はメニューのある練習をメニュー (practice_log) の行で返すので、同じ練習のメニューを
+ * 練習1件のカードにまとめる (web の DayDetailModal と同じ)。カードは練習として描き、練習タイトル・
+ * 練習メモ・練習の削除 (個人練習のみ)・共有・出欠 (チーム練習) を出す。
+ * チーム練習は type="team_practice" にするので、自分のメニューがあっても出欠ボタンが出る。
+ * targetId (練習タブで押したメニュー) がまとめたメニューのどれかなら、そのメニューだけを出す。
+ */
+function groupPracticeLogsByPractice(items: CalendarItem[], targetId?: string): OtherItemCard[] {
+  const logsByPractice = new Map<string, CalendarItem[]>();
+  for (const item of items) {
+    if (item.type !== "practice_log") continue;
+    const practiceId = getPracticeIdOfLog(item);
+    const group = logsByPractice.get(practiceId);
+    if (group) group.push(item);
+    else logsByPractice.set(practiceId, [item]);
+  }
+
+  const cards: OtherItemCard[] = [];
+  const emitted = new Set<string>();
+  for (const item of items) {
+    if (item.type !== "practice_log") {
+      cards.push({ item, hasPracticeLogs: false });
+      continue;
+    }
+    const practiceId = getPracticeIdOfLog(item);
+    if (emitted.has(practiceId)) continue;
+    emitted.add(practiceId);
+    const logs = logsByPractice.get(practiceId) ?? [item];
+    const practice = readRow(readRow(item.metadata)?.practice);
+    const teamId = item.metadata?.team_id ?? null;
+    const practiceItem: CalendarItem = {
+      id: practiceId,
+      type: teamId ? "team_practice" : "practice",
+      date: item.date,
+      title: readString(practice?.title) ?? "",
+      place: item.place,
+      note: readString(practice?.note),
+      metadata: { ...item.metadata, practice_id: practiceId },
+    };
+    const practiceLogUpdateKey = logs
+      .map((log) => {
+        const updatedAt = readString(readRow(readRow(log.metadata)?.practice_log)?.updated_at);
+        return `${log.id}:${updatedAt ?? ""}`;
+      })
+      .sort()
+      .join(",");
+    cards.push({
+      item: practiceItem,
+      targetLogId: targetId && logs.some((log) => log.id === targetId) ? targetId : undefined,
+      practiceLogUpdateKey,
+      hasPracticeLogs: true,
+    });
+  }
+  return cards;
+}
+
 /**
  * 日付詳細モーダルコンポーネント
  * 選択した日付のエントリー一覧を表示
@@ -193,7 +280,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onRetry,
   colorSettings = EMPTY_COLOR_SETTINGS,
   onClose,
-  onEntryPress,
   onAddPractice,
   onAddRecord,
   onEditPractice,
@@ -298,11 +384,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     });
 
     return {
-      otherItems: others,
+      otherItems: groupPracticeLogsByPractice(others, targetId),
       entriesByCompetition: entriesByComp,
       recordsByCompetition: recordsByComp,
     };
-  }, [scopedEntries]);
+  }, [scopedEntries, targetId]);
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
@@ -381,12 +467,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 <>
                   <View style={styles.entriesContainer}>
                     {/* 記録以外のエントリー */}
-                    {otherItems.map((item) => {
+                    {otherItems.map(({ item, targetLogId, practiceLogUpdateKey, hasPracticeLogs }) => {
                       const title = buildEntryTitle(item, fallbackTeamName, titleLabels);
                       const color = getEntryDisplayColor(item, colorSettings);
-                      const typeLabel = t(getEntryTypeLabelKey(item.type));
+                      // メニューがある個人練習は、バッジを従来どおり「練習ログ」にする
+                      // (チーム練習は自分のメニューの有無にかかわらず「チーム練習」)
+                      const typeLabel = t(
+                        getEntryTypeLabelKey(
+                          hasPracticeLogs && item.type === "practice" ? "practice_log" : item.type,
+                        ),
+                      );
                       const isPractice = item.type === "practice" || item.type === "team_practice";
-                      const isPracticeLog = item.type === "practice_log";
                       const practiceId = item.metadata?.practice_id || item.id;
 
                       const isCompetition =
@@ -409,10 +500,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           color={color}
                           typeLabel={typeLabel}
                           isPractice={isPractice}
-                          isPracticeLog={isPracticeLog}
                           practiceId={practiceId}
+                          targetLogId={targetLogId}
+                          practiceLogUpdateKey={practiceLogUpdateKey}
                           hasEntriesOrRecords={hasEntriesOrRecords}
-                          onEntryPress={onEntryPress}
                           onClose={onClose}
                           onEditPractice={onEditPractice}
                           onDeletePractice={onDeletePractice}
@@ -450,6 +541,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
                         const note = firstEntry.note || undefined;
                         const isTeamCompetition = !!firstEntry.metadata?.competition?.team_id;
+                        const entryTeamId = firstEntry.metadata?.competition?.team_id ?? null;
 
                         return (
                           <EntryDetail
@@ -461,6 +553,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             note={note}
                             entries={entryList}
                             isTeamCompetition={isTeamCompetition}
+                            teamId={entryTeamId}
                             color={getEntryDisplayColor(firstEntry, colorSettings)}
                             onEditCompetition={(item) => {
                               if (onEditCompetition) {
@@ -474,6 +567,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                               }
                             }}
                             onEditEntry={onEditEntry}
+                            onDeleteEntry={onDeleteEntry}
                             onAddRecord={(compId: string, dateParam: string) => {
                               if (onAddRecord) {
                                 onAddRecord(compId, dateParam);

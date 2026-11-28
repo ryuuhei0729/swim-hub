@@ -176,6 +176,9 @@
       "imageRemoveConfirm": "确定删除这张图片吗？",
       "avatarRemoveConfirm": "确定删除头像吗？",
       "removeChoice": "删除",
+      "adjustPositionTitle": "调整位置",
+      "adjustPositionHint": "拖动图片，将要使用的部分对准框内",
+      "adjustPositionConfirm": "完成",
       "uploadFailed": "上传失败",
       "imageUploadFailedDetail": "图片上传失败：{detail}",
       "imageUploadFailedSimple": "图片上传失败",
@@ -910,6 +913,8 @@
       "deletePracticeConfirmMessage": "确定删除该训练记录吗？\n此操作无法撤销。",
       "deleteMenuConfirmMessage": "确定删除该训练菜单吗？\n此操作无法撤销。",
       "deleteRecordConfirmMessage": "确定删除该比赛记录吗？\n此操作无法撤销。",
+      "deleteEntryConfirmMessage": "要删除此报名吗？\n此操作无法撤销。",
+      "entryNotOpenMessage": "报名{status}，无法进行报名登记。",
       "deleteCompetitionConfirmMessage": "确定删除该比赛吗？\n此操作无法撤销。",
       "deleteButton": "删除"
     },
@@ -974,7 +979,8 @@
       "recordMemoLabel": "备注",
       "recordsLoading": "正在加载记录...",
       "recordsEmpty": "暂无记录",
-      "entryTypeCompetition": "比赛"
+      "entryTypeCompetition": "比赛",
+      "viewTeamRecords": "查看团队记录"
     },
     "deleteConfirm": {
       "title": "删除记录",
@@ -1116,6 +1122,7 @@
       "columnTarget": "目标",
       "columnGap": "距目标",
       "best": "最佳 {time}",
+      "entryTime": "报名成绩 {time}",
       "target": "目标",
       "setGoal": "+ 设定目标",
       "setGoalShort": "+ 目标",
@@ -1920,6 +1927,8 @@
       "upgradeButton": "升级到 Premium",
       "restoreButton": "恢复购买",
       "manageSubButton": "管理订阅",
+      "managedByWebTitle": "已在网页版订阅",
+      "managedByWebMessage": "此方案是在网页版（swim-hub.app）订阅的。如需更改或取消，请在网页版的设置页面中操作。",
       "termsLink": "使用条款",
       "privacyLink": "隐私政策"
     },
@@ -1965,6 +1974,7 @@
         "processingButton": "处理中..."
       },
       "managePlanButton": "管理套餐",
+      "managedByStore": "您是通过应用（App Store / Google Play）订阅的。如需更改或取消方案，请在手机应用商店的订阅设置中操作。",
       "managePlanProcessing": "处理中..."
     },
     "googleCalendar": {
@@ -2616,7 +2626,6 @@
       "noTeamsSubtext": "请创建团队，或使用邀请码加入",
       "pendingRetry": "刷新状态",
       "teamNotFound": "未找到团队",
-      "webGuide": "团队管理功能请使用网页版。",
       "bulkRegisterAdminRequired": "使用此功能需要管理员权限。",
       "webGuideButton": "打开网页版",
       "pendingMessage": "您的加入申请正在等待管理员审核。\n请耐心等待审核通过。",
@@ -3894,6 +3903,7 @@
       "upload": {
         "dropzoneText": "拖放图片，或点击选择",
         "dropzoneHint": "JPEG / PNG，5MB 以内",
+        "mobileHint": "请拍摄计时表照片，或从相册中选择",
         "invalidTypeError": "仅支持 JPEG 或 PNG 格式的图片",
         "fileSizeError": "图片大小须在 5MB 以内",
         "analyzeButton": "开始解析",
@@ -3932,7 +3942,8 @@
       "errors": {
         "serverError": "发生了服务器错误",
         "invalidFormat": "解析结果格式不正确，请重试。",
-        "analyzeError": "解析过程中发生错误"
+        "analyzeError": "解析过程中发生错误",
+        "dailyLimitReached": "已达到今日使用次数上限。升级到 Premium 即可无限使用"
       }
     },
     "adminAttendance": {
@@ -4211,6 +4222,7 @@
         "placePlaceholder": "场馆名称",
         "notePlaceholder": "备注"
       },
+      "modeTabCalendar": "日历",
       "modeTabFile": "文件导入",
       "modeTabManual": "手动输入"
     },
@@ -4244,6 +4256,7 @@
     "premiumStart": "开通 Premium",
     "trialNote": "7 天免费试用结束后，将按所选套餐自动续费，可随时取消。",
     "cancelNote": "订阅可随时取消。\n可在 App Store 设置中管理。",
+    "cancelNoteAndroid": "订阅可随时取消。\n可在 Google Play 的“订阅”中管理。",
     "alreadyPremium": "你已在使用 Premium 套餐",
     "title": "升级到 Premium",
     "subtitle": "无限制使用全部功能。",
@@ -4349,6 +4362,7 @@
       "noStyle": "请选择项目",
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
+      "segmentHeader": "区间",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {
@@ -4499,6 +4513,7 @@
       "average": "平均：",
       "notEntered": "未输入",
       "overallAvg": "总平均：",
+      "fastest": "最快：",
       "save": "保存",
       "cancel": "取消",
       "helpTitle": "成绩输入技巧",
@@ -4584,6 +4599,8 @@
       "distance_placeholder": "距离 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "出发反应时间",
+      "reactionTimeFormatInvalid": "反应时间格式不正确",
+      "reactionTimeRange": "反应时间必须在-1.00至2.00秒之间",
       "splitTimeLabel": "分段成绩",
       "splitAdd25m": "添加(每25m)",
       "splitAdd50m": "添加(每50m)",
@@ -4870,6 +4887,7 @@
     "listModalTitle": "反馈",
     "unknownAuthor": "已注销用户",
     "edited": "已编辑",
+    "newLabel": "NEW",
     "editAria": "编辑反馈",
     "deleteAria": "删除反馈",
     "loading": "加载中...",

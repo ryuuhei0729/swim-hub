@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface CalendarHeaderProps {
@@ -29,6 +28,7 @@ export default function CalendarHeader({
   setShowMonthSelector,
 }: CalendarHeaderProps) {
   const t = useTranslations("dashboard");
+  const locale = useLocale() as SupportedLocale;
   return (
     <div className="px-1 sm:px-6 py-2 sm:py-4 border-b border-gray-200 bg-white">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -60,7 +60,7 @@ export default function CalendarHeader({
             disabled={isLoading}
             data-testid="month-year-display"
           >
-            {format(currentDate, "yyyy年M月", { locale: ja })}
+            {formatDate(currentDate, "yearMonth", locale)}
           </button>
           <button
             onClick={onNextMonth}

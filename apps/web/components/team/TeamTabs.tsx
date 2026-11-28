@@ -23,8 +23,10 @@ const TAB_ICONS: Record<TeamTabType, React.ComponentType<{ className?: string }>
 export interface TeamTabsProps {
   activeTab: TeamTabType;
   onTabChange: (tab: TeamTabType) => void;
-  /** 承認待ちメンバー数 (管理者ビューのメンバータブにバッジ表示) */
+  /** 承認待ちメンバー数 (メンバータブにバッジ表示) */
   pendingCount?: number;
+  /** 自分の出欠の未回答数 (出欠タブにバッジ表示。mobile の TeamTabs と同じ) */
+  attendanceCount?: number;
 }
 
 /**
@@ -32,7 +34,12 @@ export interface TeamTabsProps {
  * メンバー・予定・出欠・その他 の 4 タブを均等幅で並べる (mobile の TeamTabs と同じ)。
  * タブの数・位置は管理者ビューでも変えない。
  */
-export default function TeamTabs({ activeTab, onTabChange, pendingCount = 0 }: TeamTabsProps) {
+export default function TeamTabs({
+  activeTab,
+  onTabChange,
+  pendingCount = 0,
+  attendanceCount = 0,
+}: TeamTabsProps) {
   const t = useTranslations("teams");
 
   return (
@@ -42,7 +49,8 @@ export default function TeamTabs({ activeTab, onTabChange, pendingCount = 0 }: T
           const Icon = TAB_ICONS[tab.id];
           const isActive = activeTab === tab.id;
           const name = t(tab.labelKey);
-          const badgeCount = tab.id === "members" ? pendingCount : 0;
+          const badgeCount =
+            tab.id === "members" ? pendingCount : tab.id === "attendance" ? attendanceCount : 0;
           const showBadge = badgeCount > 0;
 
           return (

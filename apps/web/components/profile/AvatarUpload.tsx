@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts";
 import { validateImageFile } from "@/utils/imageUtils";
 import { getSignedImageUrl } from "@/lib/image-url";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // react-easy-cropを含むImageCropModalを動的インポート（バンドルサイズ削減）
 const ImageCropModal = dynamic(() => import("./ImageCropModal"), { ssr: false });
@@ -21,6 +22,13 @@ interface AvatarUploadProps {
   disabled?: boolean;
   /** アバターサイズの Tailwind クラス (デフォルト: "h-40 w-40") */
   sizeClassName?: string;
+  /**
+   * 指定すると、トリミングを確定してもアップロードせず、プレビューだけ出してこのコールバックに
+   * トリミング後のファイルを渡す (null は選択の取り消し)。アップロード・反映は呼び出し元が
+   * 「保存」を押したときに行う (プロフィール編集。mobile の ProfileEditModal と同じ)。
+   * 指定しないときは従来どおりトリミング確定時にアップロードし onAvatarChange を呼ぶ。
+   */
+  onPendingFileChange?: (file: File | null) => void;
 }
 
 export default function AvatarUpload({
@@ -29,9 +37,16 @@ export default function AvatarUpload({
   onAvatarChange,
   disabled = false,
   sizeClassName = "h-40 w-40",
+  onPendingFileChange,
 }: AvatarUploadProps) {
   const t = useTranslations("mypage.avatarUpload");
+  const tUpload = useTranslations("common.upload");
+  const tCommon = useTranslations("common");
   const { user } = useAuth();
+  const deferUpload = onPendingFileChange !== undefined;
+  // 保存前のトリミング済み画像のプレビュー (deferUpload のときだけ使う)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -55,6 +70,14 @@ export default function AvatarUpload({
       cancelled = true;
     };
   }, [currentAvatarUrl]);
+
+  // プレビューの object URL はアンマウント・差し替え時に解放する
+  useEffect(() => {
+    if (!pendingPreviewUrl) return;
+    return () => {
+      URL.revokeObjectURL(pendingPreviewUrl);
+    };
+  }, [pendingPreviewUrl]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -115,8 +138,37 @@ export default function AvatarUpload({
     }
   };
 
+  /** 保存前のトリミング済み画像を取り消す (サーバーには何も送っていないので確認しない) */
+  const clearPendingImage = () => {
+    setPendingPreviewUrl(null);
+    onPendingFileChange?.(null);
+  };
+
+  const releaseSelectedImage = () => {
+    // メモリリークを防ぐため、生成したオブジェクトURLを解放
+    try {
+      const imageSrc = selectedImage?.src;
+      if (typeof imageSrc === "string" && imageSrc.length > 0) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    } catch {
+      // エラーは無視
+    }
+    setIsCropModalOpen(false);
+    setSelectedImage(null);
+  };
+
   const handleCropComplete = async (croppedFile: File) => {
     if (!user) return;
+
+    if (deferUpload) {
+      // 「保存」を押すまではアップロードしない。プレビューだけ差し替える
+      setError(null);
+      setPendingPreviewUrl(URL.createObjectURL(croppedFile));
+      onPendingFileChange?.(croppedFile);
+      releaseSelectedImage();
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
@@ -143,18 +195,8 @@ export default function AvatarUpload({
       console.error("アップロードエラー:", err);
       setError(toUserFacingMessage(err, t("uploadImageFailed")));
     } finally {
-      // メモリリークを防ぐため、生成したオブジェクトURLを解放
-      try {
-        const imageSrc = selectedImage?.src;
-        if (typeof imageSrc === "string" && imageSrc.length > 0) {
-          URL.revokeObjectURL(imageSrc);
-        }
-      } catch {
-        // エラーは無視
-      }
+      releaseSelectedImage();
       setIsUploading(false);
-      setIsCropModalOpen(false);
-      setSelectedImage(null);
     }
   };
 
@@ -173,6 +215,8 @@ export default function AvatarUpload({
     }
   };
 
+  const displayedAvatarUrl = pendingPreviewUrl ?? resolvedAvatarUrl;
+
   return (
     <div className="relative flex flex-col items-center">
       {/* アバター表示 */}
@@ -180,14 +224,14 @@ export default function AvatarUpload({
         className={`
           relative ${sizeClassName} rounded-full flex items-center justify-center cursor-pointer
           ${disabled || isUploading ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}
-          ${resolvedAvatarUrl ? "bg-gray-100" : "bg-blue-500"}
+          ${displayedAvatarUrl ? "bg-gray-100" : "bg-blue-500"}
           transition-opacity duration-200
         `}
         onClick={handleClick}
       >
-        {resolvedAvatarUrl ? (
+        {displayedAvatarUrl ? (
           <img
-            src={resolvedAvatarUrl}
+            src={displayedAvatarUrl}
             alt={t("profileImageAlt")}
             className="w-full h-full rounded-full object-cover"
           />
@@ -211,13 +255,17 @@ export default function AvatarUpload({
           </div>
         )}
 
-        {/* 削除ボタン */}
-        {currentAvatarUrl && !isUploading && !disabled && (
+        {/* 削除ボタン (保存前の選択があればその取り消し。保存済みの画像は確認してから削除する) */}
+        {(pendingPreviewUrl || currentAvatarUrl) && !isUploading && !disabled && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleRemoveAvatar();
+              if (pendingPreviewUrl) {
+                clearPendingImage();
+              } else {
+                setShowRemoveConfirm(true);
+              }
             }}
             className="absolute top-1 right-1 z-10 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600"
             aria-label={t("deleteAvatarAriaLabel")}
@@ -250,6 +298,22 @@ export default function AvatarUpload({
           onCropComplete={handleCropComplete}
         />
       )}
+
+      {/* 削除確認 (mobile の AvatarUpload と同じ) */}
+      <ConfirmDialog
+        isOpen={showRemoveConfirm}
+        onConfirm={() => {
+          setShowRemoveConfirm(false);
+          void handleRemoveAvatar();
+        }}
+        onCancel={() => setShowRemoveConfirm(false)}
+        title={tUpload("removeConfirmTitle")}
+        message={tUpload("avatarRemoveConfirm")}
+        confirmLabel={tUpload("removeChoice")}
+        cancelLabel={tCommon("cancel")}
+        variant="danger"
+        initialFocus="cancel"
+      />
     </div>
   );
 }

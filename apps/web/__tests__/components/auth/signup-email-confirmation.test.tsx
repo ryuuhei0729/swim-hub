@@ -480,6 +480,37 @@ describe("[V-04] signup エラー時はメール確認ボックスが表示さ�
     });
   });
 
+  it("登録済みのメールアドレス (code=user_already_exists) は「登録済み」のエラーを出し、確認メールの案内は出さない (swimhub-tasks#96)", async () => {
+    mockSignUp.mockResolvedValueOnce({
+      data: null,
+      error: { status: 422, code: "user_already_exists", message: "User already registered" },
+    });
+
+    render(<AuthForm mode="signup" />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("signup-name-input"), {
+        target: { value: "テストユーザー" },
+      });
+      fireEvent.change(screen.getByTestId("email-input"), {
+        target: { value: "existing@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("password-input"), {
+        target: { value: "Test1234!" },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("signup-button"));
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector(".bg-green-50")).toBeNull();
+      // auth.supabaseErrors.userAlreadyRegistered (このメールアドレスは既に登録されています)
+      expect(screen.getByText("supabaseErrors.userAlreadyRegistered")).toBeTruthy();
+    });
+  });
+
   it("signup で名前が空の場合はバリデーションエラーが出て緑ボックスは表示されない", async () => {
     render(<AuthForm mode="signup" />);
 
@@ -575,6 +606,16 @@ describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /
     });
 
     expect(screen.queryByTestId("email-signup-button")).not.toBeNull();
+  });
+
+  it("利用規約・プライバシーポリシーへの同意文とリンクを表示する (mobile の登録開始画面と同じ。swimhub-tasks#132)", () => {
+    mockUseAuth.mockReturnValue(makeAuthContext({}));
+
+    render(<SignupPage />);
+
+    const notice = screen.getByTestId("signup-legal-notice");
+    expect(notice.querySelector('a[href="/ja/terms"]')?.textContent).toBe("termsOfService");
+    expect(notice.querySelector('a[href="/ja/privacy"]')?.textContent).toBe("privacyPolicy");
   });
 });
 

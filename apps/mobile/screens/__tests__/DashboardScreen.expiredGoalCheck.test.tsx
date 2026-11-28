@@ -42,11 +42,12 @@ describe("DashboardScreen の期限切れチェック配線", () => {
     expect(noComments).toMatch(/<ReflectionModal[\s\S]*?onSkip=\{skipMilestone\}[\s\S]*?onSaved=\{handleMilestoneSaved\}/);
   });
 
-  it("『目標管理を見る』はマイルストーン側のみ: モーダルを閉じて目標タブ (MainTabs/Goals) へ遷移。目標側には配線しない (遷移先の目標タブに過去の目標は出ないため)", () => {
-    const hits = noComments.match(/skipMilestone\(\);\s*navigation\.navigate\("MainTabs", \{ screen: "Goals" \}\);/g) ?? [];
-    expect(hits.length).toBe(1);
-    expect((noComments.match(/onGoToGoals=/g) ?? []).length).toBe(1);
-    expect(noComments).not.toMatch(/skipGoal\(\);\s*navigation\.navigate/);
-    expect(noComments).not.toMatch(/<GoalReflectionModal[^>]*onGoToGoals/);
+  it("『目標管理を見る』は目標・マイルストーンの両方: モーダルを閉じて (skip*) 目標タブ (MainTabs/Goals) へ遷移する (web に揃える。swimhub-tasks#129)", () => {
+    const milestoneHits = noComments.match(/skipMilestone\(\);\s*navigation\.navigate\("MainTabs", \{ screen: "Goals" \}\);/g) ?? [];
+    const goalHits = noComments.match(/skipGoal\(\);\s*navigation\.navigate\("MainTabs", \{ screen: "Goals" \}\);/g) ?? [];
+    expect(milestoneHits.length).toBe(1);
+    expect(goalHits.length).toBe(1);
+    expect((noComments.match(/onGoToGoals=/g) ?? []).length).toBe(2);
+    expect(noComments).toMatch(/<GoalReflectionModal[\s\S]*?onGoToGoals=/);
   });
 });

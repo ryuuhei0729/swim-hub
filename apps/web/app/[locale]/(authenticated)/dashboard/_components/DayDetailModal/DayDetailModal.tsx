@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useAuth } from "@/contexts";
+import { useRouter } from "@/i18n/navigation";
+import { teamScheduleItemHref, type TeamScheduleLink } from "@/utils/teamView";
 import { useFittedModalHeight } from "@/hooks/useFittedModalHeight";
 import { lockBodyScroll } from "@/utils/scrollLock";
 import {
@@ -54,8 +55,10 @@ export default function DayDetailModal({
   onDeleteRecord,
 }: DayDetailModalProps) {
   const { supabase, user } = useAuth();
+  const router = useRouter();
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const locale = useLocale() as SupportedLocale;
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const [isFetchingRecordCount, setIsFetchingRecordCount] = useState(false);
@@ -239,6 +242,13 @@ export default function DayDetailModal({
     setShowAttendanceModal({ eventId, eventType, teamId });
   };
 
+  // 「チームの記録を見る」: 日付詳細は自分の記録だけなので、メンバー全員の記録は
+  // チーム画面の予定タブでその練習・大会の詳細を開いて見る (利用者ビュー)
+  const handleShowTeamRecords = (teamId: string, link: TeamScheduleLink) => {
+    onClose();
+    router.push(teamScheduleItemHref(teamId, link));
+  };
+
   // エントリー編集ハンドラー
   const handleEditEntry = async (item: CalendarItem, competitionId: string) => {
     // getUser()とcompetitionステータスチェックを並行実行
@@ -357,7 +367,7 @@ export default function DayDetailModal({
             className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4"
           >
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              {format(date, "M月d日(E)", { locale: ja })}
+              {formatDate(date, "shortWithWeekday", locale)}
             </h3>
             <button
               onClick={onClose}
@@ -440,6 +450,15 @@ export default function DayDetailModal({
                             ? () => handleShowAttendance(item.id, "practice", item.metadata!.team_id!)
                             : undefined
                         }
+                        onShowTeamRecords={
+                          item.type === "team_practice" && item.metadata?.team_id
+                            ? () =>
+                                handleShowTeamRecords(item.metadata!.team_id!, {
+                                  kind: "practice",
+                                  id: item.id,
+                                })
+                            : undefined
+                        }
                         color={getItemColor(item)}
                       />
                     ))}
@@ -494,6 +513,15 @@ export default function DayDetailModal({
                                   handleShowAttendance(practiceId, "practice", item.metadata.team_id!)
                               : undefined
                           }
+                          onShowTeamRecords={
+                            isPracticeMetadata(item.metadata) && item.metadata.team_id
+                              ? () =>
+                                  handleShowTeamRecords(item.metadata.team_id!, {
+                                    kind: "practice",
+                                    id: practiceId,
+                                  })
+                              : undefined
+                          }
                           color={getItemColor(item)}
                         />
                       );
@@ -540,6 +568,15 @@ export default function DayDetailModal({
                           item.type === "team_competition" && item.metadata?.team_id
                             ? () =>
                                 handleShowAttendance(item.id, "competition", item.metadata!.team_id!)
+                            : undefined
+                        }
+                        onShowTeamRecords={
+                          item.type === "team_competition" && item.metadata?.team_id
+                            ? () =>
+                                handleShowTeamRecords(item.metadata!.team_id!, {
+                                  kind: "competition",
+                                  id: item.id,
+                                })
                             : undefined
                         }
                         color={getItemColor(item)}
@@ -605,6 +642,15 @@ export default function DayDetailModal({
                               setShowDeleteConfirm({ id: entryId, type: "entry", competitionId });
                             }}
                             onClose={onClose}
+                            onShowTeamRecords={
+                              item.metadata?.team_id
+                                ? () =>
+                                    handleShowTeamRecords(item.metadata!.team_id!, {
+                                      kind: "competition",
+                                      id: competitionId,
+                                    })
+                                : undefined
+                            }
                             color={getItemColor(item)}
                           />
                         );
@@ -677,6 +723,15 @@ export default function DayDetailModal({
                                     "competition",
                                     record.metadata!.competition!.team_id!,
                                   )
+                              : undefined
+                          }
+                          onShowTeamRecords={
+                            record.metadata?.competition?.team_id
+                              ? () =>
+                                  handleShowTeamRecords(record.metadata!.competition!.team_id!, {
+                                    kind: "competition",
+                                    id: compId,
+                                  })
                               : undefined
                           }
                           color={getItemColor(record)}

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
-import { format, isValid, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
+import { isValid, parseISO } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { ArrowLeftIcon, CalendarDaysIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import type { RecordCompetition } from "./types";
 
@@ -25,6 +25,7 @@ export default function RecordPageHeader({
 }: RecordPageHeaderProps) {
   const tCommon = useTranslations("common");
   const tRecords = useTranslations("competition.records");
+  const locale = useLocale() as SupportedLocale;
   const date = parseISO(competition.date);
 
   return (
@@ -51,7 +52,7 @@ export default function RecordPageHeader({
           </div>
           <div className="flex items-center gap-1">
             <CalendarDaysIcon className="h-4 w-4" />
-            <span>{isValid(date) ? format(date, "yyyy年M月d日(EEE)", { locale: ja }) : "-"}</span>
+            <span>{isValid(date) ? formatDate(date, "longWithWeekday", locale) : "-"}</span>
           </div>
           {competition.place && (
             <div className="flex items-center gap-1">

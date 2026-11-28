@@ -24,6 +24,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
 import { useTeamViewStore } from "@/stores/team/teamViewStore";
+import { formatBadgeCount } from "@/hooks/useTeamBadgeCounts";
 import {
   isApprovedMembership,
   shouldOpenAsAdmin,
@@ -51,6 +52,13 @@ export interface TeamViewHeaderProps {
   onOpenAnnouncements?: () => void;
   /** チーム設定 (チーム情報・招待コード・記録色・脱退) を開く。未指定ならボタンを出さない */
   onOpenSettings?: () => void;
+  /**
+   * チームごとの未対応件数 (出欠の未回答 + 承認待ち)。切替メニューの各チームに出す
+   * (mobile の TeamSwitcherSheet と同じ。swimhub-tasks #73)
+   */
+  badgeCounts?: Record<string, number>;
+  /** 他のチームの未対応件数の合計。チーム名の横に出す (mobile の TeamDetailView と同じ) */
+  otherTeamsBadgeCount?: number;
 }
 
 /**
@@ -71,6 +79,8 @@ export default function TeamViewHeader({
   onToggleView,
   onOpenAnnouncements,
   onOpenSettings,
+  badgeCounts = {},
+  otherTeamsBadgeCount = 0,
 }: TeamViewHeaderProps) {
   const t = useTranslations("teams");
   const router = useRouter();
@@ -159,6 +169,17 @@ export default function TeamViewHeader({
                 className={`h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
                 aria-hidden="true"
               />
+              {otherTeamsBadgeCount > 0 && (
+                <span
+                  className="ml-1 inline-flex shrink-0 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
+                  data-testid="team-switcher-other-teams-badge"
+                >
+                  <span aria-hidden="true">{formatBadgeCount(otherTeamsBadgeCount)}</span>
+                  <span className="sr-only">
+                    {t("mobile.otherTeamsBadgeAria", { count: otherTeamsBadgeCount })}
+                  </span>
+                </span>
+              )}
             </button>
 
             {isMenuOpen && (
@@ -195,6 +216,22 @@ export default function TeamViewHeader({
                         {membership.role === "admin" && (
                           <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-600">
                             {t("badge.admin")}
+                          </span>
+                        )}
+                        {(badgeCounts[membership.team_id] ?? 0) > 0 && (
+                          <span
+                            className="shrink-0 inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
+                            data-testid={`team-switcher-badge-${membership.team_id}`}
+                          >
+                            <span aria-hidden="true">
+                              {formatBadgeCount(badgeCounts[membership.team_id] ?? 0)}
+                            </span>
+                            <span className="sr-only">
+                              {t("mobile.tabBadgeAria", {
+                                name: "",
+                                count: badgeCounts[membership.team_id] ?? 0,
+                              })}
+                            </span>
                           </span>
                         )}
                         {selected && (

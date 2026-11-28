@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import { deleteProfileImageViaApi } from "@/utils/imageUpload";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { AvatarCropModal, type AvatarCropRect, type AvatarCropSource } from "./AvatarCropModal";
 
 interface AvatarUploadProps {
   /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
@@ -104,6 +105,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const { user, getAccessToken } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  // Android: 位置を調整している画像 (null の間は位置調整の画面を出さない)
+  const [cropSource, setCropSource] = useState<AvatarCropSource | null>(null);
   const previousBlobUrlRef = useRef<string | null>(null);
   // profile-images は private バケットのため、パスから署名付きURLを解決して表示する
   const { url: resolvedAvatarUrl } = useSignedImageUrl("profile-images", currentAvatarUrl);
@@ -129,6 +132,49 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       }
     };
   }, [selectedImageUri]);
+
+  /**
+   * Android: 選んだ位置で正方形に切り抜き、JPEG に変換してプレビュー・親への通知まで行う
+   * (Photo Picker は切り抜きをサポートしないため自前で行う。HEIC/HEIF もここで JPEG になる)
+   */
+  const finishAndroidCrop = async (uri: string, crop: AvatarCropRect) => {
+    try {
+      const rendered = await ImageManipulator.manipulate(uri)
+        .crop({ originX: crop.originX, originY: crop.originY, width: crop.size, height: crop.size })
+        .renderAsync();
+      const cropped = await rendered.saveAsync({
+        compress: 0.7,
+        format: SaveFormat.JPEG,
+        base64: true,
+      });
+
+      // base64データのチェック
+      if (!cropped.base64) {
+        Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageDataFetchFailed"), [{ text: "OK" }]);
+        return;
+      }
+
+      // ファイルサイズのチェック（5MB以下）。ImageResult に fileSize がないため base64 長から概算する
+      const estimatedBytes = cropped.base64.length * 0.75;
+      if (estimatedBytes > 5 * 1024 * 1024) {
+        Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageSizeError", { maxMb: 5 }), [{ text: "OK" }]);
+        return;
+      }
+
+      // 選択した画像をアバター表示エリアにプレビューとして表示
+      setSelectedImageUri(cropped.uri);
+
+      // 親コンポーネントに選択した画像を通知（Android は常に JPEG 出力）
+      if (onImageSelected) {
+        onImageSelected(cropped.uri, cropped.base64, "jpg");
+      }
+    } catch (err) {
+      console.error("画像選択エラー:", err);
+      const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
+      setError(errorMessage);
+      Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
+    }
+  };
 
   const handleImageSelect = async () => {
     if (!user || disabled) return;
@@ -202,41 +248,14 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         }
 
         // Photo Picker は allowsEditing/aspect によるクロップをサポートしないため、
-        // 選択後に自前で中央正方形クロップ + JPEG 変換（HEIC/HEIF対応）を行う
+        // 選択後に自前で正方形クロップ + JPEG 変換（HEIC/HEIF対応）を行う。
+        // 正方形でなければ位置調整の画面 (AvatarCropModal) を出し、切り抜く位置を選んでもらう
         const { width, height } = await resolveAssetDimensions(asset);
-        const size = Math.min(width, height);
-        const originX = Math.round((width - size) / 2);
-        const originY = Math.round((height - size) / 2);
-
-        const rendered = await ImageManipulator.manipulate(asset.uri)
-          .crop({ originX, originY, width: size, height: size })
-          .renderAsync();
-        const cropped = await rendered.saveAsync({
-          compress: 0.7,
-          format: SaveFormat.JPEG,
-          base64: true,
-        });
-
-        // base64データのチェック
-        if (!cropped.base64) {
-          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageDataFetchFailed"), [{ text: "OK" }]);
+        if (width === height) {
+          await finishAndroidCrop(asset.uri, { originX: 0, originY: 0, size: width });
           return;
         }
-
-        // ファイルサイズのチェック（5MB以下）。ImageResult に fileSize がないため base64 長から概算する
-        const estimatedBytes = cropped.base64.length * 0.75;
-        if (estimatedBytes > 5 * 1024 * 1024) {
-          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageSizeError", { maxMb: 5 }), [{ text: "OK" }]);
-          return;
-        }
-
-        // 選択した画像をアバター表示エリアにプレビューとして表示
-        setSelectedImageUri(cropped.uri);
-
-        // 親コンポーネントに選択した画像を通知（Android は常に JPEG 出力）
-        if (onImageSelected) {
-          onImageSelected(cropped.uri, cropped.base64, "jpg");
-        }
+        setCropSource({ uri: asset.uri, width, height });
       } catch (err) {
         console.error("画像選択エラー:", err);
         const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
@@ -399,6 +418,18 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
       {/* エラー表示 */}
       {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {/* Android: 切り抜く位置の調整 */}
+      {cropSource && (
+        <AvatarCropModal
+          source={cropSource}
+          onCancel={() => setCropSource(null)}
+          onConfirm={(crop) => {
+            setCropSource(null);
+            void finishAndroidCrop(cropSource.uri, crop);
+          }}
+        />
+      )}
     </View>
   );
 };

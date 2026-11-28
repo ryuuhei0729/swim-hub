@@ -25,12 +25,15 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   editData,
 }) => {
   const t = useTranslations("teamsAdmin");
+  const tTeams = useTranslations("teams");
   const tCommon = useTranslations("common");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [startAt, setStartAt] = useState<string>("");
   const [endAt, setEndAt] = useState<string>("");
   const [errors, setErrors] = useState<{ startAt?: string; endAt?: string }>({});
+  // タイトル・内容が空のときのエラー (mobile の TeamAnnouncementForm と同じくフォームの上に出す)
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { supabase } = useAuth();
   const createAnnouncementMutation = useCreateTeamAnnouncementMutation(supabase);
@@ -65,6 +68,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       setEndAt(formatLocalDateTime(oneWeekLater));
     }
     setErrors({});
+    setFormError(null);
   }, [editData, isOpen]);
 
   const validateDates = (): boolean => {
@@ -95,10 +99,15 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent, publishStatus: boolean) => {
     e.preventDefault();
 
-    if (!title.trim() || !content.trim()) {
-      console.error("タイトルと内容を入力してください");
+    if (!title.trim()) {
+      setFormError(tTeams("mobile.announcementTitleRequired"));
       return;
     }
+    if (!content.trim()) {
+      setFormError(tTeams("mobile.announcementContentRequired"));
+      return;
+    }
+    setFormError(null);
 
     // 日時のバリデーション
     if (!validateDates()) {
@@ -183,6 +192,15 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           {/* コンテンツ */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+              {formError && (
+                <div
+                  role="alert"
+                  className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700"
+                  data-testid="announcement-form-error"
+                >
+                  {formError}
+                </div>
+              )}
               {/* タイトル */}
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -192,7 +210,10 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                   type="text"
                   id="title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setFormError(null);
+                  }}
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   placeholder={t("announcementForm.titlePlaceholder")}
@@ -209,7 +230,10 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                 <textarea
                   id="content"
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    setFormError(null);
+                  }}
                   disabled={isLoading}
                   rows={8}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"

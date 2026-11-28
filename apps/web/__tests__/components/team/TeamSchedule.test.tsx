@@ -6,6 +6,8 @@
  *   [S-4] 過去は 20 件ずつ「もっと見る」で読み足す
  *   [S-5] 管理者ビューは 練習追加 / 大会追加 / 一括登録、利用者ビューは上部に追加ボタンを出さず
  *         練習カードごとの「記録追加」から自分のログを付ける (swimhub-tasks#57)
+ *   [S-6] linkedItem (URL の ?practice= / ?competition=) の練習・大会は、開いたらすぐ詳細を出す。
+ *         過去の予定でも (一覧の読み込み範囲に関係なく) 開ける (swimhub-tasks#141)
  */
 import React from "react";
 import userEvent from "@testing-library/user-event";
@@ -23,7 +25,20 @@ vi.mock("@/components/forms/CompetitionBasicForm", () => ({
   default: (props: { isOpen: boolean }) =>
     props.isOpen ? <div data-testid="competition-basic-form" /> : null,
 }));
-vi.mock("../../../components/team/TeamPracticeDetailModal", () => ({ default: () => null }));
+vi.mock("../../../components/team/TeamPracticeDetailModal", () => ({
+  default: (props: { practiceId: string; heading: string }) => (
+    <div data-testid="team-practice-detail-modal" data-practice-id={props.practiceId}>
+      {props.heading}
+    </div>
+  ),
+}));
+vi.mock("../../../components/team/TeamCompetitionRecordsModal", () => ({
+  default: (props: { competitionId: string; competitionTitle: string }) => (
+    <div data-testid="team-competition-records-modal" data-competition-id={props.competitionId}>
+      {props.competitionTitle}
+    </div>
+  ),
+}));
 
 vi.mock("@/contexts/AuthProvider");
 import { useAuth } from "@/contexts/AuthProvider";
@@ -179,5 +194,64 @@ describe("TeamSchedule — ビューごとの操作", () => {
     expect(screen.queryByRole("button", { name: "練習記録追加" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "大会追加" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("team-schedule-bulk-register")).not.toBeInTheDocument();
+  });
+});
+
+describe("TeamSchedule — 外から詳細を開く (linkedItem)", () => {
+  beforeEach(() => {
+    setup({
+      practices: [
+        practiceRow("p-a", "練習A", "2099-03-01"),
+        practiceRow("p-old", "過去の練習", "2000-05-01"),
+      ],
+      competitions: [competitionRow("c-old", "過去の大会", "2000-06-01")],
+    });
+  });
+
+  it("[S-6] 練習の詳細 (メンバー全員のタイム一覧) を開き、処理し終えたら知らせる", async () => {
+    const onLinkedItemHandled = vi.fn();
+    render(
+      <TeamSchedule
+        teamId="team-1"
+        linkedItem={{ kind: "practice", id: "p-a" }}
+        onLinkedItemHandled={onLinkedItemHandled}
+      />,
+    );
+    const modal = await screen.findByTestId("team-practice-detail-modal");
+    expect(modal.getAttribute("data-practice-id")).toBe("p-a");
+    expect(modal.textContent).toContain("練習A");
+    expect(onLinkedItemHandled).toHaveBeenCalledTimes(1);
+    expect(mock.state.byIdCalls).toEqual([{ table: "practices", teamId: "team-1", id: "p-a" }]);
+    // 今日以降の予定なので「過去」には切り替えない
+    expect(screen.getByRole("switch", { name: "過去" }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("[S-6] 過去の大会でも記録一覧を開き、一覧を「過去」に切り替える", async () => {
+    const onLinkedItemHandled = vi.fn();
+    render(
+      <TeamSchedule
+        teamId="team-1"
+        linkedItem={{ kind: "competition", id: "c-old" }}
+        onLinkedItemHandled={onLinkedItemHandled}
+      />,
+    );
+    const modal = await screen.findByTestId("team-competition-records-modal");
+    expect(modal.getAttribute("data-competition-id")).toBe("c-old");
+    expect(modal.textContent).toContain("過去の大会");
+    expect(onLinkedItemHandled).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("switch", { name: "過去" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("[S-6] 見つからない (他のチームの予定など) ときは何も開かず、処理し終えたことだけ知らせる", async () => {
+    const onLinkedItemHandled = vi.fn();
+    render(
+      <TeamSchedule
+        teamId="team-1"
+        linkedItem={{ kind: "practice", id: "missing" }}
+        onLinkedItemHandled={onLinkedItemHandled}
+      />,
+    );
+    await vi.waitFor(() => expect(onLinkedItemHandled).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("team-practice-detail-modal")).not.toBeInTheDocument();
   });
 });

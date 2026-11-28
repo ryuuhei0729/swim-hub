@@ -17,7 +17,6 @@ import {
   getDay,
   isToday,
 } from "date-fns";
-import { ja } from "date-fns/locale";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -391,7 +390,7 @@ export default function DatePicker({
                     !isSelected && dayOfWeek === 6 && isCurrentMonth && "text-blue-500",
                     isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent",
                   )}
-                  aria-label={format(day, "yyyy年M月d日", { locale: ja })}
+                  aria-label={formatDate(day, "long", locale)}
                   aria-pressed={isSelected || undefined}
                 >
                   {format(day, "d")}

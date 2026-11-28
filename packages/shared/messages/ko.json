@@ -176,6 +176,9 @@
       "imageRemoveConfirm": "이 이미지를 삭제하시겠습니까?",
       "avatarRemoveConfirm": "프로필 이미지를 삭제하시겠습니까?",
       "removeChoice": "삭제",
+      "adjustPositionTitle": "위치 조정",
+      "adjustPositionHint": "이미지를 드래그하여 사용할 부분을 틀에 맞춰 주세요",
+      "adjustPositionConfirm": "완료",
       "uploadFailed": "업로드에 실패했습니다",
       "imageUploadFailedDetail": "이미지 업로드에 실패했습니다: {detail}",
       "imageUploadFailedSimple": "이미지 업로드에 실패했습니다",
@@ -910,6 +913,8 @@
       "deletePracticeConfirmMessage": "이 연습 기록을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteMenuConfirmMessage": "이 연습 메뉴를 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteRecordConfirmMessage": "이 대회 기록을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
+      "deleteEntryConfirmMessage": "이 엔트리를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+      "entryNotOpenMessage": "엔트리가 {status}이므로 엔트리 등록을 할 수 없습니다.",
       "deleteCompetitionConfirmMessage": "이 대회를 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.",
       "deleteButton": "삭제"
     },
@@ -974,7 +979,8 @@
       "recordMemoLabel": "메모",
       "recordsLoading": "기록을 불러오는 중...",
       "recordsEmpty": "기록이 없습니다",
-      "entryTypeCompetition": "대회"
+      "entryTypeCompetition": "대회",
+      "viewTeamRecords": "팀 기록 보기"
     },
     "deleteConfirm": {
       "title": "기록 삭제",
@@ -1116,6 +1122,7 @@
       "columnTarget": "목표",
       "columnGap": "목표까지",
       "best": "베스트 {time}",
+      "entryTime": "엔트리 {time}",
       "target": "목표",
       "setGoal": "+ 목표 설정",
       "setGoalShort": "+ 목표",
@@ -1920,6 +1927,8 @@
       "upgradeButton": "Premium으로 업그레이드",
       "restoreButton": "구매 복원하기",
       "manageSubButton": "구독 관리",
+      "managedByWebTitle": "웹에서 구독 중입니다",
+      "managedByWebMessage": "이 플랜은 웹(swim-hub.app)에서 구독했습니다. 플랜 변경 및 해지는 웹의 설정 화면에서 해 주세요.",
       "termsLink": "이용약관",
       "privacyLink": "개인정보 처리방침"
     },
@@ -1965,6 +1974,7 @@
         "processingButton": "처리 중..."
       },
       "managePlanButton": "플랜 관리",
+      "managedByStore": "앱(App Store / Google Play)에서 구독 중입니다. 플랜 변경 및 해지는 스마트폰 스토어의 구독 설정에서 해 주세요.",
       "managePlanProcessing": "처리 중..."
     },
     "googleCalendar": {
@@ -2616,7 +2626,6 @@
       "noTeamsSubtext": "팀을 만들거나 초대 코드로 참가하세요",
       "pendingRetry": "상태 새로고침",
       "teamNotFound": "팀을 찾을 수 없습니다",
-      "webGuide": "팀 관리 기능은 웹 버전을 이용해 주세요.",
       "bulkRegisterAdminRequired": "이 기능을 사용하려면 관리자 권한이 필요합니다.",
       "webGuideButton": "웹 버전 열기",
       "pendingMessage": "팀 참가 요청이 관리자 승인을 기다리고 있습니다.\n승인될 때까지 잠시 기다려 주세요.",
@@ -3894,6 +3903,7 @@
       "upload": {
         "dropzoneText": "이미지를 드래그 앤 드롭하거나 클릭하여 선택하세요",
         "dropzoneHint": "JPEG / PNG, 5MB 이하",
+        "mobileHint": "기록표 사진을 찍거나 라이브러리에서 선택하세요",
         "invalidTypeError": "이미지 형식은 JPEG 또는 PNG만 지원합니다",
         "fileSizeError": "이미지 크기는 5MB 이하로 해주세요",
         "analyzeButton": "분석하기",
@@ -3932,7 +3942,8 @@
       "errors": {
         "serverError": "서버 오류가 발생했습니다",
         "invalidFormat": "분석 결과 형식이 올바르지 않습니다. 다시 시도해 주세요",
-        "analyzeError": "분석 중 오류가 발생했습니다"
+        "analyzeError": "분석 중 오류가 발생했습니다",
+        "dailyLimitReached": "오늘 사용 횟수에 도달했습니다. Premium으로 업그레이드하면 무제한으로 이용할 수 있습니다"
       }
     },
     "adminAttendance": {
@@ -4211,6 +4222,7 @@
         "placePlaceholder": "장소명",
         "notePlaceholder": "메모"
       },
+      "modeTabCalendar": "캘린더",
       "modeTabFile": "파일 가져오기",
       "modeTabManual": "직접 입력"
     },
@@ -4244,6 +4256,7 @@
     "premiumStart": "Premium 시작하기",
     "trialNote": "7일간의 무료 체험 후 선택한 플랜으로 자동 갱신됩니다. 언제든지 취소할 수 있습니다.",
     "cancelNote": "구독은 언제든지 취소할 수 있습니다.\nApp Store 설정에서 관리할 수 있습니다.",
+    "cancelNoteAndroid": "구독은 언제든지 취소할 수 있습니다.\nGoogle Play의 정기 결제에서 관리할 수 있습니다.",
     "alreadyPremium": "이미 Premium 플랜을 이용 중입니다",
     "title": "Premium으로 업그레이드",
     "subtitle": "모든 기능을 제한 없이 이용하실 수 있습니다",
@@ -4349,6 +4362,7 @@
       "noStyle": "종목을 선택해 주세요",
       "noLap": "랩 타임을 계산할 수 없습니다",
       "distanceHeader": "거리",
+      "segmentHeader": "구간",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {
@@ -4499,6 +4513,7 @@
       "average": "평균:",
       "notEntered": "미입력",
       "overallAvg": "전체 평균:",
+      "fastest": "최고:",
       "save": "저장",
       "cancel": "취소",
       "helpTitle": "기록 입력 팁",
@@ -4584,6 +4599,8 @@
       "distance_placeholder": "거리 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "반응 시간",
+      "reactionTimeFormatInvalid": "반응 시간 형식이 올바르지 않습니다",
+      "reactionTimeRange": "반응 시간은 -1.00~2.00초 범위로 입력해 주세요",
       "splitTimeLabel": "스플릿 타임",
       "splitAdd25m": "추가 (25m마다)",
       "splitAdd50m": "추가 (50m마다)",
@@ -4870,6 +4887,7 @@
     "listModalTitle": "피드백",
     "unknownAuthor": "탈퇴한 사용자",
     "edited": "수정됨",
+    "newLabel": "NEW",
     "editAria": "피드백 수정",
     "deleteAria": "피드백 삭제",
     "loading": "불러오는 중...",

@@ -99,7 +99,6 @@ function renderItem(
       color="#10B981"
       typeLabel="大会"
       isPractice={false}
-      isPracticeLog={false}
       practiceId=""
       onClose={vi.fn()}
       {...handlers}
@@ -152,7 +151,6 @@ describe("PracticeLogDetail (その他アイテム) 削除ボタンの isTeamCom
         color="#10B981"
         typeLabel="練習"
         isPractice={isPractice}
-        isPracticeLog={false}
         practiceId={item.id}
         onClose={vi.fn()}
         onDeletePractice={onDeletePractice}

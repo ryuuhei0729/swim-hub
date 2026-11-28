@@ -38,6 +38,7 @@ import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { CompetitionAPI } from "@apps/shared/api/competitions";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { createOrUpdateById } from "@apps/shared/utils/idempotentWrite";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
@@ -218,6 +219,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const [poolType, setPoolType] = useState<number>(0);
   const [competitionNote, setCompetitionNote] = useState("");
   const [competitionErrors, setCompetitionErrors] = useState<Record<string, string>>({});
+
+  // ---- 場所サジェスト (過去に使った大会の場所。web CompetitionTabModal と同じ取得元) ----
+  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    const api = new CompetitionAPI(supabase);
+    api.getUniqueCompetitionPlaces().then(setPlaceSuggestions).catch(() => {});
+  }, [supabase]);
 
   // ---- 画像 state ----
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
@@ -2183,6 +2191,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
               errors={competitionErrors}
               disabled={isSaving || !canEditCompetitionDetails}
               locked={!canEditCompetitionDetails}
+              placeSuggestions={placeSuggestions}
             />
 
             {/* メモ */}

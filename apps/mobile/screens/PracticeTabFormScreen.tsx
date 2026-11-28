@@ -41,6 +41,7 @@ import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { runMilestoneJudgment } from "@apps/shared/utils/milestoneJudgment";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { createOrUpdateById } from "@apps/shared/utils/idempotentWrite";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -485,7 +486,10 @@ export const PracticeTabFormScreen: React.FC = () => {
             return {
               id: log.id,
               existingLogId: log.id,
-              style: log.style || "Fr",
+              // practice_logs.style は legacy な小文字行（"fr" など）が混在し得るため
+              // toStyleCode() で正規化する（web の PracticeTabModal と同じ）。正規化できない
+              // 値は "Fr" に潰さず元の値を保持する（触らず保存しただけで自由形に化けないように）。
+              style: toStyleCode(log.style) ?? (log.style || "Fr"),
               swimCategory: (log.swim_category as "Swim" | "Pull" | "Kick") || "Swim",
               distance: log.distance || "",
               reps: log.rep_count || "",

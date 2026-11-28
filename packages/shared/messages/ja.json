@@ -176,6 +176,9 @@
       "imageRemoveConfirm": "この画像を削除しますか？",
       "avatarRemoveConfirm": "プロフィール画像を削除しますか？",
       "removeChoice": "削除",
+      "adjustPositionTitle": "位置を調整",
+      "adjustPositionHint": "画像をドラッグして、使う部分を枠に合わせてください",
+      "adjustPositionConfirm": "決定",
       "uploadFailed": "アップロードに失敗しました",
       "imageUploadFailedDetail": "画像のアップロードに失敗しました: {detail}",
       "imageUploadFailedSimple": "画像のアップロードに失敗しました",
@@ -910,6 +913,8 @@
       "deletePracticeConfirmMessage": "この練習記録を削除しますか？\nこの操作は取り消せません。",
       "deleteMenuConfirmMessage": "この練習メニューを削除しますか？\nこの操作は取り消せません。",
       "deleteRecordConfirmMessage": "この大会記録を削除しますか？\nこの操作は取り消せません。",
+      "deleteEntryConfirmMessage": "このエントリーを削除しますか？\nこの操作は取り消せません。",
+      "entryNotOpenMessage": "エントリーは{status}のため、エントリー登録はできません。",
       "deleteCompetitionConfirmMessage": "この大会を削除しますか？\nこの操作は取り消せません。",
       "deleteButton": "削除"
     },
@@ -974,7 +979,8 @@
       "recordMemoLabel": "メモ",
       "recordsLoading": "記録を読み込み中...",
       "recordsEmpty": "記録がありません",
-      "entryTypeCompetition": "大会"
+      "entryTypeCompetition": "大会",
+      "viewTeamRecords": "チームの記録を見る"
     },
     "deleteConfirm": {
       "title": "記録を削除",
@@ -1116,6 +1122,7 @@
       "columnTarget": "目標",
       "columnGap": "目標まで",
       "best": "ベスト {time}",
+      "entryTime": "エントリー {time}",
       "target": "目標",
       "setGoal": "＋ 目標を設定",
       "setGoalShort": "＋ 目標",
@@ -1920,6 +1927,8 @@
       "upgradeButton": "Premium にアップグレード",
       "restoreButton": "購入を復元する",
       "manageSubButton": "サブスクリプションを管理",
+      "managedByWebTitle": "Web で契約中です",
+      "managedByWebMessage": "このプランは Web（swim-hub.app）で契約しています。プランの変更・解約は Web の設定画面から行ってください。",
       "termsLink": "利用規約",
       "privacyLink": "プライバシーポリシー"
     },
@@ -1965,6 +1974,7 @@
         "processingButton": "処理中..."
       },
       "managePlanButton": "プランを管理",
+      "managedByStore": "アプリ（App Store / Google Play）で契約中です。プランの変更・解約はスマートフォンのストアのサブスクリプション設定から行ってください。",
       "managePlanProcessing": "処理中..."
     },
     "googleCalendar": {
@@ -2616,7 +2626,6 @@
       "noTeamsSubtext": "チームを作成するか、招待コードで参加してください",
       "pendingRetry": "状態を更新",
       "teamNotFound": "チームが見つかりません",
-      "webGuide": "チーム管理機能に関してはWeb版をご利用ください。",
       "bulkRegisterAdminRequired": "この機能を利用するには管理者権限が必要です。",
       "webGuideButton": "Web版を開く",
       "pendingMessage": "チームへの参加リクエストは管理者の承認待ちです。\n承認されるまでしばらくお待ちください。",
@@ -3894,6 +3903,7 @@
       "upload": {
         "dropzoneText": "画像をドラッグ&ドロップ、またはクリックして選択",
         "dropzoneHint": "JPEG / PNG, 5MB以下",
+        "mobileHint": "タイム記録表の写真を撮るか、ライブラリから選んでください",
         "invalidTypeError": "画像形式はJPEGまたはPNGのみ対応しています",
         "fileSizeError": "画像サイズは5MB以下にしてください",
         "analyzeButton": "解析する",
@@ -3932,7 +3942,8 @@
       "errors": {
         "serverError": "サーバーエラーが発生しました",
         "invalidFormat": "解析結果の形式が不正です。再度お試しください",
-        "analyzeError": "解析中にエラーが発生しました"
+        "analyzeError": "解析中にエラーが発生しました",
+        "dailyLimitReached": "今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます"
       }
     },
     "adminAttendance": {
@@ -4211,6 +4222,7 @@
         "placePlaceholder": "会場名",
         "notePlaceholder": "メモ"
       },
+      "modeTabCalendar": "カレンダー",
       "modeTabFile": "ファイル取込",
       "modeTabManual": "手動入力"
     },
@@ -4244,6 +4256,7 @@
     "premiumStart": "Premium を開始する",
     "trialNote": "7日間の無料トライアル後、選択したプランで自動更新されます。いつでもキャンセル可能です。",
     "cancelNote": "サブスクリプションはいつでもキャンセルできます。\nApp Store の設定から管理できます。",
+    "cancelNoteAndroid": "サブスクリプションはいつでもキャンセルできます。\nGoogle Play の「定期購入」から管理できます。",
     "alreadyPremium": "すでに Premium プランをご利用中です",
     "title": "Premium にアップグレード",
     "subtitle": "すべての機能を制限なくご利用いただけます",
@@ -4349,6 +4362,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
+      "segmentHeader": "区間",
       "splitTimeHeader": "Time"
     },
     "bestBadge": {
@@ -4499,6 +4513,7 @@
       "average": "平均:",
       "notEntered": "未入力",
       "overallAvg": "全体平均:",
+      "fastest": "最速:",
       "save": "保存",
       "cancel": "キャンセル",
       "helpTitle": "タイム入力のコツ",
@@ -4584,6 +4599,8 @@
       "distance_placeholder": "距離 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "リアクションタイム",
+      "reactionTimeFormatInvalid": "リアクションタイムの形式が正しくありません",
+      "reactionTimeRange": "リアクションタイムは-1.00〜2.00秒の範囲で入力してください",
       "splitTimeLabel": "スプリットタイム",
       "splitAdd25m": "追加(25mごと)",
       "splitAdd50m": "追加(50mごと)",
@@ -4870,6 +4887,7 @@
     "listModalTitle": "フィードバック",
     "unknownAuthor": "退会したユーザー",
     "edited": "編集済み",
+    "newLabel": "NEW",
     "editAria": "フィードバックを編集",
     "deleteAria": "フィードバックを削除",
     "loading": "読み込み中...",

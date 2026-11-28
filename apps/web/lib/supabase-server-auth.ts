@@ -101,7 +101,7 @@ export const getServerSubscription = cache(
       const supabase = await createAuthenticatedServerClient();
       const { data, error } = await supabase
         .from("user_subscriptions")
-        .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+        .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end, provider")
         .eq("id", userId)
         .single();
 
@@ -115,6 +115,7 @@ export const getServerSubscription = cache(
         cancelAtPeriodEnd: (data.cancel_at_period_end as boolean) ?? false,
         premiumExpiresAt: (data.premium_expires_at as string) ?? null,
         trialEnd: (data.trial_end as string) ?? null,
+        provider: (data.provider as SubscriptionInfo["provider"]) ?? null,
       };
     } catch {
       return defaultSubscription;

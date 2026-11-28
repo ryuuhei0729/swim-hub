@@ -35,6 +35,7 @@ import {
   extractTokenHashFromUrl,
 } from "@/lib/auth-deep-link";
 import { localizeAuthError } from "@/utils/authErrorLocalizer";
+import { env } from "@/lib/env";
 
 /**
  * Mobile 固有の AuthState 拡張
@@ -120,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = (await supabase
           .from("user_subscriptions")
-          .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+          .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end, provider")
           .eq("id", userId)
           .single()) as {
           data: {
@@ -129,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             cancel_at_period_end: boolean | null;
             premium_expires_at: string | null;
             trial_end: string | null;
+            provider: string | null;
           } | null;
           error: unknown;
         };
@@ -139,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
           premiumExpiresAt: data.premium_expires_at ?? null,
           trialEnd: data.trial_end ?? null,
+          provider: (data.provider as SubscriptionInfo["provider"]) ?? null,
         };
       } catch {
         return null;
@@ -264,7 +267,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // サインアップ
-  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+  const signUp = useCallback(async (
+    email: string,
+    password: string,
+    name?: string,
+    gender?: number,
+    birthday?: string,
+  ) => {
     if (!supabase) {
       return {
         data: null,
@@ -280,6 +289,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name: name || "",
+            // web (apps/web/contexts/AuthProvider.tsx) と同じく user metadata に入れる
+            gender: gender ?? 0,
+            birthday: birthday || null,
           },
           emailRedirectTo: getRedirectUri(),
         },
@@ -415,8 +427,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     try {
-      // パスワードリセットの redirectTo (recovery ディープリンク対応) は別スプリントで実装する
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {});
+      // アプリにはパスワード再設定のディープリンク画面が無いため、web と同じく
+      // web の /api/auth/callback を戻り先にする（token_hash を検証し、type=recovery から
+      // web の /update-password へ進める）。戻り先を省くと Supabase の Site URL が使われ、
+      // web の中継が token_hash を転送しないため再設定できない
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${env.webApiUrl}/api/auth/callback`,
+      });
 
       if (error) {
         return { data: null, error: error as import("@supabase/supabase-js").AuthError };
