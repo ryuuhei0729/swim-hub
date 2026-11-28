@@ -4244,6 +4244,7 @@
     "premiumStart": "Premium starten",
     "trialNote": "Nach der 7-tägigen kostenlosen Testphase verlängert sich Ihr gewählter Tarif automatisch. Jederzeit kündbar.",
     "cancelNote": "Sie können Ihr Abonnement jederzeit kündigen.\nVerwalten Sie es über die App-Store-Einstellungen.",
+    "cancelNoteAndroid": "Sie können Ihr Abonnement jederzeit kündigen.\nVerwalten Sie es in Google Play unter „Abos“.",
     "alreadyPremium": "Sie nutzen bereits den Premium-Tarif",
     "title": "Auf Premium upgraden",
     "subtitle": "Schalten Sie alle Funktionen ohne Einschränkungen frei.",

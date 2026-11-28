@@ -4244,6 +4244,7 @@
     "premiumStart": "Premium を開始する",
     "trialNote": "7日間の無料トライアル後、選択したプランで自動更新されます。いつでもキャンセル可能です。",
     "cancelNote": "サブスクリプションはいつでもキャンセルできます。\nApp Store の設定から管理できます。",
+    "cancelNoteAndroid": "サブスクリプションはいつでもキャンセルできます。\nGoogle Play の「定期購入」から管理できます。",
     "alreadyPremium": "すでに Premium プランをご利用中です",
     "title": "Premium にアップグレード",
     "subtitle": "すべての機能を制限なくご利用いただけます",

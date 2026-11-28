@@ -4244,6 +4244,7 @@
     "premiumStart": "Premium 시작하기",
     "trialNote": "7일간의 무료 체험 후 선택한 플랜으로 자동 갱신됩니다. 언제든지 취소할 수 있습니다.",
     "cancelNote": "구독은 언제든지 취소할 수 있습니다.\nApp Store 설정에서 관리할 수 있습니다.",
+    "cancelNoteAndroid": "구독은 언제든지 취소할 수 있습니다.\nGoogle Play의 정기 결제에서 관리할 수 있습니다.",
     "alreadyPremium": "이미 Premium 플랜을 이용 중입니다",
     "title": "Premium으로 업그레이드",
     "subtitle": "모든 기능을 제한 없이 이용하실 수 있습니다",
