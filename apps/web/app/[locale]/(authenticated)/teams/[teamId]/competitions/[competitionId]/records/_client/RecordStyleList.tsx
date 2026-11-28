@@ -33,7 +33,8 @@ const relayCardBgClass = (relayKind: RelayKind): string =>
 const CARD_CLASS =
   "flex flex-col items-start rounded-lg border border-gray-200 px-3 py-2 text-left shadow-sm transition hover:border-blue-400 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500";
 
-const GROUP_GRID_CLASS = "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2";
+// 列が多いと「100m自由形」「100mメドレーリレー」が単語の途中で折り返すので、4列までにする
+const GROUP_GRID_CLASS = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2";
 
 interface RecordStyleListProps<S extends StyleLookup> {
   styles: readonly S[];
