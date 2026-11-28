@@ -133,6 +133,8 @@ export const MyPageScreen: React.FC = () => {
   // 「プラン」行の右に出す値
   const planValue = useMemo(() => {
     if (subscription?.status === "trialing") return t("account.mobile.planValue.trialing");
+    // 支払い失敗 (past_due) は Free ではないので、プラン画面と同じく支払い未完了と出す
+    if (subscription?.status === "past_due") return t("settings.subscription.badge.pastDue");
     return checkIsPremium(subscription)
       ? t("account.mobile.planValue.premium")
       : t("account.mobile.planValue.free");

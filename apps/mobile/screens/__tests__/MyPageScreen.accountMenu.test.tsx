@@ -82,6 +82,14 @@ describe("MyPageScreen — アカウントタブの一覧", () => {
     expect(await screen.findByText("Google")).toBeTruthy();
   });
 
+  it("支払い失敗 (past_due) のときはプランの値を Free ではなく支払い未完了と出す", async () => {
+    harness.subscription = { plan: "premium", status: "past_due", premiumExpiresAt: null };
+    renderScreen();
+    expect(await screen.findByText("テストユーザー")).toBeTruthy();
+    expect(screen.getByText("Premium（支払い未完了）")).toBeTruthy();
+    expect(screen.queryByText("Free")).toBeNull();
+  });
+
   it("お問い合わせとタイムレベル判定は web のページを外部リンクで開く (規約と同じ)", async () => {
     renderScreen();
     expect(await screen.findByText("テストユーザー")).toBeTruthy();
