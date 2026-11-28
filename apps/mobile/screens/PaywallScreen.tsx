@@ -12,7 +12,9 @@ import {
   StyleSheet,
   ScrollView,
   Linking,
+  Platform,
 } from "react-native";
+import { differenceInDays, isValid } from "date-fns";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -45,12 +47,12 @@ export const PaywallScreen: React.FC = () => {
   const hasTrialed = subscription?.trialEnd !== null && subscription?.trialEnd !== undefined;
   // 現在トライアル中かどうか
   const isTrialing = subscription?.status === "trialing";
-  // トライアル残日数
+  // トライアル残日数 (web の SubscriptionSettings と同じく端数は切り捨て)
   const trialDaysRemaining = (() => {
     if (!isTrialing || !subscription?.trialEnd) return 0;
-    const end = new Date(subscription.trialEnd).getTime();
-    const now = Date.now();
-    return Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+    const end = new Date(subscription.trialEnd);
+    if (!isValid(end)) return 0;
+    return Math.max(0, differenceInDays(end, new Date()));
   })();
 
   // オファリングを取得
@@ -299,7 +301,9 @@ export const PaywallScreen: React.FC = () => {
         )}
 
         <Text style={styles.cancelNote}>
-          {t("paywallMobile.cancelNote")}
+          {Platform.OS === "android"
+            ? t("paywallMobile.cancelNoteAndroid")
+            : t("paywallMobile.cancelNote")}
         </Text>
 
         {/* リストアボタン */}

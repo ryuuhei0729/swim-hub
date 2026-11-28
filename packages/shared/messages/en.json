@@ -4241,6 +4241,7 @@
     "premiumStart": "Start Premium",
     "trialNote": "After the 7-day free trial, your selected plan will auto-renew. Cancel anytime.",
     "cancelNote": "You can cancel your subscription at any time.\nManage it from App Store settings.",
+    "cancelNoteAndroid": "You can cancel your subscription at any time.\nManage it from Subscriptions in Google Play.",
     "alreadyPremium": "You are already on the Premium plan",
     "title": "Upgrade to Premium",
     "subtitle": "Unlock every feature without limits.",

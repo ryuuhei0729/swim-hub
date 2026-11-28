@@ -1,12 +1,24 @@
 /**
  * Apple認証フック
- * expo-apple-authenticationを使用してネイティブのApple認証を実行
+ * - iOS: expo-apple-authentication を使用してネイティブの Apple 認証を実行
+ * - Android: ネイティブの Sign in with Apple が無いため、Supabase の OAuth
+ *   (Web ベースの Sign in with Apple) を expo-web-browser で開いて認証する。
+ *   流れは Google ログイン (共有パッケージの signInWithGoogle) と同じで、
+ *   swimhub://auth/callback?code=... を受け取って PKCE の code を交換する。
  */
 import { useState, useCallback } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 import { useTranslation } from "react-i18next";
+import { claimOAuthCode } from "@ryuuhei0729/swimhub-oauth/mobile";
+import {
+  getRedirectUri,
+  extractTokensFromUrl,
+  oauthSessionGuard,
+  localizeOAuthErrorCode,
+} from "@/lib/google-auth";
 import { supabase } from "@/lib/supabase";
 import { saveLastLoginMethod } from "@/lib/lastLoginMethod";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
@@ -44,6 +56,93 @@ export interface UseAppleAuthReturn {
   isAvailable: boolean;
 }
 
+type SupabaseClient = NonNullable<typeof supabase>;
+
+/**
+ * Android 向け: Supabase の OAuth (Web ベースの Sign in with Apple) をブラウザで開いてサインインする。
+ * 決して reject せず、失敗は localizeOAuthErrorCode で扱える機械可読コード
+ * (auth_cancelled など) か Supabase のエラーを Error.message に入れて返す。
+ */
+const signInWithAppleInBrowser = async (
+  client: SupabaseClient,
+): Promise<{ success: boolean; error?: Error }> => {
+  const redirectUri = getRedirectUri();
+  try {
+    const { data, error: oauthError } = await client.auth.signInWithOAuth({
+      provider: "apple",
+      options: {
+        redirectTo: redirectUri,
+        scopes: "name email",
+        skipBrowserRedirect: true,
+      },
+    });
+    if (oauthError || !data.url) {
+      return { success: false, error: oauthError ?? new Error("url_not_received") };
+    }
+
+    // openAuthSessionAsync 進行中は AuthProvider のグローバル Linking ハンドラを無効化する
+    oauthSessionGuard.active = true;
+    const browserResult = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+    if (browserResult.type !== "success" || !browserResult.url) {
+      const code =
+        browserResult.type === "cancel"
+          ? "auth_cancelled"
+          : browserResult.type === "dismiss"
+            ? "auth_dismissed"
+            : "auth_failed";
+      return { success: false, error: new Error(code) };
+    }
+
+    const tokens = extractTokensFromUrl(browserResult.url);
+    if (tokens.error) {
+      return { success: false, error: new Error(tokens.error) };
+    }
+
+    if (tokens.code) {
+      // 同一 code を AuthProvider のグローバル Linking ハンドラ安全網と二重に交換しない
+      const claim = claimOAuthCode(tokens.code);
+      if (!claim.claimed) {
+        const otherResult = await claim.result;
+        return otherResult.success
+          ? { success: true }
+          : { success: false, error: new Error("code_exchange_failed") };
+      }
+      try {
+        const { data: exchangeData, error: exchangeError } =
+          await client.auth.exchangeCodeForSession(tokens.code);
+        const ok = !exchangeError && !!exchangeData.session;
+        claim.resolve({ success: ok });
+        if (!ok) {
+          return { success: false, error: exchangeError ?? new Error("session_not_received") };
+        }
+        return { success: true };
+      } catch (exchangeException) {
+        claim.resolve({ success: false });
+        throw exchangeException;
+      }
+    }
+
+    // implicit フォールバック (#access_token=...)
+    if (tokens.accessToken && tokens.refreshToken) {
+      const { data: sessionData, error: sessionError } = await client.auth.setSession({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+      });
+      if (sessionError || !sessionData.session) {
+        return { success: false, error: sessionError ?? new Error("session_not_received") };
+      }
+      return { success: true };
+    }
+
+    return { success: false, error: new Error("tokens_not_received") };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e : new Error(String(e)) };
+  } finally {
+    oauthSessionGuard.active = false;
+  }
+};
+
 /**
  * Apple認証フック
  */
@@ -52,8 +151,8 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // iOSでのみ利用可能
-  const isAvailable = Platform.OS === "ios";
+  // iOS はネイティブ、Android はブラウザ (Supabase の OAuth) で利用可能
+  const isAvailable = Platform.OS === "ios" || Platform.OS === "android";
 
   /**
    * Appleでサインイン
@@ -73,6 +172,21 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
 
     setLoading(true);
     setError(null);
+
+    if (Platform.OS === "android") {
+      try {
+        const result = await signInWithAppleInBrowser(supabase);
+        if (!result.success) {
+          const message = localizeOAuthErrorCode(result.error?.message ?? "");
+          setError(message);
+          return { success: false, error: new Error(message) };
+        }
+        await saveLastLoginMethod("apple");
+        return { success: true };
+      } finally {
+        setLoading(false);
+      }
+    }
 
     // タイムアウト保護: signInAsyncがiPad等でハングした場合にローディングを強制解除
     const APPLE_AUTH_TIMEOUT_MS = 60000;

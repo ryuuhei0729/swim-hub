@@ -34,7 +34,8 @@ const isEmailOtpLinkType = (value: string | null): value is EmailOtpLinkType =>
  *      email 確認/パスワードリセットは token_hash 方式のためここには来ない)
  *   4. (旧形式=implicit フォールバック) フラグメントに `access_token` または `error` が含まれる。
  *      フラグメントの `type` が `recovery` の場合は対象外
- *      (いずれの形式でもパスワードリセットのリカバリーリンク対応は別スプリントで実装する)
+ *      (パスワード再設定メールの戻り先は web の /api/auth/callback で、web の /update-password で
+ *      再設定するため、アプリのディープリンクでは扱わない)
  */
 export const isEmailAuthCallback = (url: string): boolean => {
   // フラグメント・クエリを除いたベース URL を抽出し完全一致チェック
@@ -46,7 +47,7 @@ export const isEmailAuthCallback = (url: string): boolean => {
   const query = url.split("#")[0]!.split("?")[1] ?? "";
   const queryParams = new URLSearchParams(query);
   if (queryParams.has("token_hash")) {
-    // recovery (パスワードリセット) リンクは対象外 — recovery の深リンク対応は別スプリント
+    // recovery (パスワードリセット) リンクは対象外 — 再設定は web の /update-password で行う
     return queryParams.get("type") !== "recovery";
   }
 
@@ -59,7 +60,7 @@ export const isEmailAuthCallback = (url: string): boolean => {
   const hash = url.split("#")[1] ?? "";
   const params = new URLSearchParams(hash);
 
-  // recovery (パスワードリセット) リンクは対象外 — recovery の深リンク対応は別スプリント
+  // recovery (パスワードリセット) リンクは対象外 — 再設定は web の /update-password で行う
   if (params.get("type") === "recovery") return false;
 
   return params.has("access_token") || params.has("error");

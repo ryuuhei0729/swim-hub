@@ -29,6 +29,9 @@ function isEmailFormat(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/** 名前の最大文字数 (web の Step2Profile と同じ) */
+const NAME_MAX_LENGTH = 50;
+
 /**
  * オンボーディング Step 2: プロフィール補完フォーム
  * name が email 形式の場合のみスキップ不可 (ProfileEditModal のロジックを参照)
@@ -68,8 +71,18 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
   }, [initialProfile]);
 
   const handleSubmit = async () => {
-    if (!formData.name.trim()) {
+    // web の Step2Profile と同じ検証 (空欄・メールアドレス形式・50文字超を弾く)
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
       setError(t("onboarding.step2.validation.nameRequired"));
+      return;
+    }
+    if (isEmailFormat(trimmedName)) {
+      setError(t("onboarding.step2.validation.nameEmailFormat"));
+      return;
+    }
+    if (trimmedName.length > NAME_MAX_LENGTH) {
+      setError(t("onboarding.step2.validation.nameTooLong", { max: NAME_MAX_LENGTH }));
       return;
     }
     setIsSaving(true);
