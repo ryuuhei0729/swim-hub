@@ -31,6 +31,7 @@ export function buildAuthContext(overrides: AuthContextOverrides = {}): MobileAu
     loading: false,
     subscription: null,
     onboardingCompleted: true,
+    isGuardian: false,
     supabase: (supabase ?? {}) as SupabaseClient,
     signIn: vi.fn(async () => ({ data: null, error: null })),
     signUp: vi.fn(async () => ({ data: null, error: null })),

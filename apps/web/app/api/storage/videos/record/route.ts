@@ -6,6 +6,7 @@ import { authenticateApiRequest } from "@/lib/auth-api";
 import { deleteVideosFromR2 } from "@/lib/r2-video";
 import { authorizeRecordVideoMutation } from "@/lib/video-authz";
 import { NextRequest, NextResponse } from "next/server";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -14,6 +15,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
     const { user, supabase } = auth;
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     const { searchParams } = new URL(request.url);
     const recordId = searchParams.get("recordId");

@@ -69,6 +69,18 @@ export type TabParamList = {
   MyPage: undefined;
 };
 
+/**
+ * 保護者アカウント (閲覧専用) のスタック。ボトムタブは持たず、チーム画面と
+ * そこから開く閲覧専用の画面だけを登録する (それ以外の画面へは辿れない)。
+ * チーム画面の部品は MainStackParamList の型で navigate するため、
+ * 共有する画面は同じルート名・同じ params にすること。
+ */
+export type GuardianStackParamList = {
+  GuardianTeam: undefined;
+  TeamAnnouncements: MainStackParamList["TeamAnnouncements"];
+  TeamRankings: MainStackParamList["TeamRankings"];
+};
+
 // メインスタックのパラメータ型
 export type MainStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;

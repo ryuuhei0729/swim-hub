@@ -48,6 +48,9 @@ export const teamDetailKeys = {
   /** 大会の記録一覧 (個人 + リレー) */
   competitionRecords: (competitionId: string) =>
     [...teamKeys.all, "competitionRecords", competitionId] as const,
+  /** 練習のタイム一覧 (メンバー全員の practice_logs + practice_times) */
+  practiceTimes: (practiceId: string) =>
+    [...teamKeys.all, "practiceTimes", practiceId] as const,
 } as const;
 
 /** グループやその所属を書き換えたあとに、グループ関連のキャッシュをまとめて取り直す */

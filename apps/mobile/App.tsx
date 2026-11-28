@@ -17,6 +17,7 @@ import { ToastProvider } from "./providers/ToastProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
+import { GuardianStack } from "./navigation/GuardianStack";
 import { OnboardingStack } from "./navigation/OnboardingStack";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneAchievementPrompter } from "./components/goals/MilestoneAchievementPrompter";
@@ -64,7 +65,7 @@ const SupabaseErrorScreen: React.FC = () => {
  */
 const AppNavigator: React.FC = () => {
   // React Hooksは常に同じ順序で呼ばれる必要があるため、条件分岐の前に呼ぶ
-  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
+  const { isAuthenticated, loading, onboardingCompleted, isGuardian } = useAuth();
   const { isConnected, isInternetReachable } = useNetwork();
   const { t } = useTranslation();
 
@@ -74,6 +75,7 @@ const AppNavigator: React.FC = () => {
       "[AppNavigator] render — loading:", loading,
       "isAuthenticated:", isAuthenticated,
       "onboardingCompleted:", onboardingCompleted,
+      "isGuardian:", isGuardian,
       "supabase:", !!supabase,
     );
   }
@@ -83,8 +85,9 @@ const AppNavigator: React.FC = () => {
     return <SupabaseErrorScreen />;
   }
 
-  // 認証状態 or オンボーディング状態の確認中 (loading または null)
-  if (loading || (isAuthenticated && onboardingCompleted === null)) {
+  // 認証状態 or オンボーディング状態 or 保護者かどうかの確認中 (loading または null)。
+  // 保護者かどうかが決まる前に通常の画面を出すと、保護者に一瞬ボトムタブが見えるため待つ
+  if (loading || (isAuthenticated && (onboardingCompleted === null || isGuardian === null))) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
@@ -98,9 +101,14 @@ const AppNavigator: React.FC = () => {
   // React Query の onlineManager と同じ基準 (isNetInfoOnline) で判定する
   const isOffline = !isNetInfoOnline({ isConnected, isInternetReachable });
 
+  // 保護者アカウント (閲覧専用) はチーム画面だけの専用スタックにする。
+  // オンボーディング (プロフィールの保存) も書き込みなので、保護者には出さない
+  const showGuardian = isAuthenticated && isGuardian === true;
+
   // 認証状態 × オンボーディング状態に応じてスタックを切り替え
   const renderStack = () => {
     if (!isAuthenticated) return <AuthStack />;
+    if (showGuardian) return <GuardianStack />;
     if (!onboardingCompleted) return <OnboardingStack />;
     return <MainStack />;
   };
@@ -110,8 +118,10 @@ const AppNavigator: React.FC = () => {
       <OfflineBanner visible={isOffline} />
       <NavigationContainer>
         {renderStack()}
-        {isAuthenticated && onboardingCompleted && <MilestoneAchievementPrompter />}
-        <StatusBar style={isAuthenticated && !onboardingCompleted ? "light" : "auto"} />
+        {isAuthenticated && onboardingCompleted && !showGuardian && <MilestoneAchievementPrompter />}
+        <StatusBar
+          style={isAuthenticated && !onboardingCompleted && !showGuardian ? "light" : "auto"}
+        />
       </NavigationContainer>
     </View>
   );

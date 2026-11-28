@@ -16,6 +16,7 @@ import { ALWAYS_REVALIDATE, getCachedQueryStatus } from "@/hooks/cachedQuery";
 import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
 import { CategorySection } from "./CategorySection";
 import { usePendingAction } from "@/hooks/usePendingAction";
@@ -110,7 +111,9 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         )
         .eq("team_id", teamId)
         .eq("status", "approved")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        // 保護者アカウントはグループに割り当てる対象ではない
+        .neq("role", GUARDIAN_ROLE);
       if (fetchError) {
         console.error("Failed to fetch team members:", fetchError);
         throw fetchError;

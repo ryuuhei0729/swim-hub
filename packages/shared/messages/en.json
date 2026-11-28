@@ -761,6 +761,13 @@
       "defaultError": "An error occurred. Please try again later.",
       "loginFailed": "Login failed. Please check your details and try again.",
       "genericError": "An error occurred. Please try again later."
+    },
+    "guardianAppOnly": {
+      "title": "Please use the app",
+      "description": "Parent accounts can only be used in the SwimHub app. Please log in from the SwimHub app on your smartphone.",
+      "openAppStore": "Get the app on the App Store",
+      "logout": "Log out",
+      "logoutFailed": "Failed to log out. Please try again."
     }
   },
   "pricing": {
@@ -1116,7 +1123,7 @@
       "entryBefore": "Entries haven't opened yet",
       "personalNoEntries": "Add the events you will swim",
       "enter": "Enter",
-      "registerEvents": "Add events",
+      "registerEvents": "Entry",
       "noneTitle": "No upcoming competitions",
       "noneDescription": "Add a competition to see the days left, your events and how far you are from your goals",
       "addCompetition": "+ Add competition",
@@ -2854,6 +2861,10 @@
         "switchedToAdmin": "Switched to admin view",
         "switchedToUser": "Switched to member view"
       },
+      "guardian": {
+        "badge": "Parent view",
+        "logoutButton": "Log out"
+      },
       "pendingApproveConfirmTitle": "Confirm approval",
       "pendingApproveConfirmMessage": "Approve {name}?",
       "pendingRejectConfirmTitle": "Confirm rejection",
@@ -3117,7 +3128,9 @@
         "addAriaLabel": "Add practice record for {date}",
         "viewAriaLabel": "View practice record for {date}",
         "editButton": "Edit",
-        "deleteButton": "Delete"
+        "deleteButton": "Delete",
+        "recordBulkButton": "Enter records",
+        "viewTimesAriaLabel": "View times for {date}"
       },
       "selfLogButton": "Add My Log"
     },
@@ -3677,6 +3690,23 @@
         "Fly": "Butterfly",
         "IM": "Individual Medley"
       }
+    },
+    "practiceTimes": {
+      "titleSuffix": " - Times",
+      "openAria": "View times for {title}",
+      "loading": "Loading...",
+      "loadError": "Failed to load practice times",
+      "empty": "No records yet",
+      "memberCount": "{count} people",
+      "averageLabel": "Avg",
+      "fastest": "Best {time}",
+      "recordedCount": "{recorded}/{total} reps",
+      "noTime": "No times recorded",
+      "setLabel": "Set {set}",
+      "setAverage": "Avg {time}",
+      "memo": "Note",
+      "unknownUser": "Unknown",
+      "rowAria": "{name}, average {time}"
     },
     "competitionRecordsModal": {
       "titleSuffix": " - Records",

@@ -10,6 +10,7 @@ import { localeFromReferer } from "@/i18n/routing";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_ERROR_CODE } from "@swim-hub/shared/constants/premium";
 import type { PremiumRequiredError } from "@swim-hub/shared/constants/premium";
+import { rejectIfGuardian } from "@/lib/guardian-guard";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const guardianDenied = await rejectIfGuardian(user.id);
+    if (guardianDenied) return guardianDenied;
 
     const supabase = await createAuthenticatedServerClient();
 

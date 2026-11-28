@@ -10,6 +10,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useTeamGroups, type TeamGroupWithCount } from "./hooks/useTeamGroups";
 import { useGroupActions } from "./hooks/useGroupActions";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { GUARDIAN_ROLE } from "@apps/shared/types";
 import {
   BulkAssignModal,
   CategorySection,
@@ -100,7 +101,9 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         )
         .eq("team_id", teamId)
         .eq("status", "approved")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        // 保護者アカウントはグループに割り当てる対象ではない
+        .neq("role", GUARDIAN_ROLE);
       if (fetchError) throw fetchError;
       // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
       return ((data ?? []) as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday);

@@ -1374,6 +1374,10 @@ export type Database = {
         Args: { template_id: string };
         Returns: undefined;
       };
+      is_guardian_account: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       is_pending_team_member: {
         Args: { target_team_id: string; target_user_id: string };
         Returns: boolean;

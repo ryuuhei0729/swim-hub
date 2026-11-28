@@ -764,6 +764,13 @@
       "defaultError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
       "loginFailed": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
       "genericError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut."
+    },
+    "guardianAppOnly": {
+      "title": "Bitte nutze die App",
+      "description": "Elternkonten können nur in der SwimHub-App verwendet werden. Bitte melde dich in der SwimHub-App auf deinem Smartphone an.",
+      "openAppStore": "App im App Store laden",
+      "logout": "Abmelden",
+      "logoutFailed": "Abmelden fehlgeschlagen. Bitte versuche es erneut."
     }
   },
   "pricing": {
@@ -1119,7 +1126,7 @@
       "entryBefore": "Die Meldefrist hat noch nicht begonnen",
       "personalNoEntries": "Tragen Sie die Disziplinen ein, in denen Sie starten",
       "enter": "Melden",
-      "registerEvents": "Disziplinen eintragen",
+      "registerEvents": "Meldung",
       "noneTitle": "Keine anstehenden Wettkämpfe",
       "noneDescription": "Fügen Sie einen Wettkampf hinzu, um die verbleibenden Tage, Ihre Disziplinen und den Abstand zu Ihren Zielen zu sehen",
       "addCompetition": "+ Wettkampf hinzufügen",
@@ -2857,6 +2864,10 @@
         "switchedToAdmin": "Zur Administratoransicht gewechselt",
         "switchedToUser": "Zur Mitgliederansicht gewechselt"
       },
+      "guardian": {
+        "badge": "Elternansicht",
+        "logoutButton": "Abmelden"
+      },
       "pendingApproveConfirmTitle": "Genehmigung bestätigen",
       "pendingApproveConfirmMessage": "{name} genehmigen?",
       "pendingRejectConfirmTitle": "Ablehnung bestätigen",
@@ -3120,7 +3131,9 @@
         "addAriaLabel": "Trainingseintrag für {date} hinzufügen",
         "viewAriaLabel": "Trainingseintrag für {date} anzeigen",
         "editButton": "Bearbeiten",
-        "deleteButton": "Löschen"
+        "deleteButton": "Löschen",
+        "recordBulkButton": "Ergebnisse stellvertretend eingeben",
+        "viewTimesAriaLabel": "Zeiten für {date} anzeigen"
       },
       "selfLogButton": "Eigenes Protokoll hinzufügen"
     },
@@ -3680,6 +3693,23 @@
         "Fly": "Schmetterling",
         "IM": "Lagen"
       }
+    },
+    "practiceTimes": {
+      "titleSuffix": " - Zeiten",
+      "openAria": "Zeiten für {title} anzeigen",
+      "loading": "Wird geladen...",
+      "loadError": "Trainingszeiten konnten nicht geladen werden",
+      "empty": "Noch keine Einträge",
+      "memberCount": "{count} Personen",
+      "averageLabel": "Ø",
+      "fastest": "Bestzeit {time}",
+      "recordedCount": "{recorded}/{total} Wdh.",
+      "noTime": "Keine Zeiten erfasst",
+      "setLabel": "Satz {set}",
+      "setAverage": "Ø {time}",
+      "memo": "Notiz",
+      "unknownUser": "Unbekannt",
+      "rowAria": "{name}, Durchschnitt {time}"
     },
     "competitionRecordsModal": {
       "titleSuffix": " - Ergebnisse",

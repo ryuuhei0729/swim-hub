@@ -14,6 +14,8 @@ import { TeamAttendanceTab } from "./attendance/TeamAttendanceTab";
 import { TeamHeaderAdminToggle } from "./TeamHeaderAdminToggle";
 import { TeamScheduleList } from "./TeamScheduleList";
 import { TeamOthersTab } from "./TeamOthersTab";
+import { GuardianLogoutButton } from "./GuardianLogoutButton";
+import { GUARDIAN_TEAM_TAB_IDS } from "./teamTabDefs";
 import { TeamBodySkeleton } from "@/components/ui/ScreenSkeletons";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
@@ -21,6 +23,7 @@ import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 import { useTeamViewStore } from "@/stores/teamViewStore";
 import { useTeamAdminView } from "@/hooks/useTeamAdminView";
 import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
+import { useIsGuardian } from "@/hooks/useIsGuardian";
 import type { MainStackParamList } from "@/navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -48,6 +51,11 @@ export interface TeamDetailViewProps {
  *   - メンバーの目標 … その他タブ
  *   - お知らせの作成 … ヘッダー 🔔 から開く画面
  *
+ * 保護者アカウント (閲覧専用) のときは保護者版として表示する:
+ *   - チーム名の右に「保護者版」バッジ。チーム切替は出さない (保護者版は1チームだけを見る)
+ *   - 出欠タブを出さない (TEAM_TAB_DEFS の guardianVisible)
+ *   - チーム設定・管理者ビュー切替の代わりにログアウトボタンを出す
+ *
  * 最後に開いていたタブと管理者ビューの ON/OFF は、チームごとに useTeamViewStore に保存して復元する。
  * 呼び出し側は teamId を key に渡し、チームを切り替えたら作り直すこと
  * (メンバータブの表示切替などのローカル state を別チームへ持ち越さないため)。
@@ -60,6 +68,7 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const isGuardian = useIsGuardian();
   const storedTab = useTeamViewStore((state) => state.byTeam[teamId]?.tab);
   const setTab = useTeamViewStore((state) => state.setTab);
   const [membersSegment, setMembersSegment] = useState<MembersSegment>("members");
@@ -75,7 +84,10 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     effectiveIsAdminView,
   } = useTeamAdminView(teamId);
 
-  const activeTab = resolveActiveTabOnAdminViewToggle(storedTab ?? "members", effectiveIsAdminView);
+  const resolvedTab = resolveActiveTabOnAdminViewToggle(storedTab ?? "members", effectiveIsAdminView);
+  // 保護者版に無いタブ (出欠) を覚えていたらメンバータブを出す
+  const activeTab =
+    isGuardian && !GUARDIAN_TEAM_TAB_IDS.includes(resolvedTab) ? "members" : resolvedTab;
   const handleTabChange = (tab: TeamTabType) => setTab(teamId, tab);
   // グループ管理は管理者ビューでのみ選べる。利用者ビューに戻したらメンバー表を出す
   const activeMembersSegment: MembersSegment = effectiveIsAdminView ? membersSegment : "members";
@@ -97,30 +109,41 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
 
   const header = (
     <View style={styles.header}>
-      <Pressable
-        style={styles.switcherButton}
-        onPress={onOpenSwitcher}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={t("teams.mobile.switcher.openAria")}
-        testID="team-switcher-open"
-      >
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {currentTeam?.name || teamName}
-        </Text>
-        <Feather name="chevron-down" size={20} color="#6B7280" />
-        {otherTeamsCount > 0 && (
-          <View
-            style={styles.otherTeamsBadge}
-            accessibilityLabel={t("teams.mobile.otherTeamsBadgeAria", { count: otherTeamsCount })}
-            testID="team-switcher-other-teams-badge"
-          >
-            <Text style={styles.otherTeamsBadgeText}>
-              {otherTeamsCount > 99 ? "99+" : otherTeamsCount}
-            </Text>
+      {isGuardian ? (
+        <View style={styles.switcherButton} testID="team-guardian-title">
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {currentTeam?.name || teamName}
+          </Text>
+          <View style={styles.guardianBadge} testID="team-guardian-badge">
+            <Text style={styles.guardianBadgeText}>{t("teams.mobile.guardian.badge")}</Text>
           </View>
-        )}
-      </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          style={styles.switcherButton}
+          onPress={onOpenSwitcher}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.switcher.openAria")}
+          testID="team-switcher-open"
+        >
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {currentTeam?.name || teamName}
+          </Text>
+          <Feather name="chevron-down" size={20} color="#6B7280" />
+          {otherTeamsCount > 0 && (
+            <View
+              style={styles.otherTeamsBadge}
+              accessibilityLabel={t("teams.mobile.otherTeamsBadgeAria", { count: otherTeamsCount })}
+              testID="team-switcher-other-teams-badge"
+            >
+              <Text style={styles.otherTeamsBadgeText}>
+                {otherTeamsCount > 99 ? "99+" : otherTeamsCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      )}
       <View style={styles.headerActions}>
         <Pressable
           style={styles.headerIconButton}
@@ -132,17 +155,23 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
         >
           <Feather name="bell" size={21} color="#374151" />
         </Pressable>
-        <Pressable
-          style={styles.headerIconButton}
-          onPress={() => navigation.navigate("TeamSettings", { teamId })}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel={t("teams.mobile.headerSettings")}
-          testID="team-header-settings"
-        >
-          <Feather name="settings" size={21} color="#374151" />
-        </Pressable>
-        {isCurrentUserAdmin && <TeamHeaderAdminToggle teamId={teamId} />}
+        {isGuardian ? (
+          <GuardianLogoutButton />
+        ) : (
+          <>
+            <Pressable
+              style={styles.headerIconButton}
+              onPress={() => navigation.navigate("TeamSettings", { teamId })}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.mobile.headerSettings")}
+              testID="team-header-settings"
+            >
+              <Feather name="settings" size={21} color="#374151" />
+            </Pressable>
+            {isCurrentUserAdmin && <TeamHeaderAdminToggle teamId={teamId} />}
+          </>
+        )}
       </View>
     </View>
   );
@@ -276,6 +305,7 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
         isAdmin={effectiveIsAdminView}
         pendingCount={isCurrentUserAdmin ? pendingCount : 0}
         attendanceCount={thisTeamCount.unanswered}
+        guardianMode={isGuardian}
       />
       {/* 再取得に失敗しても、前回取得した内容をそのまま表示する */}
       <StaleDataBanner visible={isError} onRetry={() => refetch()} />
@@ -313,6 +343,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     flexShrink: 1,
+  },
+  guardianBadge: {
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  guardianBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#B45309",
   },
   otherTeamsBadge: {
     minWidth: 18,
