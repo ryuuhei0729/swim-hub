@@ -50,6 +50,12 @@ import { FormModals } from "./FormModals";
 import { useDashboardHandlers } from "../_hooks/useDashboardHandlers";
 import { useCalendarHandlers } from "../_hooks/useCalendarHandlers";
 import { useDashboardRefreshOnSave } from "../_hooks/useDashboardRefreshOnSave";
+import {
+  expiredGoalCheckSessionKey,
+  hasCheckedExpiredGoals,
+  markExpiredGoalsChecked,
+  unmarkExpiredGoalsChecked,
+} from "../_hooks/expiredGoalCheckSession";
 
 interface DashboardClientProps {
   /**
@@ -79,7 +85,6 @@ export default function DashboardClient({
   const queryClient = useQueryClient();
   const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null);
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null);
-  const hasCheckedExpiredRef = useRef(false);
   // 次の大会の「目標を設定」から開く目標作成。null は閉じている
   const [goalCreateTarget, setGoalCreateTarget] = useState<{
     competitionId?: string;
@@ -94,6 +99,8 @@ export default function DashboardClient({
   // 並びは「次の大会 → 前回の練習」で固定し、今日・明日に練習があれば前回の練習を見せた状態で開く
   // (大会が今日・明日なら次の大会)。どちらを見せるか決まるまでは前回の練習を並べない
   const lastPracticeQuery = useLastPracticeQuery(supabase, user?.id);
+  // 「チームの大会を見る」は承認済み・有効なチームがあるときだけ出す (参加申請中だけなら出さない。mobile と同じ)
+  const hasApprovedTeam = teams.some((m) => m.status === "approved" && m.is_active);
   const lastPractice = lastPracticeQuery.data;
   const initialCard = useDashboardInitialCard(supabase, user?.id);
   const cardsReady =
@@ -159,15 +166,27 @@ export default function DashboardClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 期限切れ目標・マイルストーンチェック（ログイン時・1回のみ）
-  // 目標を優先してチェックし、目標がなければマイルストーンをチェック
+  // 期限切れ目標・マイルストーンチェック（ログインしてから1回のみ）
+  // 目標を優先してチェックし、目標がなければマイルストーンをチェック。
+  // 判定済みフラグはページの外 (expiredGoalCheckSession) に持つので、ページを移って戻ってきても
+  // 再確認せず、スキップした振り返りもまた出さない (mobile の useExpiredGoalCheck と同じ)。
+  const userId = user?.id;
+  const lastSignInAt = user?.last_sign_in_at;
+  // 判定はログインごとに1回きりなので、supabase / queryClient は最新を ref で持つ
+  // (参照が変わるたびに effect をやり直して確認し直さないため)
+  const expiredCheckDepsRef = useRef({ supabase, queryClient });
+  expiredCheckDepsRef.current = { supabase, queryClient };
   useEffect(() => {
-    if (!user || hasCheckedExpiredRef.current) return;
-    hasCheckedExpiredRef.current = true;
-    const userId = user.id;
+    if (!userId) return;
+    const sessionKey = expiredGoalCheckSessionKey(userId, lastSignInAt);
+    if (hasCheckedExpiredGoals(sessionKey)) return;
+    markExpiredGoalsChecked(sessionKey);
+    let active = true;
+    let completed = false;
 
     const checkExpired = async () => {
       try {
+        const { supabase, queryClient } = expiredCheckDepsRef.current;
         const goalAPI = new GoalAPI(supabase);
 
         // 代理入力 (チーム管理者による練習・大会記録の代理保存) は保存時点では
@@ -181,22 +200,30 @@ export default function DashboardClient({
         // まず期限切れ目標をチェック（優先）
         const expiredGoals = await goalAPI.getExpiredGoals();
         if (expiredGoals && expiredGoals.length > 0) {
-          setExpiredGoal(expiredGoals[0]!); // expiredGoals.length > 0 を直上の if で確認済み
+          completed = true;
+          if (active) setExpiredGoal(expiredGoals[0]!); // expiredGoals.length > 0 を直上の if で確認済み
           return;
         }
 
         // 期限切れ目標がなければマイルストーンをチェック
         const expiredMilestones = await goalAPI.getExpiredMilestones();
-        if (expiredMilestones && expiredMilestones.length > 0) {
+        completed = true;
+        if (active && expiredMilestones && expiredMilestones.length > 0) {
           setExpiredMilestone(expiredMilestones[0]!); // expiredMilestones.length > 0 を直上の if で確認済み
         }
       } catch (error) {
+        completed = true;
         console.error("期限切れチェックエラー:", error);
       }
     };
 
     checkExpired();
-  }, [user, supabase, queryClient]);
+    return () => {
+      active = false;
+      // 確認が終わる前にページを離れたときは、結果を出せないので次に開いたときにもう一度確認する
+      if (!completed) unmarkExpiredGoalsChecked(sessionKey);
+    };
+  }, [userId, lastSignInAt]);
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 
@@ -421,7 +448,7 @@ export default function DashboardClient({
             <DashboardCardCarousel initialIndex={initialCard.initialIndex} ready={cardsReady}>
               <NextCompetitionCard
                 key="next-competition"
-                hasTeams={teams.length > 0}
+                hasTeams={hasApprovedTeam}
                 openEntryLogForm={openEntryLogForm}
                 onAddCompetition={() => onAddItem(new Date(), "record")}
                 onSetGoal={setGoalCreateTarget}
