@@ -19,11 +19,14 @@ import {
   ChevronDownIcon,
   SparklesIcon,
   PrinterIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import TagInput from "@/components/forms/TagInput";
 import TeamTimeInputModal from "@/components/team/TeamTimeInputModal";
 import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
 import OcrScanModal from "@/components/team/OcrScanModal";
+import { PracticeLogTemplateSelectModal } from "@/components/practice-log-templates/PracticeLogTemplateSelectModal";
+import type { PracticeLogTemplate } from "@apps/shared/types/practiceLogTemplate";
 import { PracticeTag, Practice } from "@apps/shared/types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
@@ -146,6 +149,7 @@ export default function PracticeLogClient({
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tItemTabs = useTranslations("forms.itemTabs");
   const tCommon = useTranslations("common");
+  const tPracticeLog = useTranslations("forms.practiceLog");
   const locale = useLocale();
   const router = useRouter();
   const { supabase, subscription } = useAuth();
@@ -168,6 +172,8 @@ export default function PracticeLogClient({
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showOcrModal, setShowOcrModal] = useState(false);
+  // テンプレートを読み込む先のメニュー (null ならテンプレート選択を閉じている)
+  const [templateMenuId, setTemplateMenuId] = useState<string | null>(null);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(
     null,
@@ -407,6 +413,40 @@ export default function PracticeLogClient({
         menu.id === menuId ? { ...menu, [field]: value } : menu,
       ),
     );
+  };
+
+  // ---- テンプレートから作成 (mobile TeamPracticeLogBulkFormScreen の handleTemplateSelect と同じ) ----
+  // 対象メニュー1件の種目・距離・本数・サークル・メモ・タグだけを上書きし、
+  // 対象メンバー・タイム・動画と他のメニューには触れない
+  const handleTemplateSelect = (template: PracticeLogTemplate) => {
+    if (!templateMenuId) return;
+    const circleTime = template.circle || 0;
+    const templateTags = template.tag_ids
+      ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
+      : [];
+    setMenus((prev) =>
+      prev.map((menu) =>
+        menu.id === templateMenuId
+          ? {
+              ...menu,
+              style: template.style,
+              swimCategory: template.swim_category,
+              distance: template.distance,
+              reps: template.rep_count,
+              sets: template.set_count,
+              circleMin: Math.floor(circleTime / 60),
+              circleSec: circleTime % 60,
+              note: template.note || "",
+              tags: templateTags,
+            }
+          : menu,
+      ),
+    );
+  };
+
+  // テンプレート管理は別タブで開く (この画面を離れると全員分の代理入力が消えるため)
+  const openTemplateManager = () => {
+    window.open(`/${locale}/account?tab=templates`, "_blank", "noopener,noreferrer");
   };
 
   const handleTimeSave = (menuId: string, times: TeamTimeEntry[]) => {
@@ -1204,11 +1244,26 @@ export default function PracticeLogClient({
                 </div>
               )}
 
-              {/* タグ */}
+              {/* タグ + テンプレートから作成 (個人側 PracticeTabModal と同じ配置) */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("practiceLog.tagLabel")}
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {t("practiceLog.tagLabel")}
+                  </label>
+                  <Button
+                    type="button"
+                    onClick={() => setTemplateMenuId(menu.id)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 whitespace-nowrap"
+                    disabled={saving}
+                    data-testid={`team-practice-log-template-${index + 1}`}
+                  >
+                    <ClipboardDocumentListIcon className="h-4 w-4" />
+                    <span className="sm:hidden">{tPracticeLog("templateFrom")}</span>
+                    <span className="hidden sm:inline">{tPracticeLog("templateFromLong")}</span>
+                  </Button>
+                </div>
                 <TagInput
                   selectedTags={menu.tags}
                   availableTags={availableTags}
@@ -1441,6 +1496,16 @@ export default function PracticeLogClient({
             )
           }
           onCancel={() => setVideoUploadModal(null)}
+        />
+      )}
+
+      {/* テンプレート選択 (開いたときだけ描画する。テンプレート一覧の取得もそのときに行う) */}
+      {templateMenuId !== null && (
+        <PracticeLogTemplateSelectModal
+          isOpen
+          onClose={() => setTemplateMenuId(null)}
+          onSelect={handleTemplateSelect}
+          onManage={openTemplateManager}
         />
       )}
 

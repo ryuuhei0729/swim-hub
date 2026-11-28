@@ -16,12 +16,18 @@ interface PracticeLogTemplateSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (template: PracticeLogTemplate) => void;
+  /**
+   * 「テンプレートを管理」の動作。省略時はこのページを離れてテンプレート管理へ移る。
+   * 入力途中の内容をページに持つ呼び出し元 (チームの練習ログ代理入力) は、離れずに済む動作を渡す
+   */
+  onManage?: () => void;
 }
 
 export function PracticeLogTemplateSelectModal({
   isOpen,
   onClose,
   onSelect,
+  onManage,
 }: PracticeLogTemplateSelectModalProps) {
   const t = useTranslations("practiceLogTemplates.selectModal");
   const router = useRouter();
@@ -52,8 +58,12 @@ export function PracticeLogTemplateSelectModal({
 
   const handleManageClick = useCallback(() => {
     onClose();
+    if (onManage) {
+      onManage();
+      return;
+    }
     router.push("/account?tab=templates");
-  }, [router, onClose]);
+  }, [router, onClose, onManage]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
