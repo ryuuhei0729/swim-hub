@@ -4,22 +4,28 @@ import React, { useState } from "react";
 import { useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import { TeamEvent } from "@swim-hub/shared/types";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { EventGroupedByMonth } from "@/types/admin-attendance";
+import { effectiveAttendanceStatus } from "@/utils/teamAttendance";
 
 interface BulkChangeModalProps {
   isOpen: boolean;
   events: TeamEvent[];
   onClose: () => void;
-  onBulkUpdate: (selectedEventIds: Set<string>, status: "open" | "closed") => Promise<void>;
+  /** 選んだイベントの受付状態をまとめて変える。成功したら true */
+  onBulkUpdate: (
+    selectedEventIds: Set<string>,
+    status: "open" | "closed",
+  ) => Promise<boolean>;
 }
 
 function groupEventsByMonth(events: TeamEvent[]): EventGroupedByMonth[] {
   const grouped: Record<string, EventGroupedByMonth> = {};
 
   events.forEach((event) => {
-    const date = new Date(event.date);
+    const date = parseISO(event.date);
+    if (!isValid(date)) return;
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const key = `${year}-${month}`;
@@ -41,27 +47,23 @@ function groupEventsByMonth(events: TeamEvent[]): EventGroupedByMonth[] {
   });
 }
 
-export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkChangeModalProps) {
+/**
+ * 受付状態をまとめて変える。mobile と同じく対象は 1 件ずつ選ぶ (月ごとにまとめて選ぶ操作は無い)。
+ * 月の見出しは並びの区切りとしてだけ出す
+ */
+export function BulkChangeModal({
+  isOpen,
+  events,
+  onClose,
+  onBulkUpdate,
+}: BulkChangeModalProps) {
   const t = useTranslations("teamsAdmin");
-  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [updating, setUpdating] = useState(false);
 
   const groupedEvents = groupEventsByMonth(events);
-
-  const handleToggleMonth = (monthEvents: TeamEvent[]) => {
-    const monthEventIds = new Set(monthEvents.map((e) => e.id));
-    const selectedCount = Array.from(monthEventIds).filter((id) => selectedEventIds.has(id)).length;
-    const allSelected = selectedCount === monthEventIds.size;
-
-    setSelectedEventIds((prev) => {
-      const next = new Set(prev);
-      if (allSelected) {
-        monthEventIds.forEach((id) => next.delete(id));
-      } else {
-        monthEventIds.forEach((id) => next.add(id));
-      }
-      return next;
-    });
-  };
 
   const handleToggleEvent = (eventId: string) => {
     setSelectedEventIds((prev) => {
@@ -75,34 +77,23 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
     });
   };
 
-  const getMonthCheckboxState = (
-    monthEvents: TeamEvent[],
-  ): "checked" | "unchecked" | "indeterminate" => {
-    const monthEventIds = monthEvents.map((e) => e.id);
-    const selectedCount = monthEventIds.filter((id) => selectedEventIds.has(id)).length;
-
-    if (selectedCount === 0) return "unchecked";
-    if (selectedCount === monthEventIds.length) return "checked";
-    return "indeterminate";
-  };
-
   const getMonthLabel = (year: number, month: number) => {
     return `${year}年${month}月`;
   };
 
-  const getDayOfMonth = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.getDate();
-  };
-
-  const getWeekday = (dateStr: string) => {
-    return format(new Date(dateStr), "E", { locale: ja });
+  const getDayLabel = (dateStr: string) => {
+    const date = parseISO(dateStr);
+    return isValid(date) ? format(date, "d日（E）", { locale: ja }) : "-";
   };
 
   const handleUpdate = async (status: "open" | "closed") => {
-    await onBulkUpdate(selectedEventIds, status);
-    setSelectedEventIds(new Set());
-    onClose();
+    setUpdating(true);
+    try {
+      const ok = await onBulkUpdate(selectedEventIds, status);
+      if (ok) setSelectedEventIds(new Set());
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleClose = () => {
@@ -110,8 +101,15 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
     onClose();
   };
 
+  const isDisabled = selectedEventIds.size === 0 || updating;
+
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} title={t("bulkChange.title")} size="xl">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={t("bulkChange.title")}
+      size="xl"
+    >
       <div className="space-y-6">
         {groupedEvents.length === 0 ? (
           <div className="bg-gray-50 rounded-lg p-6 text-center">
@@ -120,101 +118,98 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
         ) : (
           <>
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {groupedEvents.map((group) => {
-                const monthCheckboxState = getMonthCheckboxState(group.events);
+              {groupedEvents.map((group) => (
+                <div key={`${group.year}-${group.month}`} className="space-y-2">
+                  {/* 月の見出し (区切りとしてだけ出す) */}
+                  <div className="pb-2 border-b border-gray-200">
+                    <h3 className="text-base font-medium text-gray-900">
+                      {getMonthLabel(group.year, group.month)}
+                    </h3>
+                  </div>
 
-                return (
-                  <div key={`${group.year}-${group.month}`} className="space-y-2">
-                    {/* 月ヘッダー */}
-                    <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={monthCheckboxState === "checked"}
-                        ref={(input) => {
-                          if (input) {
-                            input.indeterminate = monthCheckboxState === "indeterminate";
-                          }
-                        }}
-                        onChange={() => handleToggleMonth(group.events)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label className="text-base font-medium text-gray-900">
-                        {getMonthLabel(group.year, group.month)}
-                      </label>
-                    </div>
+                  {/* 日付リスト */}
+                  <div className="space-y-1">
+                    {group.events.map((event) => {
+                      const isSelected = selectedEventIds.has(event.id);
+                      // 未設定は受付中として扱う
+                      const currentStatus = effectiveAttendanceStatus(event);
+                      const statusLabel =
+                        currentStatus === "open"
+                          ? t("bulkChange.statusOpen")
+                          : t("bulkChange.statusClosed");
+                      const statusColor =
+                        currentStatus === "open"
+                          ? "text-blue-600"
+                          : "text-red-600";
 
-                    {/* 日付リスト */}
-                    <div className="pl-6 space-y-1">
-                      {group.events.map((event) => {
-                        const isSelected = selectedEventIds.has(event.id);
-                        const currentStatus = event.attendance_status || null;
-                        const statusLabel =
-                          currentStatus === "open"
-                            ? t("bulkChange.statusOpen")
-                            : currentStatus === "closed"
-                              ? t("bulkChange.statusClosed")
-                              : t("bulkChange.statusUnset");
-                        const statusColor =
-                          currentStatus === "open"
-                            ? "text-blue-600"
-                            : currentStatus === "closed"
-                              ? "text-red-600"
-                              : "text-gray-500";
-
-                        return (
-                          <div key={event.id} className="flex items-start gap-2 py-1">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleEvent(event.id)}
-                              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {getDayOfMonth(event.date)}日（{getWeekday(event.date)}）
+                      return (
+                        <label
+                          key={event.id}
+                          className="flex items-start gap-2 py-1 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleEvent(event.id)}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-gray-900">
+                                {getDayLabel(event.date)}
+                              </span>
+                              {event.type === "competition" && (
+                                <span className="text-xs text-purple-600">
+                                  {t("bulkChange.competitionLabel")}
                                 </span>
-                                {event.type === "competition" && (
-                                  <span className="text-xs text-purple-600">{t("bulkChange.competitionLabel")}</span>
-                                )}
-                                <span className="text-sm text-gray-700">
-                                  {event.type === "competition"
-                                    ? event.title || t("adminAttendance.eventDefault.competition")
-                                    : event.title || t("adminAttendance.eventDefault.practice")}
+                              )}
+                              <span className="text-sm text-gray-700">
+                                {event.type === "competition"
+                                  ? event.title ||
+                                    t(
+                                      "adminAttendance.eventDefault.competition",
+                                    )
+                                  : event.title ||
+                                    t("adminAttendance.eventDefault.practice")}
+                              </span>
+                              {event.place && (
+                                <span className="text-xs text-gray-600">
+                                  @{event.place}
                                 </span>
-                                {event.place && (
-                                  <span className="text-xs text-gray-600">@{event.place}</span>
-                                )}
-                                <span className={`text-xs font-medium ${statusColor}`}>
-                                  [{statusLabel}]
-                                </span>
-                              </div>
+                              )}
+                              <span
+                                className={`text-xs font-medium ${statusColor}`}
+                              >
+                                [{statusLabel}]
+                              </span>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </label>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             {/* 一括操作ボタン */}
             <div className="flex justify-center gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={() => handleUpdate("open")}
-                disabled={selectedEventIds.size === 0}
+                type="button"
+                disabled={isDisabled}
                 className={`px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors ${
-                  selectedEventIds.size === 0 ? "opacity-50 cursor-not-allowed" : ""
+                  isDisabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 {t("bulkChange.openButton")}
               </button>
               <button
                 onClick={() => handleUpdate("closed")}
-                disabled={selectedEventIds.size === 0}
+                type="button"
+                disabled={isDisabled}
                 className={`px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors ${
-                  selectedEventIds.size === 0 ? "opacity-50 cursor-not-allowed" : ""
+                  isDisabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 {t("bulkChange.closedButton")}

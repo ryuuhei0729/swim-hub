@@ -1,157 +1,43 @@
 "use client";
 
 import React from "react";
-import BaseModal from "@/components/ui/BaseModal";
-import { TeamEvent } from "@swim-hub/shared/types";
-import { AttendanceEditState } from "../hooks/useAttendanceEdit";
-import { getStatusBadge } from "./StatusBadge";
-import { formatDate } from "@apps/shared/utils/date";
-import { resolveAttendanceStatus } from "@apps/shared/utils/attendanceStatus";
 import { useTranslations } from "next-intl";
+import BaseModal from "@/components/ui/BaseModal";
+import type { MyAttendanceItem } from "@/utils/teamAttendance";
+import type { MyAnswerChange } from "../hooks/useMyAttendanceSaver";
+import { AttendanceAnswerRow } from "./AttendanceAnswerRow";
 
 interface MonthDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  events: TeamEvent[];
-  editStates: Record<string, AttendanceEditState>;
-  loading: boolean;
-  error: string | null;
-  saving: boolean;
-  onStatusChange: (eventId: string, status: "present" | "absent" | "other" | null) => void;
-  onNoteChange: (eventId: string, note: string) => void;
-  onSaveAll: () => void;
-  onEventClick: (event: TeamEvent) => void;
+  /** その月の今日以降のイベント */
+  items: MyAttendanceItem[];
+  onSave: (item: MyAttendanceItem, change: MyAnswerChange) => void;
+  onEventClick: (item: MyAttendanceItem) => void;
 }
 
-const NOTE_MAX_LENGTH = 500;
-
+/** 月の詳細。出席 / 欠席 / その他 は押した時点で保存する (まとめて保存のボタンは無い) */
 export const MonthDetailModal = React.memo(
-  ({
-    isOpen,
-    onClose,
-    title,
-    events,
-    editStates,
-    loading,
-    error,
-    saving,
-    onStatusChange,
-    onNoteChange,
-    onSaveAll,
-    onEventClick,
-  }: MonthDetailModalProps) => {
+  ({ isOpen, onClose, title, items, onSave, onEventClick }: MonthDetailModalProps) => {
     const t = useTranslations("teams");
 
     return (
       <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="xl">
-        {loading ? (
-          <div className="text-center py-6">
-            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-            <p className="mt-1.5 text-sm text-gray-500">{t("monthDetail.loading")}</p>
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-sm text-red-800">{error}</p>
+        {items.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg p-6 text-center">
+            <p className="text-sm text-gray-600">{t("monthList.empty")}</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {events.length === 0 ? (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <p className="text-sm text-gray-600">{t("monthList.empty")}</p>
-              </div>
-            ) : (
-              <>
-                <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
-                  {events.map((event) => {
-                    const editState = editStates[event.id] || { status: null, note: "" };
-
-                    return (
-                      <div
-                        key={`${event.type}-${event.id}`}
-                        className={`p-4 hover:bg-gray-50 cursor-pointer ${
-                          event.type === "competition" ? "bg-purple-50" : "bg-white"
-                        }`}
-                        onClick={() => onEventClick(event)}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                              {formatDate(event.date, "shortWithWeekday")}
-                            </span>
-                            <h3 className="text-xs font-medium text-gray-900">
-                              {event.type === "competition" ? event.title : t("monthDetail.practiceLabel")}
-                            </h3>
-                            {event.place && (
-                              <span className="text-xs text-gray-600">@{event.place}</span>
-                            )}
-                          </div>
-
-                          <div
-                            className="flex flex-col items-end gap-1.5 shrink-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div>{getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}</div>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => onStatusChange(event.id, "present")}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                  editState.status === "present"
-                                    ? "bg-green-100 text-green-800 border-2 border-green-500"
-                                    : "bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent"
-                                }`}
-                              >
-                                {t("attendanceList.statusPresent")}
-                              </button>
-                              <button
-                                onClick={() => onStatusChange(event.id, "absent")}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                  editState.status === "absent"
-                                    ? "bg-red-100 text-red-800 border-2 border-red-500"
-                                    : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
-                                }`}
-                              >
-                                {t("attendanceList.statusAbsent")}
-                              </button>
-                              <button
-                                onClick={() => onStatusChange(event.id, "other")}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                  editState.status === "other"
-                                    ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-500"
-                                    : "bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent"
-                                }`}
-                              >
-                                {t("attendanceList.statusOther")}
-                              </button>
-                              <input
-                                type="text"
-                                value={editState.note}
-                                onChange={(e) => onNoteChange(event.id, e.target.value)}
-                                placeholder={t("monthDetail.notePlaceholder")}
-                                maxLength={NOTE_MAX_LENGTH}
-                                className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex justify-center pt-3">
-                  <button
-                    onClick={onSaveAll}
-                    disabled={saving}
-                    className={`px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors ${
-                      saving ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    {saving ? t("monthDetail.saving") : t("monthDetail.saveButton")}
-                  </button>
-                </div>
-              </>
-            )}
+          <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
+            {items.map((item) => (
+              <AttendanceAnswerRow
+                key={`${item.event.type}-${item.event.id}`}
+                item={item}
+                onSave={onSave}
+                onOpen={onEventClick}
+              />
+            ))}
           </div>
         )}
       </BaseModal>

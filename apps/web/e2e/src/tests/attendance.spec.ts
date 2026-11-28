@@ -164,14 +164,7 @@ test.describe("出席管理のテスト", () => {
     expect(
       buttonClasses?.includes("green") || buttonClasses?.includes("border-green"),
     ).toBeTruthy();
-
-    // ステップ5: 保存ボタンが有効になることを確認
-    const saveButton = page.locator('button:has-text("保存")').first();
-    const isSaveButtonEnabled = await saveButton.isEnabled();
-
-    // 変更があれば保存ボタンが有効になる（既に同じ状態の場合は無効のまま）
-    // どちらの状態でもテストは成功とする
-    expect(saveButton).toBeVisible();
+    // 押した時点で保存されるので、保存ボタンは無い
   });
 
   /**
@@ -347,8 +340,7 @@ test.describe("出席管理のテスト", () => {
       expect(
         modalContent?.includes("出席") ||
           modalContent?.includes("欠席") ||
-          modalContent?.includes("その他") ||
-          modalContent?.includes("保存"),
+          modalContent?.includes("その他"),
       ).toBeTruthy();
 
       // ステップ6: モーダルを閉じる

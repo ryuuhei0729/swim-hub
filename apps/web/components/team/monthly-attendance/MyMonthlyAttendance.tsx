@@ -1,21 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+/**
+ * チーム「出欠」タブ (利用者)
+ *
+ * mobile のチームの出欠タブと同じく、今日〜12 か月先の練習・大会だけを出す (過去のものは出さず、回答もできない)。
+ * 出席 / 欠席 / その他 は押した時点で保存し、備考は入力欄から離れたとき・Enter で保存する (保存ボタンは無い)。
+ * - 月の一覧: 押すとその月の詳細 (モーダル)
+ * - 直近の出欠: 今月 (今日以降)・来月
+ * - 行を押すと、そのイベントの全員の出欠 (出欠状況モーダル)
+ */
+import React, { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/contexts";
 import { useTranslations } from "next-intl";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { TeamEvent } from "@swim-hub/shared/types";
+import { groupMyAttendanceByMonth, type MyAttendanceItem } from "@/utils/teamAttendance";
 import { MonthList } from "./components/MonthList";
 import { RecentAttendance } from "./components/RecentAttendance";
 import { MonthDetailModal } from "./components/MonthDetailModal";
 import { AttendanceStatusModal } from "./components/AttendanceStatusModal";
-import { useMonthList } from "./hooks/useMonthList";
-import { useRecentAttendance } from "./hooks/useRecentAttendance";
-import { useMonthDetail } from "./hooks/useMonthDetail";
-import { useAttendanceEdit } from "./hooks/useAttendanceEdit";
+import { useMyAttendanceList } from "./hooks/useMyAttendanceList";
+import { useMyAttendanceSaver, type MyAnswerChange } from "./hooks/useMyAttendanceSaver";
 import { useAttendanceStatus } from "./hooks/useAttendanceStatus";
-import { invalidateTeamAttendanceAnswerQueries } from "@/hooks/queries/teamDetailKeys";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
@@ -23,57 +29,22 @@ export interface MyMonthlyAttendanceProps {
 
 export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps) {
   const { supabase, user } = useAuth();
-  const queryClient = useQueryClient();
   const t = useTranslations("teams");
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
+  const userId = user?.id ?? null;
 
-  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<TeamEvent | null>(
     null,
   );
-  const abortControllerRef = useRef<AbortController | null>(null);
 
+  const { items, queryKey, loading, error } = useMyAttendanceList(teamId, supabase, userId);
   const {
-    monthList,
-    loading: loadingMonthList,
-    error: monthListError,
-    loadMonthList,
-    updateMonthStatus,
-  } = useMonthList(teamId, supabase, attendanceAPI, user?.id ?? null);
-
-  const {
-    events: recentEvents,
-    attendances: recentAttendances,
-    editStates: recentEditStates,
-    loading: loadingRecent,
-    savingEventIds,
-    error: recentError,
-    loadRecentAttendances,
-    handleStatusChange: handleRecentStatusChange,
-    handleNoteChange: handleRecentNoteChange,
-    saveEvent: handleSaveRecentEvent,
-  } = useRecentAttendance(teamId, supabase, attendanceAPI, updateMonthStatus);
-
-  const {
-    events: monthEvents,
-    attendances: monthAttendances,
-    loading: loadingMonth,
-    error: monthError,
-    loadAttendances: loadMonthAttendances,
-  } = useMonthDetail(teamId, supabase, attendanceAPI);
-
-  const {
-    editStates: monthEditStates,
-    saving: savingMonth,
-    error: editError,
-    handleStatusChange: handleMonthStatusChange,
-    handleNoteChange: handleMonthNoteChange,
-    initializeEditStates,
-    saveAll,
-    setEditStates,
-  } = useAttendanceEdit(teamId, supabase, attendanceAPI);
+    saveAnswer,
+    error: saveError,
+    clearError: clearSaveError,
+  } = useMyAttendanceSaver({ supabase, attendanceAPI, userId, listKey: queryKey });
 
   const {
     attendanceData,
@@ -82,89 +53,35 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     loadAttendanceData,
   } = useAttendanceStatus(teamId, supabase, isAttendanceModalOpen);
 
-  // 月別サマリは useMonthList (React Query) がマウント時に取得する。
-  // 直近の出欠は回答フォームの初期値になるので、キャッシュせず毎回最新を読み込む
-  useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+  const months = useMemo(() => groupMyAttendanceByMonth(items), [items]);
+  // モーダルには一覧のキャッシュの最新の値を渡す (保存後の回答が反映される)
+  const selectedMonth = useMemo(
+    () => months.find((month) => month.key === selectedMonthKey) ?? null,
+    [months, selectedMonthKey],
+  );
 
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+  const handleSave = useCallback(
+    (item: MyAttendanceItem, change: MyAnswerChange) => {
+      void saveAnswer(item, change);
+    },
+    [saveAnswer],
+  );
 
-    loadRecentAttendances(abortController.signal);
-
-    return () => {
-      abortController.abort();
-    };
-  }, [loadRecentAttendances]);
-
-  useEffect(() => {
-    if (selectedMonth && isModalOpen) {
-      const loadData = async () => {
-        const result = await loadMonthAttendances(selectedMonth.year, selectedMonth.month);
-        if (result) {
-          initializeEditStates(result.events, result.attendances);
-        }
-      };
-      loadData();
-    }
-  }, [selectedMonth, isModalOpen, loadMonthAttendances, initializeEditStates]);
-
-  const handleMonthClick = (year: number, month: number) => {
-    setSelectedMonth({ year, month });
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedMonth(null);
-    setEditStates({});
-  };
-
-  const handleSaveAll = async () => {
-    await saveAll(monthEvents, monthAttendances, async () => {
-      // 出欠状況モーダル (全員の回答) のキャッシュに保存前の回答が残らないよう落とす
-      await invalidateTeamAttendanceAnswerQueries(queryClient, monthEvents);
-      if (selectedMonth) {
-        await loadMonthAttendances(selectedMonth.year, selectedMonth.month);
-      }
-      await loadMonthList();
-      handleCloseModal();
-    });
-  };
-
-  const handleOpenAttendanceModal = async (event: TeamEvent) => {
-    setSelectedEventForAttendance(event);
-    setIsAttendanceModalOpen(true);
-    await loadAttendanceData(event);
-  };
+  const handleOpenAttendanceModal = useCallback(
+    (item: MyAttendanceItem) => {
+      setSelectedEventForAttendance(item.event);
+      setIsAttendanceModalOpen(true);
+      void loadAttendanceData(item.event);
+    },
+    [loadAttendanceData],
+  );
 
   const handleCloseAttendanceModal = () => {
     setIsAttendanceModalOpen(false);
     setSelectedEventForAttendance(null);
   };
 
-  // 直近の出欠を 1 件保存したら、そのイベントの出欠状況モーダルのキャッシュも落とす
-  // (月別サマリは useRecentAttendance が updateMonthStatus で更新する)
-  const handleSaveRecentEventAndInvalidate = useCallback(
-    async (eventId: string) => {
-      await handleSaveRecentEvent(eventId);
-      const event = recentEvents.find((e) => e.id === eventId);
-      if (event) {
-        await invalidateTeamAttendanceAnswerQueries(queryClient, [event]);
-      }
-    },
-    [handleSaveRecentEvent, recentEvents, queryClient],
-  );
-
-  const getMonthLabel = (year: number, month: number) => {
-    return t("attendance.monthLabel", { year, month });
-  };
-
-  const error = monthListError || recentError || monthError || editError;
-
-  if (loadingMonthList) {
+  if (loading) {
     return (
       <div className="p-4">
         <div className="text-center py-6">
@@ -187,31 +104,36 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
   return (
     <div className="p-4">
-      <MonthList monthList={monthList} onMonthClick={handleMonthClick} />
+      {saveError && (
+        <div
+          className="mb-4 flex items-start justify-between gap-3 bg-red-50 border border-red-200 rounded-lg p-3"
+          role="alert"
+        >
+          <p className="text-sm text-red-800">{saveError}</p>
+          <button
+            type="button"
+            onClick={clearSaveError}
+            className="text-xs text-red-700 hover:text-red-900 shrink-0"
+          >
+            {t("monthDetail.close")}
+          </button>
+        </div>
+      )}
 
-      <RecentAttendance
-        events={recentEvents}
-        editStates={recentEditStates}
-        savingEventIds={savingEventIds}
-        loading={loadingRecent}
-        onStatusChange={handleRecentStatusChange}
-        onNoteChange={handleRecentNoteChange}
-        onSave={handleSaveRecentEventAndInvalidate}
-        attendances={recentAttendances}
-      />
+      <MonthList months={months} onMonthClick={(month) => setSelectedMonthKey(month.key)} />
+
+      <RecentAttendance months={months} onSave={handleSave} onOpen={handleOpenAttendanceModal} />
 
       <MonthDetailModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={selectedMonth ? getMonthLabel(selectedMonth.year, selectedMonth.month) : ""}
-        events={monthEvents}
-        editStates={monthEditStates}
-        loading={loadingMonth}
-        error={monthError}
-        saving={savingMonth}
-        onStatusChange={handleMonthStatusChange}
-        onNoteChange={handleMonthNoteChange}
-        onSaveAll={handleSaveAll}
+        isOpen={selectedMonthKey !== null}
+        onClose={() => setSelectedMonthKey(null)}
+        title={
+          selectedMonth
+            ? t("attendance.monthLabel", { year: selectedMonth.year, month: selectedMonth.month })
+            : ""
+        }
+        items={selectedMonth?.items ?? []}
+        onSave={handleSave}
         onEventClick={handleOpenAttendanceModal}
       />
 

@@ -27,35 +27,19 @@ export const StatusBadge = React.memo(({ status }: StatusBadgeProps) => {
 
 StatusBadge.displayName = "StatusBadge";
 
-export function AttendanceStatusBadge({
-  status,
-}: {
-  status: "open" | "closed" | null | undefined;
-}) {
+/**
+ * 出欠の受付状態のバッジ。受付状態は 受付中 / 締切 の 2 つだけ
+ * (未設定は受付中として扱う。effectiveAttendanceStatus で丸めてから渡す)
+ */
+export function AttendanceStatusBadge({ status }: { status: "open" | "closed" }) {
   const t = useTranslations("teams");
-  switch (status) {
-    case "open":
-      return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">
-          {t("attendance.statusOpen")}
-        </span>
-      );
-    case "closed":
-      return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-800">
-          {t("attendance.statusClosed")}
-        </span>
-      );
-    default:
-      return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
-          {t("attendance.statusUnset")}
-        </span>
-      );
-  }
+  return status === "open" ? (
+    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">
+      {t("attendance.statusOpen")}
+    </span>
+  ) : (
+    <span className="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-800">
+      {t("attendance.statusClosed")}
+    </span>
+  );
 }
-
-/** @deprecated Use AttendanceStatusBadge component instead */
-export const getStatusBadge = (status: "open" | "closed" | null | undefined) => {
-  return <AttendanceStatusBadge status={status} />;
-};
