@@ -3630,6 +3630,7 @@
       "creating": "作成中...",
       "createButton": "作成",
       "updateFailed": "チーム練習記録の更新に失敗しました",
+      "imageSaveFailed": "練習記録は保存されましたが、画像の保存に失敗しました",
       "deleteFailed": "チーム練習記録の削除に失敗しました"
     },
     "competitionForm": {
@@ -3641,6 +3642,7 @@
       "authRequired": "認証が必要です",
       "createFailed": "チーム大会の作成に失敗しました",
       "updateFailed": "チーム大会の更新に失敗しました",
+      "imageSaveFailed": "大会は保存されましたが、画像の保存に失敗しました",
       "deleteFailed": "チーム大会の削除に失敗しました",
       "competitionNameLabel": "大会名",
       "competitionNamePlaceholder": "例: 県大会（空欄の場合は「大会」と表示）",

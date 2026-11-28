@@ -25,6 +25,9 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
+import type { ExistingImage } from "@/components/forms/PracticeImageUploader";
+import { resolveGalleryImages } from "@/lib/image-url";
+import { hasParentImageChanges, saveParentImages } from "@/utils/parentImageSave";
 import { TeamPracticesAPI } from "@apps/shared/api/teams/practices";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import Pagination from "@/components/ui/Pagination";
@@ -109,6 +112,7 @@ export default function TeamPractices({
     availableTags,
     setAvailableTags,
     setEditingPracticeId,
+    setEditingData,
     openTabModal,
     closeTabModal,
     closeAll: closePracticeStoreAll,
@@ -142,22 +146,55 @@ export default function TeamPractices({
     openBasicForm(new Date());
   };
 
+  // 編集フォームに既存の画像を出すための取得。開き直したときに前の取得結果を反映しないよう番号で区別する
+  const editImageRequestIdRef = useRef(0);
+
   // 管理者向け: 既存の練習記録を編集(PracticeBasicForm を editData 付きで開く)
   const handleEditPractice = (e: React.MouseEvent, practice: TeamPractice) => {
     e.stopPropagation();
-    openBasicForm(new Date(practice.date), {
+    const baseEditData = {
       id: practice.id,
       type: "practice",
       date: practice.date,
       title: practice.title || "",
       place: practice.place || "",
       note: practice.note || "",
-    } as EditingData);
+    };
+    openBasicForm(new Date(practice.date), baseEditData as EditingData);
+
+    // 既存の画像は署名付き URL の解決を待たずにフォームを開き、解決後に editingData へ足す
+    // (ダッシュボードの編集と同じ。swimhub-tasks#58)
+    const requestId = ++editImageRequestIdRef.current;
+    void (async () => {
+      try {
+        const { data, error: imagePathsError } = await supabase
+          .from("practices")
+          .select("image_paths")
+          .eq("id", practice.id)
+          .single();
+        if (imagePathsError) throw imagePathsError;
+        const paths = (data as { image_paths: string[] | null } | null)?.image_paths ?? [];
+        if (paths.length === 0) return;
+        const images = await resolveGalleryImages("practice-images", paths);
+        const state = usePracticeStore.getState();
+        if (
+          editImageRequestIdRef.current !== requestId ||
+          !state.isBasicFormOpen ||
+          state.editingData?.id !== practice.id ||
+          images.length === 0
+        ) {
+          return;
+        }
+        setEditingData({ ...baseEditData, images } as EditingData);
+      } catch (err) {
+        console.error("練習の画像の取得に失敗:", err);
+      }
+    })();
   };
 
   const handlePracticeBasicSubmit = async (
     basicData: { date: string; title: string; place: string; note: string },
-    _imageData?: PracticeImageData,
+    imageData?: PracticeImageData,
     _continueToNext?: boolean,
   ) => {
     // ユーザーがログインしていない場合はエラーを表示して早期リターン
@@ -171,15 +208,16 @@ export default function TeamPractices({
     try {
       const api = new TeamPracticesAPI(supabase);
 
-      if (editingData?.id) {
-        await api.update(editingData.id, {
+      let practiceId = editingData?.id;
+      if (practiceId) {
+        await api.update(practiceId, {
           date: basicData.date,
           title: basicData.title || null,
           place: basicData.place || null,
           note: basicData.note || null,
         });
       } else {
-        await api.create({
+        const created = await api.create({
           user_id: user.id,
           team_id: teamId,
           date: basicData.date,
@@ -187,11 +225,24 @@ export default function TeamPractices({
           place: basicData.place || null,
           note: basicData.note || null,
         });
+        practiceId = created.id;
+      }
+
+      // 画像 (追加・削除)。練習本体は保存済みなので、失敗しても一覧は更新して理由を出す
+      let imageSaveFailed = false;
+      if (practiceId && imageData && hasParentImageChanges(imageData)) {
+        try {
+          await saveParentImages(supabase, "practice", practiceId, imageData);
+        } catch (imageErr) {
+          console.error("練習の画像の保存に失敗:", imageErr);
+          imageSaveFailed = true;
+        }
       }
 
       closeBasicForm();
-      await loadTeamPractices(editingData?.id);
+      await loadTeamPractices(practiceId);
       setCurrentPage(1);
+      if (imageSaveFailed) setError(t("practiceForm.imageSaveFailed"));
     } catch (err) {
       console.error("練習の保存に失敗:", err);
       setError(
@@ -660,6 +711,7 @@ export default function TeamPractices({
                     (editingData as { title?: string | null }).title ?? null,
                   place: (editingData as { place?: string }).place,
                   note: (editingData as { note?: string }).note,
+                  images: (editingData as { images?: ExistingImage[] }).images,
                 }
               : undefined
           }
