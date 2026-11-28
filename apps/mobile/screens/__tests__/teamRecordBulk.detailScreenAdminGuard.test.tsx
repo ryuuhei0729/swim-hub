@@ -58,9 +58,9 @@ describe("[V-08] 種目詳細画面の管理者ゲート", () => {
       expect(harness.getStyles).toHaveBeenCalled();
     });
 
-    // 権限ゲート: webGuide (拒否) 文言が表示され、保存ボタンは表示されない
+    // 権限ゲート: 管理者のみ (拒否) 文言が表示され、保存ボタンは表示されない
     await waitFor(() => {
-      expect(screen.getByText(ja.teams.mobile.webGuide)).toBeTruthy();
+      expect(screen.getByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeTruthy();
     });
     expect(screen.queryByText(ja.teams.record.saveButton)).toBeNull();
   });
@@ -76,7 +76,7 @@ describe("[V-08] 種目詳細画面の管理者ゲート", () => {
     await waitFor(() => {
       expect(screen.getByText(ja.teams.record.saveButton)).toBeTruthy();
     });
-    expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
+    expect(screen.queryByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeNull();
   });
 
   it("非泳者かつ管理者のユーザーは拒否されない (事実8 の権限ゲートとの非混同確認)", async () => {
@@ -95,6 +95,6 @@ describe("[V-08] 種目詳細画面の管理者ゲート", () => {
     await waitFor(() => {
       expect(screen.getByText(ja.teams.record.saveButton)).toBeTruthy();
     });
-    expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
+    expect(screen.queryByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeNull();
   });
 });

@@ -78,7 +78,7 @@ describe("TeamRecordStyleListScreen/Detail - 非泳者管理者の締め出し�
       expect(harness.getStyles).toHaveBeenCalled();
     });
 
-    expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
+    expect(screen.queryByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeNull();
   });
 
   it("[V-15-02] 詳細画面の MemberSelectModal に渡る候補一覧には非泳者が含まれない", async () => {

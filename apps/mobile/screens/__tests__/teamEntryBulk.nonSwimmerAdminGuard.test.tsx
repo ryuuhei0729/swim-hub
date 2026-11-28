@@ -7,7 +7,7 @@
 //     は useTeamsQuery が返す**生の** members を読む。もし Developer が「候補提示の直前」
 //     ではなくこの手前で members を非泳者除外フィルタに通してしまうと、
 //     「非泳者だが管理者でもあるユーザー (例: プレーしないコーチ件管理者)」が
-//     admin 判定に失敗し、権限ゲート画面 (teams.mobile.webGuide) に弾かれて
+//     admin 判定に失敗し、権限ゲート画面 (teams.mobile.bulkRegisterAdminRequired) に弾かれて
 //     代理入力に一切アクセスできなくなる。
 //
 //   [V-14-01] 非泳者かつ管理者のログインユーザーは、権限ゲート画面を表示されず
@@ -76,13 +76,13 @@ describe("TeamEntryBulkFormScreen - 非泳者管理者の締め出し回帰 (R4)
 
     render(<TeamEntryBulkFormScreen />, { wrapper: createWrapper(queryClient) });
 
-    // 権限ゲート画面 (teams.mobile.webGuide) が出ないことを確認する。
+    // 権限ゲート画面 (teams.mobile.bulkRegisterAdminRequired) が出ないことを確認する。
     // waitFor でローディング解消を待ってから判定する。
     await waitFor(() => {
       expect(harness.getStyles).toHaveBeenCalled();
     });
 
-    expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
+    expect(screen.queryByText(ja.teams.mobile.bulkRegisterAdminRequired)).toBeNull();
   });
 
   it("[V-14-02] MemberSelectModal に渡る候補一覧には非泳者が含まれない (admin判定とは独立してフィルタされる)", async () => {

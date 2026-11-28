@@ -2616,7 +2616,6 @@
       "noTeamsSubtext": "チームを作成するか、招待コードで参加してください",
       "pendingRetry": "状態を更新",
       "teamNotFound": "チームが見つかりません",
-      "webGuide": "チーム管理機能に関してはWeb版をご利用ください。",
       "bulkRegisterAdminRequired": "この機能を利用するには管理者権限が必要です。",
       "webGuideButton": "Web版を開く",
       "pendingMessage": "チームへの参加リクエストは管理者の承認待ちです。\n承認されるまでしばらくお待ちください。",
