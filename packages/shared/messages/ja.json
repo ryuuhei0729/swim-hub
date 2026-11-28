@@ -4349,6 +4349,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
+      "segmentHeader": "区間",
       "splitTimeHeader": "Time"
     },
     "bestBadge": {

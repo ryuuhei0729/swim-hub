@@ -46,6 +46,13 @@ vi.mock("@apps/shared/api/records", () => ({
   }),
 }));
 
+// --- カード上のベスト判定バッジ (#81) はここでは対象外 (RecordDetail.bestBadge.test.tsx で検証)。
+// 共有モーダル内のバッジと文言が重なって判定がぶれないよう、カード側は描画しない ---
+vi.mock("@/components/records/BestTimeBadge", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/records/BestTimeBadge")>()),
+  default: () => null,
+}));
+
 // --- expo-sharing / react-native-view-shot（ShareCardModal 実体が使う） ---
 vi.mock("expo-sharing", () => ({
   isAvailableAsync: vi.fn().mockResolvedValue(true),

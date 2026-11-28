@@ -4349,6 +4349,7 @@
       "noStyle": "请选择项目",
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
+      "segmentHeader": "区间",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {

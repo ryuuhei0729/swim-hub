@@ -4349,6 +4349,7 @@
       "noStyle": "종목을 선택해 주세요",
       "noLap": "랩 타임을 계산할 수 없습니다",
       "distanceHeader": "거리",
+      "segmentHeader": "구간",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {

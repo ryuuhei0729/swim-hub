@@ -4349,6 +4349,7 @@
       "noStyle": "Bitte wählen Sie eine Disziplin aus",
       "noLap": "Rundenzeiten können nicht berechnet werden",
       "distanceHeader": "Distanz",
+      "segmentHeader": "Abschnitt",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {

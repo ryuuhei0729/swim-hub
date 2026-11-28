@@ -4346,6 +4346,7 @@
       "noStyle": "Please select an event",
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
+      "segmentHeader": "Segment",
       "splitTimeHeader": "Split Time"
     },
     "bestBadge": {
