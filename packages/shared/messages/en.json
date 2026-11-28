@@ -3891,6 +3891,7 @@
       "upload": {
         "dropzoneText": "Drag & drop an image, or click to select",
         "dropzoneHint": "JPEG / PNG, up to 5MB",
+        "mobileHint": "Take a photo of the time sheet or choose one from your library",
         "invalidTypeError": "Only JPEG or PNG images are supported",
         "fileSizeError": "Image size must be 5MB or less",
         "analyzeButton": "Analyze",
@@ -3929,7 +3930,8 @@
       "errors": {
         "serverError": "A server error occurred",
         "invalidFormat": "Invalid analysis result format. Please try again.",
-        "analyzeError": "An error occurred during analysis"
+        "analyzeError": "An error occurred during analysis",
+        "dailyLimitReached": "You have reached today's limit. Upgrade to Premium for unlimited use."
       }
     },
     "adminAttendance": {

@@ -155,6 +155,8 @@ vi.mock("@/components/shared/VideoUploader", () => ({
 vi.mock("@/components/shared/ImageUploader", () => ({
   ImageUploader: () => null,
 }));
+// 写真からの読み取り (expo-image-picker 等を読み込む) も同じ理由で差し替える
+vi.mock("@/components/teams/TimesheetScanModal", () => ({ TimesheetScanModal: () => null }));
 
 import { Alert } from "react-native";
 import {

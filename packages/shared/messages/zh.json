@@ -3894,6 +3894,7 @@
       "upload": {
         "dropzoneText": "拖放图片，或点击选择",
         "dropzoneHint": "JPEG / PNG，5MB 以内",
+        "mobileHint": "请拍摄计时表照片，或从相册中选择",
         "invalidTypeError": "仅支持 JPEG 或 PNG 格式的图片",
         "fileSizeError": "图片大小须在 5MB 以内",
         "analyzeButton": "开始解析",
@@ -3932,7 +3933,8 @@
       "errors": {
         "serverError": "发生了服务器错误",
         "invalidFormat": "解析结果格式不正确，请重试。",
-        "analyzeError": "解析过程中发生错误"
+        "analyzeError": "解析过程中发生错误",
+        "dailyLimitReached": "已达到今日使用次数上限。升级到 Premium 即可无限使用"
       }
     },
     "adminAttendance": {

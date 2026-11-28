@@ -3894,6 +3894,7 @@
       "upload": {
         "dropzoneText": "画像をドラッグ&ドロップ、またはクリックして選択",
         "dropzoneHint": "JPEG / PNG, 5MB以下",
+        "mobileHint": "タイム記録表の写真を撮るか、ライブラリから選んでください",
         "invalidTypeError": "画像形式はJPEGまたはPNGのみ対応しています",
         "fileSizeError": "画像サイズは5MB以下にしてください",
         "analyzeButton": "解析する",
@@ -3932,7 +3933,8 @@
       "errors": {
         "serverError": "サーバーエラーが発生しました",
         "invalidFormat": "解析結果の形式が不正です。再度お試しください",
-        "analyzeError": "解析中にエラーが発生しました"
+        "analyzeError": "解析中にエラーが発生しました",
+        "dailyLimitReached": "今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます"
       }
     },
     "adminAttendance": {

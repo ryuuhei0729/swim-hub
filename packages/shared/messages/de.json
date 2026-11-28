@@ -3894,6 +3894,7 @@
       "upload": {
         "dropzoneText": "Bild per Drag & Drop ablegen oder zur Auswahl klicken",
         "dropzoneHint": "JPEG / PNG, bis zu 5MB",
+        "mobileHint": "Fotografieren Sie den Zeitbogen oder wählen Sie ein Foto aus der Mediathek",
         "invalidTypeError": "Es werden nur Bilder im Format JPEG oder PNG unterstützt",
         "fileSizeError": "Die Bildgröße darf höchstens 5MB betragen",
         "analyzeButton": "Analysieren",
@@ -3932,7 +3933,8 @@
       "errors": {
         "serverError": "Ein Serverfehler ist aufgetreten",
         "invalidFormat": "Das Format der Analyseergebnisse ist ungültig. Bitte versuchen Sie es erneut.",
-        "analyzeError": "Bei der Analyse ist ein Fehler aufgetreten"
+        "analyzeError": "Bei der Analyse ist ein Fehler aufgetreten",
+        "dailyLimitReached": "Das heutige Nutzungslimit ist erreicht. Mit Premium unbegrenzt nutzen."
       }
     },
     "adminAttendance": {

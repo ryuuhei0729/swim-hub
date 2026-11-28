@@ -46,6 +46,8 @@ import { DistanceChips } from "@/components/practices/DistanceChips";
 import { NumberStepper } from "@/components/ui/NumberStepper";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
+import { TimesheetScanModal } from "@/components/teams/TimesheetScanModal";
+import type { ScanMenuDraft } from "@apps/shared/utils/timesheetScan";
 import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
@@ -208,6 +210,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   // targetUserIds/times/videoAssets は一切変更しない)。
   const [templateModalMenuId, setTemplateModalMenuId] = useState<string | null>(null);
   const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
   // TagSelectModal ⇄ TagManageModal の遷移 (二重マウント競合の修正) は共通フックに集約。
   const {
     showTagManageModal,
@@ -499,6 +502,61 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
             }
           : menu,
       ),
+    );
+  };
+
+  // ---- 写真からタイム表を読み取る (web PracticeLogClient の handleOcrApply と同じ) ----
+  // 読み取った種目ごとのメニューを、開いたままの初期メニューなら置き換え、
+  // 入力済みのメニューがあれば「上書き」か「後ろに追加」かを選んでもらう
+  const handleScanApply = (drafts: ScanMenuDraft[]) => {
+    if (drafts.length === 0) return;
+    const scannedMenus: PracticeMenu[] = drafts.map((d) => ({
+      id: genId(),
+      style: d.style,
+      swimCategory: "Swim",
+      distance: d.distance,
+      reps: d.reps,
+      sets: d.sets,
+      circleMin: d.circle ? Math.floor(d.circle / 60) : "",
+      circleSec: d.circle ? d.circle % 60 : "",
+      note: d.note,
+      tags: [],
+      targetUserIds: d.members.map((m) => m.userId),
+      times: Object.fromEntries(
+        d.members.map((m) => [
+          m.userId,
+          m.times.map((time) => ({ ...time, displayValue: formatTime(time.time) })),
+        ]),
+      ),
+      videoAssets: {},
+    }));
+    const overwrite = () => {
+      setMenus(scannedMenus);
+      setActiveMenuIndex(0);
+    };
+    const append = () => {
+      setMenus((prev) => {
+        setActiveMenuIndex(prev.length);
+        return [...prev, ...scannedMenus];
+      });
+    };
+    // 新規作成で開いたまま何も変えていなければ、確認なしで置き換える
+    if (!isEditMode && !hasUnsavedMenus) {
+      overwrite();
+      return;
+    }
+    Alert.alert(
+      t("teamsAdmin.practiceLog.overwriteConfirm.title"),
+      t("teamsAdmin.practiceLog.overwriteConfirm.message"),
+      [
+        { text: t("teamsAdmin.practiceLog.overwriteConfirm.cancelLabel"), style: "cancel" },
+        { text: t("teamsAdmin.practiceLog.overwriteConfirm.tertiaryLabel"), onPress: append },
+        {
+          text: t("teamsAdmin.practiceLog.overwriteConfirm.confirmLabel"),
+          style: "destructive",
+          onPress: overwrite,
+        },
+      ],
     );
   };
 
@@ -867,6 +925,16 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
             </View>
           ) : null}
           <TimeInputHelp showCarryOver style={{ marginTop: 8 }} />
+          <Pressable
+            style={[styles.scanButton, saving && styles.scanButtonDisabled]}
+            onPress={() => setShowScanModal(true)}
+            disabled={saving}
+            accessibilityRole="button"
+            testID="team-practice-log-ocr-scan-button"
+          >
+            <Feather name="camera" size={16} color="#FFFFFF" />
+            <Text style={styles.scanButtonText}>{t("teamsAdmin.practiceLog.ocrButton")}</Text>
+          </Pressable>
         </View>
 
         {(() => {
@@ -1266,6 +1334,14 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         onDelete={handleDeleteTag}
       />
 
+      {/* 写真からタイム表を読み取る (web OcrScanModal と同じ scan-timesheet を使う) */}
+      <TimesheetScanModal
+        visible={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        members={memberSelectCandidates}
+        onApply={handleScanApply}
+      />
+
       {/* テンプレート選択モーダル (個人側 PracticeTabFormScreen と共通コンポーネント) */}
       <PracticeLogTemplateSelectModal
         visible={showTemplateSelectModal}
@@ -1338,6 +1414,18 @@ const styles = StyleSheet.create({
   practiceSubtitle: { fontSize: 13, color: "#6B7280", marginTop: 4 },
   placeRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   placeText: { fontSize: 13, color: "#6B7280" },
+  scanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#4F46E5",
+  },
+  scanButtonDisabled: { opacity: 0.5 },
+  scanButtonText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
   field: { marginBottom: 14 },
   fieldHalf: { flex: 1 },
   row: { flexDirection: "row", gap: 12, marginBottom: 14 },
