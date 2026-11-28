@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useAuth } from "@/contexts";
 import {
   CompetitionDetails,
@@ -92,6 +92,7 @@ export default function CompetitionDetailModal({
   onDeleteEntry,
 }: CompetitionDetailModalProps) {
   const t = useTranslations("dashboard");
+  const locale = useLocale() as SupportedLocale;
   const { supabase } = useAuth();
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
@@ -106,7 +107,7 @@ export default function CompetitionDetailModal({
   if (!isOpen) return null;
 
   const parsedDate = date ? parseISO(date) : null;
-  const headerDate = parsedDate && isValid(parsedDate) ? format(parsedDate, "M月d日(E)", { locale: ja }) : "";
+  const headerDate = parsedDate && isValid(parsedDate) ? formatDate(parsedDate, "shortWithWeekday", locale) : "";
 
   // 大会削除確認モーダルを開く。チーム大会は records を削除しないため件数取得を行わない。
   // 件数取得の失敗は非致命: 削除自体はブロックせず、件数なしの汎用文言にフォールバックする。

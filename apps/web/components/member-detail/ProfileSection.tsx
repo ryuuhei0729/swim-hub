@@ -1,7 +1,9 @@
+"use client";
+
 import React from "react";
-import { useTranslations } from "next-intl";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import Avatar from "@/components/ui/Avatar";
 import { StarIcon } from "@heroicons/react/24/outline";
 import type { MemberDetail } from "@/types/member-detail";
@@ -13,6 +15,7 @@ interface ProfileSectionProps {
 
 export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
   const t = useTranslations("teams.memberDetail.profileSection");
+  const locale = useLocale() as SupportedLocale;
   return (
     <div className="mb-10">
       <div className="flex items-start space-x-8">
@@ -54,7 +57,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
               isValid(parseISO(member.users.birthday)) && (
                 <p>
                   {t("birthdayLabel")}{" "}
-                  {format(parseISO(member.users.birthday), "yyyy年MM月dd日", { locale: ja })}
+                  {formatDate(member.users.birthday, "longPadded", locale)}
                 </p>
               )}
           </div>

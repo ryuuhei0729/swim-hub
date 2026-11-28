@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useAuth } from "@/contexts";
 import { useFittedModalHeight } from "@/hooks/useFittedModalHeight";
 import { lockBodyScroll } from "@/utils/scrollLock";
@@ -56,6 +55,7 @@ export default function DayDetailModal({
   const { supabase, user } = useAuth();
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const locale = useLocale() as SupportedLocale;
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const [isFetchingRecordCount, setIsFetchingRecordCount] = useState(false);
@@ -357,7 +357,7 @@ export default function DayDetailModal({
             className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4"
           >
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              {format(date, "M月d日(E)", { locale: ja })}
+              {formatDate(date, "shortWithWeekday", locale)}
             </h3>
             <button
               onClick={onClose}

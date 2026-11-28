@@ -17,7 +17,7 @@ import React, {
 import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
@@ -27,8 +27,8 @@ import {
   ClipboardDocumentListIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
@@ -116,6 +116,7 @@ export function useTeamCompetitionActions({
   const invalidateRankings = useInvalidateTeamRankings();
   const router = useRouter();
   const t = useTranslations("teams");
+  const locale = useLocale() as SupportedLocale;
   const queryClient = useQueryClient();
   // 保存・削除の失敗など、一覧の取得以外で出すエラー (以前と同じく一覧の代わりに表示する)
   const [error, setError] = useState<string | null>(null);
@@ -829,9 +830,7 @@ export function useTeamCompetitionActions({
                     competition.date + "T00:00:00",
                   );
                   return isValid(competitionDate)
-                    ? format(competitionDate, "yyyy年M月d日(EEE)", {
-                        locale: ja,
-                      })
+                    ? formatDate(competitionDate, "longWithWeekday", locale)
                     : "-";
                 })()}
               </span>

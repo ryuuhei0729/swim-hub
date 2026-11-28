@@ -2,8 +2,8 @@
 
 import React from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { format, isValid } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import BaseModal from "@/components/ui/BaseModal";
 import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
 import { TeamMember } from "@swim-hub/shared/utils/team";
@@ -28,11 +28,9 @@ export function AttendanceStatusModal({
 }: AttendanceStatusModalProps) {
   const t = useTranslations("teamsAdmin");
   const locale = useLocale();
-  const dateLocale = locale === "ja" ? ja : enUS;
-  const datePattern = locale === "ja" ? "MMMM d日 (EEE)" : "MMMM d (EEE)";
   const formatEventDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return isValid(date) ? format(date, datePattern, { locale: dateLocale }) : "-";
+    return isValid(date) ? formatDate(date, "shortWithWeekday", locale as SupportedLocale) : "-";
   };
 
   return (

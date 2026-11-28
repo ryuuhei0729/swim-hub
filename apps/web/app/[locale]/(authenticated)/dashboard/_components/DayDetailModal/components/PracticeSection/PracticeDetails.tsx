@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   PencilIcon,
   TrashIcon,
@@ -11,8 +11,8 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { BoltIcon } from "@heroicons/react/24/solid";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 
 const ShareCardModal = dynamic(
   () =>
@@ -66,6 +66,7 @@ export function PracticeDetails({
   // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
   const isDefaultColor = wrapperColor === DEFAULT_PRACTICE_COLOR;
   const t = useTranslations("practice");
+  const locale = useLocale() as SupportedLocale;
   const tDash = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const userId = user?.id;
@@ -326,7 +327,7 @@ export function PracticeDetails({
                         const parsedDate = practice.date ? parseISO(practice.date) : null;
                         const formattedDate =
                           parsedDate && isValid(parsedDate)
-                            ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja })
+                            ? formatDate(parsedDate, "longWithWeekday", locale)
                             : "";
 
                         setSharePracticeData({

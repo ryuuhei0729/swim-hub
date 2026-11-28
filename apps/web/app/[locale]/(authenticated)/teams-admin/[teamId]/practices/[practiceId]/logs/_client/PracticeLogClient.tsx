@@ -42,8 +42,8 @@ const TeamVideoUploader = dynamic(
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
-import { format, parseISO, isValid } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
 import {
   resetTeamQueriesAfterExternalSave,
@@ -868,14 +868,9 @@ export default function PracticeLogClient({
                 <CalendarDaysIcon className="h-4 w-4" />
                 <span>
                   {(() => {
-                    const dateLocale = locale === "ja" ? ja : enUS;
-                    const datePattern =
-                      locale === "ja"
-                        ? "yyyy年M月d日(EEE)"
-                        : "MMM d, yyyy (EEE)";
                     const parsedDate = parseISO(practice.date + "T00:00:00");
                     return isValid(parsedDate)
-                      ? format(parsedDate, datePattern, { locale: dateLocale })
+                      ? formatDate(parsedDate, "longWithWeekday", locale as SupportedLocale)
                       : "-";
                   })()}
                 </span>

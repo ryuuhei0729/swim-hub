@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
+import { isValid } from "date-fns";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import type { PracticeLogWithTags, PracticeWithLogs } from "@apps/shared/types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { buildPracticeLogLine } from "../_utils/practiceLogGrouping";
@@ -31,6 +31,7 @@ export interface PracticeCardProps {
  */
 export default function PracticeCard({ practice, log, onClick }: PracticeCardProps) {
   const t = useTranslations("practice");
+  const locale = useLocale() as SupportedLocale;
 
   // 種目コードをローカライズラベルに変換(PracticeDetails.tsx の getStyleLabel と同方式)。
   // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が混在し得るため、
@@ -49,7 +50,7 @@ export default function PracticeCard({ practice, log, onClick }: PracticeCardPro
 
   const parsedDate = practice.date ? new Date(practice.date) : null;
   const formattedDate =
-    parsedDate && isValid(parsedDate) ? format(parsedDate, "yyyy/MM/dd", { locale: ja }) : "-";
+    parsedDate && isValid(parsedDate) ? formatDate(parsedDate, "numeric", locale) : "-";
 
   const title = practice.title || t("client.practiceTitle");
 

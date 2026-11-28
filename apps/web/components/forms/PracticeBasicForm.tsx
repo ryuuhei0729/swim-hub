@@ -12,7 +12,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabase";
 import { PracticeAPI } from "@apps/shared/api";
 import { format, parseISO, isValid } from "date-fns";
-import { ja, enUS } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
@@ -67,7 +67,7 @@ export default function PracticeBasicForm({
   const tPremium = useTranslations("forms.premium");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const dateFnsLocale = locale === "ja" ? ja : enUS;
+  const dateLocale = locale as SupportedLocale;
 
   const PRACTICE_STEPS = useMemo(
     () => [
@@ -346,8 +346,8 @@ export default function PracticeBasicForm({
             </div>
             <p className="mt-2 text-sm text-gray-600">
               {editData
-                ? t("subtitle_edit", { date: validDate ? format(validDate, "M月d日(E)", { locale: dateFnsLocale }) : "" })
-                : t("subtitle_create", { date: validDate ? format(validDate, "M月d日(E)", { locale: dateFnsLocale }) : "" })}
+                ? t("subtitle_edit", { date: validDate ? formatDate(validDate, "shortWithWeekday", dateLocale) : "" })
+                : t("subtitle_create", { date: validDate ? formatDate(validDate, "shortWithWeekday", dateLocale) : "" })}
             </p>
             {/* ステッププログレス（新規作成時のみ表示） */}
             {!editData && (
