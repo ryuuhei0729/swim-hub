@@ -39,6 +39,12 @@ export interface RecordsOpenRecordRequest {
   requestKey: string;
 }
 
+/** チームタブの予定タブで開く詳細 (練習のタイム一覧 / 大会の記録一覧) */
+export interface TeamOpenEventRequest {
+  kind: "practice" | "competition";
+  id: string;
+}
+
 // タブナビゲーターのパラメータ型
 // iOS 標準のタブバーは 5 つまでしか並ばないため、練習と大会は Records (記録) タブの中で切り替える
 export type TabParamList = {
@@ -57,6 +63,11 @@ export type TabParamList = {
          * そのチームの管理者ビューを OFF にして開く (管理者ビューの出欠タブでは自分の回答ができないため)
          */
         asMember?: boolean;
+        /**
+         * 予定タブで開く練習・大会の詳細 (メンバー全員の記録)。ダッシュボードの日付詳細の
+         * 「チームの記録を見る」から開くときに渡す。initialTab は "schedule" にすること
+         */
+        openEvent?: TeamOpenEventRequest;
         /**
          * チーム設定画面 (TeamSettings) で脱退したチーム ID。
          * チームタブはこのチームを一覧から外し、残りのチームへ切り替える

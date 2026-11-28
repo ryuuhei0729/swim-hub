@@ -37,6 +37,7 @@ import { RecordFeedbackSection } from "@/components/record-feedback/RecordFeedba
 import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
+import { TeamRecordsButton } from "./TeamRecordsButton";
 
 /** records テーブルから取得した行 (キャッシュにはこの形のまま持つ) */
 interface RecordFromDB {
@@ -776,6 +777,16 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             <Feather name="plus" size={18} color="#2563EB" />
             <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
           </Pressable>
+        )}
+
+        {/* チーム大会: メンバー全員の記録はチーム画面の予定タブの詳細で見る */}
+        {isTeamCompetition && teamId && (
+          <TeamRecordsButton
+            teamId={teamId}
+            kind="competition"
+            eventId={_competitionId}
+            onClose={onClose}
+          />
         )}
       </View>
 

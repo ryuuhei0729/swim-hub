@@ -12,7 +12,7 @@
  * カードと各操作 (編集・削除・記録入力・エントリー・タイム/記録一覧シート等) は既存の一覧
  * (TeamPracticeList / TeamCompetitionList) と同じものを使う。
  */
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ import {
   type ScheduleKind,
   type ScheduleItem,
 } from "@/utils/teamSchedule";
+import { useTeamViewStore } from "@/stores/teamViewStore";
 import { PracticeItem, useTeamPracticeActions } from "./TeamPracticeList";
 import { CompetitionItem, useTeamCompetitionActions } from "./TeamCompetitionList";
 
@@ -80,6 +81,39 @@ export function TeamScheduleList({ teamId, isAdmin }: TeamScheduleListProps) {
       buildScheduleItems(practicesQuery.data ?? [], competitionsQuery.data ?? [], kind, showPast),
     [practicesQuery.data, competitionsQuery.data, kind, showPast],
   );
+
+  // 他画面 (ダッシュボードの日付詳細の「チームの記録を見る」) から頼まれた練習・大会の詳細を、
+  // カードを押したときと同じ詳細 (練習: タイム一覧 / 大会: 記録一覧) で開く。
+  // 過去の予定でも開けるよう、絞り込み前の一覧から探す
+  const pendingOpenEvent = useTeamViewStore((state) => state.pendingOpenEvent);
+  const clearOpenEvent = useTeamViewStore((state) => state.clearOpenEvent);
+  const { handleOpenTimes } = practiceActions;
+  const { handleOpenRecords } = competitionActions;
+  useEffect(() => {
+    if (!pendingOpenEvent || pendingOpenEvent.teamId !== teamId) return;
+    if (pendingOpenEvent.kind === "practice") {
+      if (!practicesQuery.isSuccess && !practicesQuery.isError) return;
+      const practice = practicesQuery.data?.find((p) => p.id === pendingOpenEvent.id);
+      if (practice) handleOpenTimes(practice);
+    } else {
+      if (!competitionsQuery.isSuccess && !competitionsQuery.isError) return;
+      const competition = competitionsQuery.data?.find((c) => c.id === pendingOpenEvent.id);
+      if (competition) handleOpenRecords(competition);
+    }
+    clearOpenEvent();
+  }, [
+    pendingOpenEvent,
+    teamId,
+    practicesQuery.isSuccess,
+    practicesQuery.isError,
+    practicesQuery.data,
+    competitionsQuery.isSuccess,
+    competitionsQuery.isError,
+    competitionsQuery.data,
+    handleOpenTimes,
+    handleOpenRecords,
+    clearOpenEvent,
+  ]);
 
   // 追加は「練習を追加 / 大会を追加」を選んでもらう。
   // Android の Alert はボタン 3 つまでなので、一括登録は別ボタンにしている
