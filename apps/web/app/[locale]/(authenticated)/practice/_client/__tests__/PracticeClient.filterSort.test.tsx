@@ -16,6 +16,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import { addDays, format } from "date-fns";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { PracticeWithLogs, PracticeTag, Style } from "@apps/shared/types";
@@ -535,6 +536,55 @@ describe("PracticeClient (log-level カード粒度 + フィルタ意味論 + dr
         expect(cardHasPlace("プールA")).toBe(true);
       },
     );
+  });
+
+  describe("先の日付の練習(モバイルと同じく除外しない)", () => {
+    const futureDate = format(addDays(new Date(), 30), "yyyy-MM-dd");
+
+    it("今日より先の日付で登録した練習も一覧に表示される", () => {
+      renderClient([
+        makePracticeDay({
+          id: "p-future",
+          date: futureDate,
+          place: "先の予定プール",
+          logs: [makeLog("p-future", { id: "log-future" })],
+        }),
+        makePracticeDay({
+          id: "p-past",
+          date: "2026-01-01",
+          place: "過去プール",
+          logs: [makeLog("p-past", { id: "log-past" })],
+        }),
+      ]);
+
+      expect(cardHasPlace("先の予定プール")).toBe(true);
+      expect(cardHasPlace("過去プール")).toBe(true);
+    });
+
+    it("先の日付の練習の場所も絞り込みの選択肢に出て、選ぶとその練習が残る", async () => {
+      const user = userEvent.setup();
+      renderClient([
+        makePracticeDay({
+          id: "p-future",
+          date: futureDate,
+          place: "先の予定プール",
+          logs: [makeLog("p-future", { id: "log-future" })],
+        }),
+        makePracticeDay({
+          id: "p-past",
+          date: "2026-01-01",
+          place: "過去プール",
+          logs: [makeLog("p-past", { id: "log-past" })],
+        }),
+      ]);
+
+      await user.click(screen.getByRole("button", { name: "絞り込み" }));
+      await user.click(screen.getByRole("button", { name: "先の予定プール" }));
+      await user.click(screen.getByRole("button", { name: "適用" }));
+
+      expect(cardHasPlace("先の予定プール")).toBe(true);
+      expect(cardHasPlace("過去プール")).toBe(false);
+    });
   });
 
   describe("データ不整合への耐性", () => {
