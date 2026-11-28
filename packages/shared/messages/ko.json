@@ -4211,6 +4211,7 @@
         "placePlaceholder": "장소명",
         "notePlaceholder": "메모"
       },
+      "modeTabCalendar": "캘린더",
       "modeTabFile": "파일 가져오기",
       "modeTabManual": "직접 입력"
     },

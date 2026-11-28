@@ -4211,6 +4211,7 @@
         "placePlaceholder": "会場名",
         "notePlaceholder": "メモ"
       },
+      "modeTabCalendar": "カレンダー",
       "modeTabFile": "ファイル取込",
       "modeTabManual": "手動入力"
     },

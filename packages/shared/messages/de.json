@@ -4211,6 +4211,7 @@
         "placePlaceholder": "Veranstaltungsort",
         "notePlaceholder": "Notiz"
       },
+      "modeTabCalendar": "Kalender",
       "modeTabFile": "Datei-Import",
       "modeTabManual": "Manuelle Eingabe"
     },

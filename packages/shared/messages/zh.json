@@ -4211,6 +4211,7 @@
         "placePlaceholder": "场馆名称",
         "notePlaceholder": "备注"
       },
+      "modeTabCalendar": "日历",
       "modeTabFile": "文件导入",
       "modeTabManual": "手动输入"
     },
