@@ -97,6 +97,7 @@ vi.mock("react-native", async (importOriginal) => {
 });
 
 import { AvatarUpload } from "../AvatarUpload";
+import { computeAvatarCrop } from "../AvatarCropModal";
 import { SaveFormat } from "expo-image-manipulator";
 import { UserFacingError } from "@apps/shared/utils/userFacingError";
 
@@ -120,6 +121,13 @@ function setupManipulatorChain(saveResult: { uri: string; base64?: string }) {
   mocks.manipulate.mockReturnValue({ crop: mocks.crop });
   mocks.renderAsync.mockResolvedValue({ saveAsync: mocks.saveAsync });
   mocks.saveAsync.mockResolvedValue(saveResult);
+}
+
+/** Android の位置調整画面 (AvatarCropModal) で、動かさずに「決定」を押す */
+async function confirmCrop() {
+  await act(async () => {
+    fireEvent.click(screen.getByText("決定"));
+  });
 }
 
 async function setPlatform(os: "android" | "ios") {
@@ -185,6 +193,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.manipulate).toHaveBeenCalledWith("file:///wide.jpg");
       expect(mocks.crop).toHaveBeenCalledWith({
         originX: 100,
@@ -207,6 +217,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.crop).toHaveBeenCalledWith({
         originX: 0,
         originY: 100,
@@ -231,6 +243,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.getSize).toHaveBeenCalledWith(
         "file:///nodim.jpg",
         expect.any(Function),
@@ -364,6 +378,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.saveAsync).toHaveBeenCalledWith(
         expect.objectContaining({ format: SaveFormat.JPEG, base64: true }),
       );
@@ -387,6 +403,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.alertFn).toHaveBeenCalled();
       expect(onImageSelected).not.toHaveBeenCalled();
     },
@@ -410,6 +428,8 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
+      // 正方形でない画像は位置調整の画面が出る。動かさずに決定すると中央で切り抜く
+      await confirmCrop();
       expect(mocks.alertFn).toHaveBeenCalled();
       expect(onImageSelected).not.toHaveBeenCalled();
     },
@@ -645,4 +665,93 @@ describe("AvatarUpload — アバター削除 (Photo Picker 移行と無関係�
       expect(mocks.alertFn).toHaveBeenCalled();
     },
   );
+});
+
+describe("AvatarUpload — Android の位置調整 (swimhub-tasks#91)", () => {
+  beforeEach(async () => {
+    await setPlatform("android");
+    setupManipulatorChain({ uri: "file:///cropped.jpg", base64: "CROPPEDBASE64" });
+    mocks.crop.mockClear();
+    mocks.manipulate.mockClear();
+  });
+
+  it("正方形でない画像では位置調整の画面を出し、決定するまで切り抜かない", async () => {
+    mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: "file:///wide.jpg", width: 800, height: 600, type: "image/jpeg" }],
+    });
+    render(<AvatarUpload {...BASE_PROPS} currentAvatarUrl={null} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("icon-camera"));
+    });
+    expect(screen.getByText("位置を調整")).toBeTruthy();
+    expect(mocks.manipulate).not.toHaveBeenCalled();
+  });
+
+  it("位置調整でキャンセルすると切り抜かず、onImageSelected も呼ばない", async () => {
+    mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: "file:///wide.jpg", width: 800, height: 600, type: "image/jpeg" }],
+    });
+    const onImageSelected = vi.fn();
+    render(<AvatarUpload {...BASE_PROPS} currentAvatarUrl={null} onImageSelected={onImageSelected} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("icon-camera"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("キャンセル"));
+    });
+    expect(screen.queryByText("位置を調整")).toBeNull();
+    expect(mocks.manipulate).not.toHaveBeenCalled();
+    expect(onImageSelected).not.toHaveBeenCalled();
+  });
+
+  it("ドラッグで左端まで寄せて決定すると、左端 (originX=0) で切り抜く", async () => {
+    const RN = await import("react-native");
+    const createSpy = vi.spyOn(RN.PanResponder, "create");
+    mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: "file:///wide.jpg", width: 800, height: 600, type: "image/jpeg" }],
+    });
+    render(<AvatarUpload {...BASE_PROPS} currentAvatarUrl={null} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("icon-camera"));
+    });
+    const config = createSpy.mock.results.at(-1)!.value.__config as {
+      onPanResponderGrant?: () => void;
+      onPanResponderMove?: (e: unknown, g: { dx: number; dy: number; vx: number; vy: number }) => void;
+    };
+    await act(async () => {
+      config.onPanResponderGrant?.();
+      // 右へ大きくドラッグ = 画像の左端を枠に合わせる (はみ出し分より大きく動かしても止まる)
+      config.onPanResponderMove?.({}, { dx: 10000, dy: 0, vx: 0, vy: 0 });
+    });
+    await confirmCrop();
+    expect(mocks.crop).toHaveBeenCalledWith({ originX: 0, originY: 0, width: 600, height: 600 });
+    createSpy.mockRestore();
+  });
+});
+
+describe("computeAvatarCrop", () => {
+  it("ずらしていない (中央) ときは従来の中央切り抜きと同じ座標", () => {
+    // 800x600 を一辺 300 の枠に出すと 400x300。中央は offsetX = (300 - 400) / 2 = -50
+    expect(computeAvatarCrop({ width: 800, height: 600 }, 300, { x: -50, y: 0 })).toEqual({
+      originX: 100,
+      originY: 0,
+      size: 600,
+    });
+  });
+
+  it("端まで寄せたときは端で切り抜き、範囲の外には出ない", () => {
+    expect(computeAvatarCrop({ width: 600, height: 800 }, 300, { x: 0, y: -100 })).toEqual({
+      originX: 0,
+      originY: 200,
+      size: 600,
+    });
+    expect(computeAvatarCrop({ width: 600, height: 800 }, 300, { x: 0, y: -1000 })).toEqual({
+      originX: 0,
+      originY: 200,
+      size: 600,
+    });
+  });
 });
