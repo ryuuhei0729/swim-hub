@@ -62,9 +62,12 @@ interface ProviderConfig {
   icon: React.ReactNode;
 }
 
+// Apple は iOS ではネイティブ、Android では Supabase の OAuth (ブラウザ) で連携する
 const PROVIDERS: ProviderConfig[] = [
   { id: "google", name: "Google", icon: <GoogleIcon /> },
-  ...(Platform.OS === "ios" ? [{ id: "apple", name: "Apple", icon: <AppleIcon /> }] : []),
+  ...(Platform.OS === "ios" || Platform.OS === "android"
+    ? [{ id: "apple", name: "Apple", icon: <AppleIcon /> }]
+    : []),
 ];
 
 export const IdentityLinkSettings: React.FC = () => {
@@ -106,14 +109,15 @@ export const IdentityLinkSettings: React.FC = () => {
 
   const canUnlink = identities.length > 1;
 
-  const handleLinkGoogle = async () => {
+  // ブラウザで OAuth を開いて連携する（Google、および Android の Apple）
+  const handleLinkInBrowser = async (provider: "google" | "apple") => {
     if (!supabase) return;
-    setActionLoading("google");
+    setActionLoading(provider);
     setError(null);
     try {
       const redirectUri = getRedirectUri();
       const { data, error: linkError } = await supabase.auth.linkIdentity({
-        provider: "google",
+        provider,
         options: {
           redirectTo: redirectUri,
           skipBrowserRedirect: true,
@@ -269,9 +273,13 @@ export const IdentityLinkSettings: React.FC = () => {
 
   const handleLink = (provider: string) => {
     if (provider === "google") {
-      handleLinkGoogle();
+      handleLinkInBrowser("google");
     } else if (provider === "apple") {
-      handleLinkApple();
+      if (Platform.OS === "ios") {
+        handleLinkApple();
+      } else {
+        handleLinkInBrowser("apple");
+      }
     }
   };
 

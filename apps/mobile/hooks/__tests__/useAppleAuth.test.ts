@@ -15,6 +15,12 @@ const mocks = vi.hoisted(() => ({
   updateUser: vi.fn(),
   localizeSupabaseAuthError: vi.fn(),
   supabaseEnabled: true,
+  signInWithOAuth: vi.fn(),
+  exchangeCodeForSession: vi.fn(),
+  setSession: vi.fn(),
+  openAuthSessionAsync: vi.fn(),
+  claimOAuthCode: vi.fn(),
+  saveLastLoginMethod: vi.fn(),
 }));
 
 // Platform モック
@@ -53,9 +59,38 @@ vi.mock("@/lib/supabase", () => ({
       auth: {
         signInWithIdToken: mocks.signInWithIdToken,
         updateUser: mocks.updateUser,
+        signInWithOAuth: mocks.signInWithOAuth,
+        exchangeCodeForSession: mocks.exchangeCodeForSession,
+        setSession: mocks.setSession,
       },
     };
   },
+}));
+
+// Android のブラウザ認証で使うモジュールのモック
+vi.mock("expo-web-browser", () => ({
+  openAuthSessionAsync: mocks.openAuthSessionAsync,
+}));
+
+vi.mock("@ryuuhei0729/swimhub-oauth/mobile", () => ({
+  claimOAuthCode: mocks.claimOAuthCode,
+}));
+
+vi.mock("@/lib/google-auth", () => ({
+  getRedirectUri: () => "swimhub://auth/callback",
+  extractTokensFromUrl: (url: string) => {
+    const params = new URL(url).searchParams;
+    return {
+      code: params.get("code") ?? undefined,
+      error: params.get("error") ?? undefined,
+    };
+  },
+  oauthSessionGuard: { active: false },
+  localizeOAuthErrorCode: (code: string) => `oauth:${code}`,
+}));
+
+vi.mock("@/lib/lastLoginMethod", () => ({
+  saveLastLoginMethod: mocks.saveLastLoginMethod,
 }));
 
 // authErrorLocalizer モック
@@ -84,6 +119,22 @@ describe("useAppleAuth", () => {
     mocks.signInWithIdToken.mockResolvedValue({ error: null });
     mocks.updateUser.mockResolvedValue({ error: null });
 
+    // Android のブラウザ認証のモックをリセット
+    mocks.signInWithOAuth.mockResolvedValue({
+      data: { url: "https://test.supabase.co/auth/v1/authorize?provider=apple" },
+      error: null,
+    });
+    mocks.openAuthSessionAsync.mockResolvedValue({
+      type: "success",
+      url: "swimhub://auth/callback?code=apple-code",
+    });
+    mocks.claimOAuthCode.mockReturnValue({ claimed: true, resolve: vi.fn() });
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "at" } },
+      error: null,
+    });
+    mocks.saveLastLoginMethod.mockResolvedValue(undefined);
+
     // localizeSupabaseAuthError モックをリセット
     mocks.localizeSupabaseAuthError.mockImplementation((error: { message?: string }) => {
       const message = error?.message || "";
@@ -103,17 +154,91 @@ describe("useAppleAuth", () => {
       expect(result.current.error).toBeNull();
     });
 
-    it("iOS以外では isAvailable が false", () => {
+    it("Android でも isAvailable が true（ブラウザで認証する）", () => {
       mocks.platformOS = "android";
+      const { result } = renderHook(() => useAppleAuth());
+
+      expect(result.current.isAvailable).toBe(true);
+    });
+
+    it("iOS / Android 以外では isAvailable が false", () => {
+      mocks.platformOS = "web";
       const { result } = renderHook(() => useAppleAuth());
 
       expect(result.current.isAvailable).toBe(false);
     });
   });
 
-  describe("signInWithApple - Platform チェック", () => {
-    it("iOS以外では早期リターンしてエラーを設定", async () => {
+  describe("signInWithApple - Android（ブラウザ認証）", () => {
+    beforeEach(() => {
       mocks.platformOS = "android";
+    });
+
+    it("Supabase の Apple OAuth をブラウザで開き、code を交換してログインする", async () => {
+      const { result } = renderHook(() => useAppleAuth());
+
+      let signInResult: { success: boolean; error?: Error | null };
+      await act(async () => {
+        signInResult = await result.current.signInWithApple();
+      });
+
+      expect(signInResult!.success).toBe(true);
+      expect(mocks.signInWithOAuth).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "apple",
+          options: expect.objectContaining({
+            redirectTo: "swimhub://auth/callback",
+            skipBrowserRedirect: true,
+          }),
+        }),
+      );
+      expect(mocks.openAuthSessionAsync).toHaveBeenCalledWith(
+        "https://test.supabase.co/auth/v1/authorize?provider=apple",
+        "swimhub://auth/callback",
+      );
+      expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("apple-code");
+      expect(mocks.saveLastLoginMethod).toHaveBeenCalledWith("apple");
+      expect(mocks.isAvailableAsync).not.toHaveBeenCalled();
+      expect(mocks.signInAsync).not.toHaveBeenCalled();
+      expect(result.current.loading).toBe(false);
+    });
+
+    it("ブラウザを閉じた場合はキャンセルとして扱う", async () => {
+      mocks.openAuthSessionAsync.mockResolvedValue({ type: "cancel" });
+      const { result } = renderHook(() => useAppleAuth());
+
+      let signInResult: { success: boolean; error?: Error | null };
+      await act(async () => {
+        signInResult = await result.current.signInWithApple();
+      });
+
+      expect(signInResult!.success).toBe(false);
+      expect(result.current.error).toBe("oauth:auth_cancelled");
+      expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(mocks.saveLastLoginMethod).not.toHaveBeenCalled();
+    });
+
+    it("code の交換に失敗した場合はエラーを表示する", async () => {
+      mocks.exchangeCodeForSession.mockResolvedValue({
+        data: { session: null },
+        error: { message: "invalid grant" },
+      });
+      const { result } = renderHook(() => useAppleAuth());
+
+      let signInResult: { success: boolean; error?: Error | null };
+      await act(async () => {
+        signInResult = await result.current.signInWithApple();
+      });
+
+      expect(signInResult!.success).toBe(false);
+      expect(result.current.error).toBe("oauth:invalid grant");
+      expect(mocks.saveLastLoginMethod).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("signInWithApple - Platform チェック", () => {
+    it("iOS / Android 以外では早期リターンしてエラーを設定", async () => {
+      mocks.platformOS = "web";
       const { result } = renderHook(() => useAppleAuth());
 
       let signInResult: { success: boolean; error?: Error | null };
@@ -388,7 +513,7 @@ describe("useAppleAuth", () => {
 
   describe("clearError", () => {
     it("エラーをクリアできる", async () => {
-      mocks.platformOS = "android";
+      mocks.platformOS = "web";
       const { result } = renderHook(() => useAppleAuth());
 
       // エラーを発生させる

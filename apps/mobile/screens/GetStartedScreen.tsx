@@ -77,7 +77,7 @@ export const GetStartedScreen: React.FC = () => {
         )}
 
         <View style={styles.buttonGroup}>
-          {/* Appleで作成（iOSのみ） */}
+          {/* Appleで作成（iOS はネイティブ、Android はブラウザ） */}
           {isAppleAvailable && (
             <AppleLoginButton
               onPress={handleAppleSignup}
